@@ -20,16 +20,16 @@ export default {
     themes: [
       {
         mytheme: {
-          primary: "#433fe9", // Azul violeta vibrante y moderno (color base)
-          secondary: "#756EF3", // Un tono más claro y suave del morado azulado
-          accent: "#A29CF8", // Morado pastel como color de realce
-          neutral: "#2E2E2E", // Negro suave para buen contraste sin ser demasiado oscuro
-          "base-100": "#F4F4FC", // Blanco con un toque lavanda para suavidad
-          info: "#5A57EE", // Azul violeta más saturado para información
-          success: "#4F9F85", // Verde azulado pastel para éxito
-          warning: "#F4A261", // Naranja cálido para advertencias (contraste natural)
-          error: "#E95F76", // Rojo coral con un toque rosado para errores
-          black: "#3B3B3B", // Negro moderno con menos dureza que #000
+          primary: "#433fe9",
+          secondary: "#756EF3",
+          accent: "#A29CF8",
+          neutral: "#2E2E2E",
+          "base-100": "#F4F4FC",
+          info: "#5A57EE",
+          success: "#4F9F85",
+          warning: "#F4A261",
+          error: "#E95F76",
+          black: "#3B3B3B",
         },
       },
     ],

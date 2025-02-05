@@ -41,11 +41,11 @@ function DashboardLayout({ children }: RootChildren) {
       />
 
       <div className="flex-1 flex flex-col">
-        <header className="bg-gray-900 text-white flex items-center p-4 md:hidden">
+        <header className="bg-neutral text-white flex items-center px-5 py-6 md:hidden">
           <button onClick={() => setDrawerOpened(true)} className="mr-4">
             <RiMenuLine className="text-xl" />
           </button>
-          <h2 className="text-lg">Dashboard</h2>
+          <h2 className="text-xl font-bold">Dashboard</h2>
         </header>
         <main className="flex-1 p-6">{children}</main>
       </div>

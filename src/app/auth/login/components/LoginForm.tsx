@@ -48,7 +48,7 @@ export default function LoginForm() {
   };
 
   return (
-    <Container fluid className="w-full">
+    <Container className="w-full">
       {error && (
         <Alert color="red" className="mb-4">
           {error}
@@ -77,7 +77,7 @@ export default function LoginForm() {
         <Button
           type="submit"
           fullWidth
-          className="bg-blue-600 hover:bg-blue-700 text-white py-2 rounded-lg"
+          className="bg-primary hover:bg-info text-white py-2 rounded-lg"
         >
           Login
         </Button>
