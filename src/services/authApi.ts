@@ -9,7 +9,9 @@ export const login = async (email: string, password: string) => {
     body: JSON.stringify({ email, password }),
   });
 
-  return response.json();
+  const returned = await response.json();
+  // console.log(returned);
+  return returned;
 };
 
 export const logoutApi = async (refreshToken: string) => {

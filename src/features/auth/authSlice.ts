@@ -1,13 +1,11 @@
 import { createSlice, PayloadAction } from "@reduxjs/toolkit";
-
-interface AuthState {
-  user: string | null;
-  accessToken: string | null;
-  refreshToken: string | null;
-}
+import { User, AuthState } from "@/interfaces/user";
 
 const initialState: AuthState = {
-  user: typeof window !== "undefined" ? localStorage.getItem("user") : null,
+  user:
+    typeof window !== "undefined"
+      ? JSON.parse(localStorage.getItem("user") || "null")
+      : null,
   accessToken:
     typeof window !== "undefined" ? localStorage.getItem("accessToken") : null,
   refreshToken:
@@ -20,16 +18,19 @@ const authSlice = createSlice({
   reducers: {
     loginSuccess: (
       state,
-      action: PayloadAction<{ user: string; access: string; refresh: string }>
+      action: PayloadAction<{
+        user: User;
+        tokens: { access: string; refresh: string };
+      }>
     ) => {
       state.user = action.payload.user;
-      state.accessToken = action.payload.access;
-      state.refreshToken = action.payload.refresh;
+      state.accessToken = action.payload.tokens.access;
+      state.refreshToken = action.payload.tokens.refresh;
 
       if (typeof window !== "undefined") {
-        localStorage.setItem("user", action.payload.user);
-        localStorage.setItem("accessToken", action.payload.access);
-        localStorage.setItem("refreshToken", action.payload.refresh);
+        localStorage.setItem("user", JSON.stringify(action.payload.user));
+        localStorage.setItem("accessToken", action.payload.tokens.access);
+        localStorage.setItem("refreshToken", action.payload.tokens.refresh);
       }
     },
 
@@ -44,8 +45,15 @@ const authSlice = createSlice({
         localStorage.removeItem("refreshToken");
       }
     },
+
+    updateUserState: (state, action: PayloadAction<User>) => {
+      state.user = { ...state.user, ...action.payload };
+      if (typeof window !== "undefined") {
+        localStorage.setItem("user", JSON.stringify(state.user));
+      }
+    },
   },
 });
 
-export const { loginSuccess, logout } = authSlice.actions;
+export const { loginSuccess, logout, updateUserState } = authSlice.actions;
 export default authSlice.reducer;

@@ -15,7 +15,7 @@ import { dashboardRoutes } from "@/routes/dashboardRoutes";
 
 function DashboardLayout({ children }: RootChildren) {
   const [drawerOpened, setDrawerOpened] = useState(false);
-  const { refreshToken } = useAuth();
+  const { refreshToken, user } = useAuth();
   const dispatch = useDispatch();
   const router = useRouter();
 
@@ -32,7 +32,11 @@ function DashboardLayout({ children }: RootChildren) {
 
   return (
     <div className="flex h-screen">
-      <Sidebar routes={dashboardRoutes} handleLogout={handleLogout} />
+      <Sidebar
+        routes={dashboardRoutes}
+        handleLogout={handleLogout}
+        user={user}
+      />
       <MobileDrawer
         routes={dashboardRoutes}
         drawerOpened={drawerOpened}

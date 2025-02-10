@@ -30,14 +30,18 @@ export default function LoginForm() {
 
     try {
       const data = await login(email, password);
-      if (data.access && data.refresh) {
+
+      if (data.tokens.access && data.tokens.refresh) {
         dispatch(
           loginSuccess({
-            user: email,
-            access: data.access,
-            refresh: data.refresh,
+            user: data.user,
+            tokens: {
+              access: data.tokens.access,
+              refresh: data.tokens.refresh,
+            },
           })
         );
+
         router.push("/dashboard");
       } else {
         setError("Invalid login credentials");
