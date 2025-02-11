@@ -10,7 +10,7 @@ import { useDispatch, useSelector } from "react-redux";
 import { updateUserState } from "@/features/auth/authSlice";
 
 export default function ProfilePage() {
-  const { user, accessToken } = useAuth();
+  const { user } = useAuth();
   const dispatch = useDispatch();
   const [isEditing, setIsEditing] = useState(false);
   const [error, setError] = useState("");
@@ -27,19 +27,18 @@ export default function ProfilePage() {
   };
 
   const handleSave = async () => {
-    setError("");
-    try {
-      const updatedUser = await updateUser(formData, accessToken);
-
-      if (updatedUser && !updatedUser.error) {
-        dispatch(updateUserState(updatedUser)); // Solo actualiza el usuario sin tocar los tokens
-        setIsEditing(false);
-      } else {
-        setError("Error al actualizar el perfil");
-      }
-    } catch (err) {
-      setError("Ocurrió un error al actualizar el perfil. Inténtalo de nuevo.");
-    }
+    // setError("");
+    // try {
+    //   const updatedUser = await updateUser(formData);
+    //   if (updatedUser && !updatedUser.error) {
+    //     dispatch(updateUserState(updatedUser)); // Solo actualiza el usuario sin tocar los tokens
+    //     setIsEditing(false);
+    //   } else {
+    //     setError("Error al actualizar el perfil");
+    //   }
+    // } catch (err) {
+    //   setError("Ocurrió un error al actualizar el perfil. Inténtalo de nuevo.");
+    // }
   };
 
   return (

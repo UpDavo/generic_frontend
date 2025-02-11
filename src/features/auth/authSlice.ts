@@ -6,10 +6,7 @@ const initialState: AuthState = {
     typeof window !== "undefined"
       ? JSON.parse(localStorage.getItem("user") || "null")
       : null,
-  accessToken:
-    typeof window !== "undefined" ? localStorage.getItem("accessToken") : null,
-  refreshToken:
-    typeof window !== "undefined" ? localStorage.getItem("refreshToken") : null,
+  accessToken: null,
 };
 
 const authSlice = createSlice({
@@ -19,30 +16,20 @@ const authSlice = createSlice({
     loginSuccess: (
       state,
       action: PayloadAction<{
-        user: User;
-        tokens: { access: string; refresh: string };
+        user: User | null;
+        accessToken: string;
       }>
     ) => {
       state.user = action.payload.user;
-      state.accessToken = action.payload.tokens.access;
-      state.refreshToken = action.payload.tokens.refresh;
-
-      if (typeof window !== "undefined") {
-        localStorage.setItem("user", JSON.stringify(action.payload.user));
-        localStorage.setItem("accessToken", action.payload.tokens.access);
-        localStorage.setItem("refreshToken", action.payload.tokens.refresh);
-      }
+      state.accessToken = action.payload.accessToken;
     },
 
-    logout: (state) => {
+    logoutSuccess: (state) => {
       state.user = null;
       state.accessToken = null;
-      state.refreshToken = null;
 
       if (typeof window !== "undefined") {
         localStorage.removeItem("user");
-        localStorage.removeItem("accessToken");
-        localStorage.removeItem("refreshToken");
       }
     },
 
@@ -55,5 +42,5 @@ const authSlice = createSlice({
   },
 });
 
-export const { loginSuccess, logout, updateUserState } = authSlice.actions;
+export const { loginSuccess, logoutSuccess, updateUserState } = authSlice.actions;
 export default authSlice.reducer;

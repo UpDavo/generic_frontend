@@ -1,9 +1,8 @@
 /* eslint-disable @typescript-eslint/no-unused-vars */
 "use client";
 import { useState } from "react";
-import { useDispatch } from "react-redux";
-import { loginSuccess } from "@/features/auth/authSlice";
-import { login } from "@/services/authApi";
+import { useAppDispatch } from "@/hooks/useAppDispatch";
+import { loginUser } from "@/hooks/useAuth";
 import { useRouter } from "next/navigation";
 import { Button, TextInput, Container, Alert } from "@mantine/core";
 import { validateEmail } from "@/utils/validateEmail";
@@ -14,7 +13,7 @@ export default function LoginForm() {
   const [error, setError] = useState("");
   const [emailError, setEmailError] = useState("");
   const [passwordError, setPasswordError] = useState("");
-  const dispatch = useDispatch();
+  const dispatch = useAppDispatch();
   const router = useRouter();
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -29,23 +28,8 @@ export default function LoginForm() {
     }
 
     try {
-      const data = await login(email, password);
-
-      if (data.tokens.access && data.tokens.refresh) {
-        dispatch(
-          loginSuccess({
-            user: data.user,
-            tokens: {
-              access: data.tokens.access,
-              refresh: data.tokens.refresh,
-            },
-          })
-        );
-
-        router.push("/dashboard");
-      } else {
-        setError("Invalid login credentials");
-      }
+      await dispatch(loginUser(email, password));
+      router.push("/dashboard");
     } catch (err) {
       setError("An error occurred while logging in. Please try again.");
     }

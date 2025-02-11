@@ -1,26 +1,44 @@
 import API_BASE_URL from "../config/apiConfig";
+import axios from "axios";
 
 export const login = async (email: string, password: string) => {
-  const response = await fetch(`${API_BASE_URL}/auth/login/`, {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-    },
-    body: JSON.stringify({ email, password }),
-  });
+  try {
+    const response = await axios.post(
+      `${API_BASE_URL}/auth/login/`,
+      { email, password },
+      { withCredentials: true }
+    );
 
-  const returned = await response.json();
-  // console.log(returned);
-  return returned;
+    return response.data;
+  } catch (error) {
+    console.error("Error en login:", error);
+    throw new Error("Error en autenticación");
+  }
 };
 
-export const logoutApi = async (refreshToken: string) => {
-  await fetch(`${API_BASE_URL}/auth/logout/`, {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      Authorization: `Bearer ${localStorage.getItem("accessToken")}`,
-    },
-    body: JSON.stringify({ refresh: refreshToken }),
-  });
+export const logout = async () => {
+  try {
+    await axios.post(
+      `${API_BASE_URL}/auth/logout/`,
+      {},
+      { withCredentials: true }
+    );
+  } catch (error) {
+    console.error("Error en logout:", error);
+  }
+};
+
+export const refreshToken = async () => {
+  try {
+    const response = await axios.post(
+      `${API_BASE_URL}/auth/refresh/`,
+      {},
+      { withCredentials: true }
+    );
+
+    return response.data.access_token;
+  } catch (error) {
+    console.error("Error al refrescar el token:", error);
+    return null;
+  }
 };

@@ -2,9 +2,9 @@
 "use client";
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
-import { useDispatch } from "react-redux";
-import { logout } from "@/features/auth/authSlice";
-import { logoutApi } from "@/services/authApi";
+import { useAppDispatch } from "@/hooks/useAppDispatch";
+import { logoutUser } from "@/hooks/useAuth";
+
 import { RiMenuLine } from "react-icons/ri";
 import { useAuth } from "@/hooks/useAuth";
 import withAuth from "@/hoc/withAuth";
@@ -15,18 +15,12 @@ import { dashboardRoutes } from "@/routes/dashboardRoutes";
 
 function DashboardLayout({ children }: RootChildren) {
   const [drawerOpened, setDrawerOpened] = useState(false);
-  const { refreshToken, user } = useAuth();
-  const dispatch = useDispatch();
+  const { user } = useAuth();
+  const dispatch = useAppDispatch();
   const router = useRouter();
 
   const handleLogout = async () => {
-    if (!refreshToken) {
-      console.error("No refresh token available for logout");
-      return;
-    }
-
-    await logoutApi(refreshToken);
-    dispatch(logout());
+    await dispatch(logoutUser());
     router.push("/auth/login");
   };
 
