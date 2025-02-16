@@ -2,10 +2,10 @@
 import { useState, useEffect } from "react";
 import { usePathname } from "next/navigation";
 import Link from "next/link";
-import { Button, Box } from "@mantine/core";
+import { Box } from "@mantine/core";
 import { SidebarProps } from "@/interfaces/navigation";
 
-const Sidebar: React.FC<SidebarProps> = ({ routes, handleLogout, user }) => {
+const Sidebar: React.FC<SidebarProps> = ({ routes }) => {
   const pathname = usePathname();
   const [active, setActive] = useState(0);
 
@@ -18,27 +18,9 @@ const Sidebar: React.FC<SidebarProps> = ({ routes, handleLogout, user }) => {
 
   return (
     <aside className="hidden md:flex flex-col w-64 bg-neutral text-white px-6 py-6 shadow-lg">
-      {/* <h2 className="text-3xl font-bold text-white mb-4">Dashboard</h2> */}
-
-      {/* Botón de perfil */}
-      {user && (
-        <div className="flex flex-col items-center justify-center mb-6 mt-3">
-          <div className="bg-gray-700 rounded-full w-16 h-16 flex items-center justify-center text-xl font-bold uppercase">
-            {user.first_name.charAt(0)}
-          </div>
-          <p className="mt-2 text-lg font-semibold">{user.first_name} {user.last_name}</p>
-          <p className="text-sm text-gray-300">{user.role?.name}</p>
-          <Link href="/dashboard/profile" passHref>
-            <Button
-              // variant="light"
-              className="mt-2 btn btn-info btn-block text-white"
-            >
-              Ver Perfil
-            </Button>
-          </Link>
-        </div>
-      )}
-
+      <div className="mx-2">
+        <h1 className="text-3xl uppercase font-bold">HINT</h1>
+      </div>
       {/* Navegación */}
       <nav className="mt-2">
         <Box w={200}>
@@ -58,14 +40,6 @@ const Sidebar: React.FC<SidebarProps> = ({ routes, handleLogout, user }) => {
           ))}
         </Box>
       </nav>
-
-      {/* Botón de logout */}
-      <Button
-        onClick={handleLogout}
-        className="mt-auto bg-info hover:bg-error transition-all duration-300 text-white font-bold py-2 px-4 rounded"
-      >
-        Logout
-      </Button>
     </aside>
   );
 };

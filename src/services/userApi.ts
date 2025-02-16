@@ -5,7 +5,7 @@ export const updateUser = async (
   sipleUser: SimpleUser,
   accessToken: string
 ) => {
-  console.log(sipleUser)
+  console.log(sipleUser);
   const response = await fetch(`${API_BASE_URL}/auth/user/`, {
     method: "PUT",
     headers: {
@@ -17,5 +17,18 @@ export const updateUser = async (
 
   const returned = await response.json();
   console.log(returned);
+  return returned;
+};
+
+export const listUsers = async (accessToken: string | null) => {
+  const response = await fetch(`${API_BASE_URL}/auth/users/all/`, {
+    method: "GET",
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${accessToken}`,
+    },
+  });
+
+  const returned = await response.json();
   return returned;
 };

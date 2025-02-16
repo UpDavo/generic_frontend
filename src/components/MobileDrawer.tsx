@@ -1,4 +1,4 @@
-import { Button, Box, Drawer } from "@mantine/core";
+import { Box, Drawer } from "@mantine/core";
 import Link from "next/link";
 import { MobileDrawerProps } from "@/interfaces/navigation";
 
@@ -6,7 +6,6 @@ const MobileDrawer: React.FC<MobileDrawerProps> = ({
   routes,
   drawerOpened,
   setDrawerOpened,
-  handleLogout,
 }) => (
   <Drawer
     opened={drawerOpened}
@@ -28,12 +27,6 @@ const MobileDrawer: React.FC<MobileDrawerProps> = ({
             </div>
           </Link>
         ))}
-        <Button
-          onClick={handleLogout}
-          className="mt-6 bg-info hover:bg-error transition-all duration-300 text-white font-bold py-2 px-4 rounded w-full"
-        >
-          Logout
-        </Button>
       </Box>
     </nav>
   </Drawer>

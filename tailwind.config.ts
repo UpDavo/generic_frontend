@@ -18,6 +18,7 @@ export default {
   plugins: [require("daisyui")],
   daisyui: {
     themes: [
+      // "garden",
       {
         mytheme: {
           primary: "#433fe9",
