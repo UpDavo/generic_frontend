@@ -42,7 +42,7 @@ export default function ReportPage() {
       },
     ],
     fecha_inicio: "2024-04-01",
-    fecha_fin: "2025-12-31",
+    fecha_fin: "2024-10-31",
   };
 
   const getMonthName = (dateString: string): string => {
