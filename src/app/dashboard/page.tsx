@@ -149,7 +149,7 @@ export default function DashboardHome() {
           <div className="grid md:grid-cols-2 grid-cols-1 gap-6 mb-6">
             {/* Costo Total */}
             <div className="card bg-base-100 shadow-xl p-6 text-center">
-              <h2 className="text-lg font-bold mb-2">Costo General</h2>
+              <h2 className="text-lg font-bold mb-2">Costo Mensual</h2>
               <p className="text-4xl font-extrabold text-green-500">
                 ${cost.toFixed(2)}
               </p>
@@ -157,7 +157,7 @@ export default function DashboardHome() {
 
             {/* Llamadas Generales */}
             <div className="card bg-base-100 shadow-xl p-6 text-center">
-              <h2 className="text-lg font-bold mb-2">Llamadas Generales</h2>
+              <h2 className="text-lg font-bold mb-2">Llamadas Mensuales</h2>
               <p className="text-4xl font-extrabold text-blue-500">
                 {totalCalls}
               </p>
@@ -167,7 +167,7 @@ export default function DashboardHome() {
           {/* Gráfico de llamadas por usuario */}
           <div className="card bg-base-100 shadow-xl p-6 col-span-3">
             <h2 className="text-lg font-bold text-center mb-4">
-              Push por Usuario
+              Pushs por Usuario
             </h2>
             {userCalls.length > 0 ? (
               <ResponsiveContainer width="100%" height={400}>
