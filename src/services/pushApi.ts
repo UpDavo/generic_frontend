@@ -1,6 +1,22 @@
 import API_BASE_URL from "../config/apiConfig";
 import { Message, SendPush } from "@/interfaces/message";
 
+export const getPrice = async (accessToken: string | null) => {
+  const response = await fetch(`${API_BASE_URL}/tada/prices/last/`, {
+    method: "GET",
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${accessToken}`,
+    },
+  });
+
+  if (!response.ok) {
+    throw new Error("Error al obtener los mensajes");
+  }
+
+  return await response.json();
+};
+
 export const listMessages = async (
   accessToken: string | null,
   page: number = 1,

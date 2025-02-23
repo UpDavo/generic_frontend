@@ -22,9 +22,10 @@ import {
   Tooltip,
   ResponsiveContainer,
 } from "recharts";
+import { useRouter } from "next/navigation";
 
 export default function LogPage() {
-  const { accessToken } = useAuth();
+  const { accessToken, user } = useAuth();
   const [logs, setLogs] = useState([]);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState<boolean>(true);
@@ -43,6 +44,23 @@ export default function LogPage() {
     []
   );
   const [showCharts, setShowCharts] = useState(false);
+
+  const router = useRouter();
+  const [authorized, setAuthorized] = useState<boolean | null>(null);
+
+  useEffect(() => {
+    const hasPermission =
+      user?.role?.is_admin ||
+      user?.role?.permissions?.some((perm) => perm.path === "/push/logs");
+
+    // console.log(user?.role?.permissions);
+
+    if (hasPermission) {
+      setAuthorized(true);
+    } else {
+      setAuthorized(false);
+    }
+  }, [user, router]);
 
   // 🚀 Cargar lista de usuarios al montar el componente
   useEffect(() => {
@@ -163,6 +181,25 @@ export default function LogPage() {
     setPage(1);
   };
 
+  if (authorized === null) {
+    return (
+      <div className="flex justify-center items-center mt-64">
+        <Loader size="lg" />
+      </div>
+    );
+  }
+
+  if (!authorized) {
+    return (
+      <div className="flex flex-col justify-center items-center mt-64">
+        <h1 className="text-3xl font-bold text-red-500">Acceso Denegado</h1>
+        <p className="mt-2 text-gray-600">
+          No tienes permisos para ver esta página.
+        </p>
+      </div>
+    );
+  }
+
   return (
     <div>
       {error && (
@@ -250,6 +287,7 @@ export default function LogPage() {
               <thead className="bg-info text-white text-md uppercase font-bold">
                 <tr>
                   <th>Enviado por</th>
+                  <th>Enviado a</th>
                   <th>Tipo</th>
                   <th>Mensaje</th>
                   <th>Fecha de Envío</th>
@@ -272,7 +310,10 @@ export default function LogPage() {
                       <td className="uppercase font-bold">
                         {log.user.first_name}
                       </td>
-                      <td>{log.notification_type}</td>
+                      <td className="uppercase font-bold">
+                        {log.email}
+                      </td>
+                      <td><div class="badge">{log.notification_type}</div></td>
                       <td>{log.message}</td>
                       <td>{new Date(log.sent_at).toLocaleString()}</td>
                     </tr>

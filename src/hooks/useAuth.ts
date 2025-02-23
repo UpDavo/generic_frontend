@@ -9,7 +9,6 @@ export const useAuth = () => {
   return { user, accessToken };
 };
 
-
 export const loginUser =
   (email: string, password: string) => async (dispatch: AppDispatch) => {
     try {
@@ -22,18 +21,35 @@ export const loginUser =
     }
   };
 
-export const logoutUser = () => async (dispatch: AppDispatch) => {
-  await logout();
-  dispatch(logoutSuccess());
-};
+export const logoutUser =
+  () => async (dispatch: AppDispatch, getState: () => RootState) => {
+    try {
+      const { accessToken } = getState().auth;
 
+      await logout(accessToken);
+      dispatch(logoutSuccess());
+    } catch (error) {
+      console.error("Error al hacer logout:", error);
+    }
+  };
 
 export const refreshAccessToken = () => async (dispatch: AppDispatch) => {
-  const newToken = await refreshToken();
-  const { user } = useSelector((state: RootState) => state.auth);
-  if (newToken) {
-    dispatch(loginSuccess({ user: user, accessToken: newToken }));
-  } else {
+  try {
+    // `data` contendrá { accessToken, user }
+    const data = await refreshToken();
+
+    if (data && data.accessToken && data.user) {
+      dispatch(
+        loginSuccess({
+          user: data.user,
+          accessToken: data.accessToken,
+        })
+      );
+    } else {
+      dispatch(logoutSuccess());
+    }
+  } catch (error) {
+    console.error(error);
     dispatch(logoutSuccess());
   }
 };

@@ -24,6 +24,8 @@ function DashboardLayout({ children }: RootChildren) {
   const dispatch = useAppDispatch();
   const router = useRouter();
 
+  // console.log(user);
+
   useEffect(() => {
     const currentRoute = dashboardRoutes.find(
       (route) => route.path === pathname
@@ -42,11 +44,12 @@ function DashboardLayout({ children }: RootChildren) {
   return (
     <div className="flex h-screen">
       {/* Sidebar y Drawer móvil */}
-      <Sidebar routes={dashboardRoutes} />
+      <Sidebar routes={dashboardRoutes} user={user} />
       <MobileDrawer
         routes={dashboardRoutes}
         drawerOpened={drawerOpened}
         setDrawerOpened={setDrawerOpened}
+        user={user}
       />
 
       {/* Contenedor principal a la derecha del Sidebar */}
@@ -100,7 +103,7 @@ function DashboardLayout({ children }: RootChildren) {
 
         {/* Footer fijo en la parte inferior */}
         <footer className="bg-gray-700 text-white p-4 flex items-center justify-center">
-          <p>© 2025 - Heimdal</p>
+          <p>© {new Date().getFullYear()} - HINT by Heimdal</p>
         </footer>
       </div>
     </div>

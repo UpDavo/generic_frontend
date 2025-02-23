@@ -12,15 +12,32 @@ import {
   Loader,
   MultiSelect,
 } from "@mantine/core";
+import { useRouter } from "next/navigation";
 
 export default function PushPage() {
-  const { accessToken } = useAuth();
+  const router = useRouter();
+  const { accessToken, user } = useAuth();
   const [messages, setMessages] = useState<SingleMessage[]>([]);
   const [selectedMessage, setSelectedMessage] = useState<string | null>(null);
   const [email, setEmail] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
+  const [authorized, setAuthorized] = useState<boolean | null>(null);
+
+  useEffect(() => {
+    const hasPermission =
+      user?.role?.is_admin ||
+      user?.role?.permissions?.some((perm) => perm.path === "/push/send");
+
+    // console.log(user?.role?.permissions);
+
+    if (hasPermission) {
+      setAuthorized(true);
+    } else {
+      setAuthorized(false);
+    }
+  }, [user, router]);
 
   useEffect(() => {
     if (accessToken) {
@@ -75,9 +92,27 @@ export default function PushPage() {
     }
   };
 
+  if (authorized === null) {
+    return (
+      <div className="flex justify-center items-center mt-64">
+        <Loader size="lg" />
+      </div>
+    );
+  }
+
+  if (!authorized) {
+    return (
+      <div className="flex flex-col justify-center items-center mt-64">
+        <h1 className="text-3xl font-bold text-red-500">Acceso Denegado</h1>
+        <p className="mt-2 text-gray-600">
+          No tienes permisos para ver esta página.
+        </p>
+      </div>
+    );
+  }
+
   return (
     <div>
-
       {error && (
         <Notification
           color="red"

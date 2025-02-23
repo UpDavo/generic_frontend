@@ -8,9 +8,10 @@ import { RiEdit2Line } from "react-icons/ri";
 import { updateUser } from "@/services/userApi";
 import { useDispatch, useSelector } from "react-redux";
 import { updateUserState } from "@/features/auth/authSlice";
+import { access } from "fs";
 
 export default function ProfilePage() {
-  const { user } = useAuth();
+  const { user, accessToken } = useAuth();
   const dispatch = useDispatch();
   const [isEditing, setIsEditing] = useState(false);
   const [error, setError] = useState("");
@@ -27,18 +28,18 @@ export default function ProfilePage() {
   };
 
   const handleSave = async () => {
-    // setError("");
-    // try {
-    //   const updatedUser = await updateUser(formData);
-    //   if (updatedUser && !updatedUser.error) {
-    //     dispatch(updateUserState(updatedUser)); // Solo actualiza el usuario sin tocar los tokens
-    //     setIsEditing(false);
-    //   } else {
-    //     setError("Error al actualizar el perfil");
-    //   }
-    // } catch (err) {
-    //   setError("Ocurrió un error al actualizar el perfil. Inténtalo de nuevo.");
-    // }
+    setError("");
+    try {
+      const updatedUser = await updateUser(formData, accessToken);
+      if (updatedUser && !updatedUser.error) {
+        dispatch(updateUserState(updatedUser)); // Solo actualiza el usuario sin tocar los tokens
+        setIsEditing(false);
+      } else {
+        setError("Error al actualizar el perfil");
+      }
+    } catch (err) {
+      setError("Ocurrió un error al actualizar el perfil. Inténtalo de nuevo.");
+    }
   };
 
   return (
@@ -60,9 +61,9 @@ export default function ProfilePage() {
           <p>
             <strong>Teléfono:</strong> {user?.phone_number || "No disponible"}
           </p>
-          <p>
+          {/* <p>
             <strong>Rol:</strong> {user?.role?.name}
-          </p>
+          </p> */}
         </div>
 
         <Button
