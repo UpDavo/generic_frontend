@@ -3,12 +3,26 @@
 import { Button, Loader } from "@mantine/core";
 import { RiEdit2Line, RiDeleteBin6Line } from "react-icons/ri";
 
-const GenericTable = ({ columns, data, loading, onEdit, onDelete }) => (
+interface GenericTableProps {
+  columns?: any;
+  data?: any;
+  loading?: any;
+  onEdit?: any;
+  onDelete?: any;
+}
+
+const GenericTable = ({
+  columns,
+  data,
+  loading,
+  onEdit,
+  onDelete,
+}: GenericTableProps) => (
   <div className="overflow-x-auto rounded-md">
     <table className="table w-full hidden md:table">
       <thead className="bg-info text-white text-md uppercase font-bold">
         <tr className="text-white">
-          {columns.map((col) => (
+          {columns.map((col: any) => (
             <th key={col.key}>{col.title}</th>
           ))}
           <th>Acciones</th>
@@ -23,12 +37,12 @@ const GenericTable = ({ columns, data, loading, onEdit, onDelete }) => (
             </td>
           </tr>
         ) : data.length > 0 ? (
-          data.map((item) => (
+          data.map((item: any) => (
             <tr key={item.id}>
-              {columns.map((col) => {
+              {columns.map((col: any) => {
                 const value = col.key
                   .split(".")
-                  .reduce((acc, part) => acc && acc[part], item);
+                  .reduce((acc: any, part: any) => acc && acc[part], item);
 
                 if (Array.isArray(value)) {
                   return (
@@ -79,16 +93,21 @@ const GenericTable = ({ columns, data, loading, onEdit, onDelete }) => (
           <p className="mt-2 text-gray-500">Cargando...</p>
         </div>
       ) : data.length > 0 ? (
-        data.map((item) => (
-          <div key={item.id} className="border rounded-lg p-4 bg-white shadow-md">
-            {columns.map((col) => {
+        data.map((item: any) => (
+          <div
+            key={item.id}
+            className="border rounded-lg p-4 bg-white shadow-md"
+          >
+            {columns.map((col: any) => {
               const value = col.key
                 .split(".")
-                .reduce((acc, part) => acc && acc[part], item);
+                .reduce((acc: any, part: any) => acc && acc[part], item);
 
               let displayValue = "—";
               if (Array.isArray(value)) {
-                displayValue = value.map((val) => val.name || val.path).join(", ");
+                displayValue = value
+                  .map((val) => val.name || val.path)
+                  .join(", ");
               } else if (typeof value === "boolean") {
                 displayValue = value ? "Sí" : "No";
               } else if (value) {

@@ -24,6 +24,16 @@ import {
 } from "recharts";
 import { useRouter } from "next/navigation";
 
+interface UserChartItem {
+  first_name: string;
+  count: number;
+}
+
+interface UserChartType {
+  type: string;
+  count: number;
+}
+
 export default function LogPage() {
   const { accessToken, user } = useAuth();
   const [logs, setLogs] = useState([]);
@@ -39,10 +49,10 @@ export default function LogPage() {
   const [users, setUsers] = useState([]); // Lista de usuarios disponibles para el filtro
 
   // Datos de los gráficos
-  const [userChartData, setUserChartData] = useState([]);
-  const [notificationTypeChartData, setNotificationTypeChartData] = useState(
-    []
-  );
+  const [userChartData, setUserChartData] = useState<UserChartItem[]>([]);
+  const [notificationTypeChartData, setNotificationTypeChartData] = useState<
+    UserChartType[]
+  >([]);
   const [showCharts, setShowCharts] = useState(false);
 
   const router = useRouter();
@@ -91,7 +101,7 @@ export default function LogPage() {
   const fetchUsers = async () => {
     try {
       const data = await listUsers(accessToken);
-      const formattedUsers = data.map((user) => ({
+      const formattedUsers = data.map((user: any) => ({
         value: user.email,
         label: `${user.first_name} ${user.last_name}`,
       }));
@@ -135,10 +145,16 @@ export default function LogPage() {
         selectedUsers // <--- PASA EL ARRAY COMPLETO
       );
       // 🔹 Contar logs por usuario (`first_name`)
-      const userCounts = data.reduce((acc, log) => {
-        acc[log.user.first_name] = (acc[log.user.first_name] || 0) + 1;
-        return acc;
-      }, {});
+      const userCounts = data.reduce(
+        (
+          acc: { [x: string]: any },
+          log: { user: { first_name: string | number } }
+        ) => {
+          acc[log.user.first_name] = (acc[log.user.first_name] || 0) + 1;
+          return acc;
+        },
+        {}
+      );
 
       const userChartDataFormatted = Object.keys(userCounts).map(
         (first_name) => ({
@@ -150,12 +166,18 @@ export default function LogPage() {
       setUserChartData(userChartDataFormatted);
 
       // 🔹 Contar logs por tipo de notificación (`notification_type`)
-      const notificationCounts = data.reduce((acc, log) => {
-        acc[log.notification_type] = (acc[log.notification_type] || 0) + 1;
-        return acc;
-      }, {});
+      const notificationCounts = data.reduce(
+        (
+          acc: { [x: string]: any },
+          log: { notification_type: string | number }
+        ) => {
+          acc[log.notification_type] = (acc[log.notification_type] || 0) + 1;
+          return acc;
+        },
+        {}
+      );
 
-      const notificationTypeChartDataFormatted = Object.keys(
+      const notificationTypeChartDataFormatted: any = Object.keys(
         notificationCounts
       ).map((type) => ({
         type,
@@ -302,7 +324,7 @@ export default function LogPage() {
                     </td>
                   </tr>
                 ) : logs.length > 0 ? (
-                  logs.map((log) => (
+                  logs.map((log: any) => (
                     <tr
                       key={log.id}
                       className="hover:bg-slate-200 hover:border-slate-200"
@@ -310,10 +332,10 @@ export default function LogPage() {
                       <td className="uppercase font-bold">
                         {log.user.first_name}
                       </td>
-                      <td className="uppercase font-bold">
-                        {log.email}
+                      <td className="uppercase font-bold">{log.email}</td>
+                      <td>
+                        <div className="badge">{log.notification_type}</div>
                       </td>
-                      <td><div class="badge">{log.notification_type}</div></td>
                       <td>{log.message}</td>
                       <td>{new Date(log.sent_at).toLocaleString()}</td>
                     </tr>

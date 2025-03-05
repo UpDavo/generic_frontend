@@ -52,7 +52,7 @@ export default function UserPage() {
   }, [accessToken]);
 
   // Transformar roles a formato para el Dropdown
-  const roleOptions = roles.map((role) => ({
+  const roleOptions = roles.map((role: any) => ({
     value: role.id.toString(),
     label: role.name,
   }));

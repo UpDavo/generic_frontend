@@ -3,14 +3,22 @@ import { User } from "@/interfaces/user";
 export interface Route {
   path: string;
   name: string;
+  permission?: string;
 }
 
+export interface RouteGroup {
+  name: string;
+  children: Route[];
+}
+
+export type SidebarRoute = Route | RouteGroup;
+
 export interface SidebarProps {
-  routes: Route[];
+  routes: any[];
 }
 
 export interface MobileDrawerProps {
-  routes: Route[];
+  routes: SidebarRoute[];
   drawerOpened: boolean;
   setDrawerOpened: (open: boolean) => void;
   user?: User | null;

@@ -73,7 +73,7 @@ export const createUser = async (user: User, accessToken: string | null) => {
     first_name: user.first_name,
     last_name: user.last_name,
     phone_number: user.phone_number,
-    role: parseInt(user.role),
+    role: user.role ? user.role.id : 0,
   };
 
   const response = await fetch(`${API_BASE_URL}/auth/users-list/`, {
@@ -121,7 +121,7 @@ export const userUpdate = async (
     first_name: sendUser.first_name,
     last_name: sendUser.last_name,
     phone_number: sendUser.phone_number,
-    role: parseInt(sendUser.role),
+    role: sendUser.role ? sendUser.role.id : 0,
   };
 
   try {

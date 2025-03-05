@@ -47,7 +47,7 @@ export default function ReportPage() {
 
   const getMonthName = (dateString: string): string => {
     const date = new Date(dateString);
-    return date.toLocaleString("es-ES", { month: "long" }).toUpperCase(); // Devuelve el nombre del mes en español
+    return date.toLocaleString("es-ES", { month: "long" }).toUpperCase();
   };
 
   const loadReport = async () => {
@@ -91,16 +91,17 @@ export default function ReportPage() {
       {reportData.length > 0 && (
         <div className="mt-6 grid gap-6">
           {reportData.map((report) => {
+            // Tipar la data del gráfico (por ej. con ChartDataItem)
             const chartData = report.dates.map((dateObj) => ({
               period: getMonthName(dateObj.start),
-              score: Math.round(dateObj.score), // Score sin decimales
+              score: Math.round(dateObj.score),
               positivo: Math.round(
                 dateObj.sentiment_distribution?.Positivo || 0
-              ), // En porcentaje
+              ),
               negativo: Math.round(
                 dateObj.sentiment_distribution?.Negativo || 0
-              ), // En porcentaje
-              neutral: Math.round(dateObj.sentiment_distribution?.Neutral || 0), // En porcentaje
+              ),
+              neutral: Math.round(dateObj.sentiment_distribution?.Neutral || 0),
             }));
 
             return (
@@ -122,7 +123,8 @@ export default function ReportPage() {
                         fill="black"
                         fontSize={16}
                         fontWeight="bold"
-                        formatter={(value) => `${value} PT`}
+                        // 👇 Indica que value es número
+                        formatter={(value: number) => `${value} PT`}
                       />
                     </Bar>
 
@@ -138,7 +140,7 @@ export default function ReportPage() {
                         fill="white"
                         fontSize={12}
                         fontWeight="bold"
-                        formatter={(value) => `${value}%`}
+                        formatter={(value: number) => `${value}%`}
                       />
                     </Bar>
                     <Bar
@@ -152,7 +154,7 @@ export default function ReportPage() {
                         fill="white"
                         fontSize={12}
                         fontWeight="bold"
-                        formatter={(value) => `${value}%`}
+                        formatter={(value: number) => `${value}%`}
                       />
                     </Bar>
                     <Bar
@@ -166,7 +168,7 @@ export default function ReportPage() {
                         fill="white"
                         fontSize={12}
                         fontWeight="bold"
-                        formatter={(value) => `${value}%`}
+                        formatter={(value: number) => `${value}%`}
                       />
                     </Bar>
                   </BarChart>

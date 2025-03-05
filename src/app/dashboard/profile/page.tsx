@@ -6,9 +6,8 @@ import { useAuth } from "@/hooks/useAuth";
 import { Modal, Button, TextInput } from "@mantine/core";
 import { RiEdit2Line } from "react-icons/ri";
 import { updateUser } from "@/services/userApi";
-import { useDispatch, useSelector } from "react-redux";
+import { useDispatch } from "react-redux";
 import { updateUserState } from "@/features/auth/authSlice";
-import { access } from "fs";
 
 export default function ProfilePage() {
   const { user, accessToken } = useAuth();
@@ -23,7 +22,7 @@ export default function ProfilePage() {
     role: user?.role?.id || 1,
   });
 
-  const handleChange = (e) => {
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setFormData({ ...formData, [e.target.name]: e.target.value });
   };
 
@@ -32,7 +31,7 @@ export default function ProfilePage() {
     try {
       const updatedUser = await updateUser(formData, accessToken);
       if (updatedUser && !updatedUser.error) {
-        dispatch(updateUserState(updatedUser)); // Solo actualiza el usuario sin tocar los tokens
+        dispatch(updateUserState(updatedUser));
         setIsEditing(false);
       } else {
         setError("Error al actualizar el perfil");
@@ -61,9 +60,6 @@ export default function ProfilePage() {
           <p>
             <strong>Teléfono:</strong> {user?.phone_number || "No disponible"}
           </p>
-          {/* <p>
-            <strong>Rol:</strong> {user?.role?.name}
-          </p> */}
         </div>
 
         <Button

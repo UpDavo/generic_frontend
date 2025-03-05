@@ -15,6 +15,41 @@ import {
 import { useAuth } from "@/hooks/useAuth";
 import { useRouter } from "next/navigation";
 
+/**
+ * Representa un “log” individual en `results`.
+ */
+export interface ILog {
+  id: number;
+  email: string;
+  notification_type: string;
+  message: string;
+  sent_at: string;
+  user: {
+    id: number;
+    email: string;
+    first_name: string;
+    last_name: string;
+    phone_number: string | null;
+    is_verified: boolean;
+  };
+}
+
+/**
+ * Representa la forma completa de la respuesta paginada.
+ */
+export interface IPaginatedLogs {
+  count: number;
+  next: string | null;
+  previous: string | null;
+  results: ILog[];
+}
+
+// 2) Define la interfaz para cada elemento de userCalls
+interface IUserCall {
+  user: string;
+  count: number;
+}
+
 export default function DashboardHome() {
   const { accessToken, user } = useAuth();
   const router = useRouter();
@@ -25,7 +60,9 @@ export default function DashboardHome() {
   const [error, setError] = useState<string | null>(null);
   const [totalCalls, setTotalCalls] = useState<number>(0);
   const [cost, setCost] = useState<number>(0);
-  const [userCalls, setUserCalls] = useState([]);
+
+  // 3) Tipar userCalls
+  const [userCalls, setUserCalls] = useState<IUserCall[]>([]);
 
   const [authorized, setAuthorized] = useState<boolean | null>(null);
 
@@ -43,13 +80,16 @@ export default function DashboardHome() {
 
   useEffect(() => {
     fetchDashboardData();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [sentAtGte, sentAtLte]);
 
   const fetchDashboardData = async () => {
     setLoading(true);
     setError(null);
+
     try {
-      const data = await listLogsReport(
+      // 1) Obtenemos la respuesta Paginada
+      const paginated: IPaginatedLogs = await listLogsReport(
         accessToken,
         null,
         sentAtGte,
@@ -57,29 +97,33 @@ export default function DashboardHome() {
         []
       );
 
+      // 2) Extraemos el array de logs
+      const logs: ILog[] = paginated.results;
+
+      // 3) Si vas a llamar a getPrice
       const prices = await getPrice(accessToken);
 
-      // Calcular total de llamadas
-      const total = data.length;
+      // 4) Calcular total de llamadas
+      const total = logs.length;
       setTotalCalls(total);
 
-      // Calcular costo (Ejemplo: $0.05 por llamada)
+      // 5) Calcular costo
       const calculatedCost = total * prices.value;
       setCost(calculatedCost);
 
-      // Calcular llamadas por usuario
-      const userCounts = data.reduce((acc, log) => {
+      // 6) Calcular llamadas por usuario (reduce)
+      const userCounts = logs.reduce<Record<string, number>>((acc, log) => {
         const userName = log.user.first_name;
         acc[userName] = (acc[userName] || 0) + 1;
         return acc;
       }, {});
 
-      const formattedUserCalls = Object.keys(userCounts).map((user) => ({
-        user,
-        count: userCounts[user],
+      const formatted = Object.keys(userCounts).map((key) => ({
+        user: key,
+        count: userCounts[key],
       }));
 
-      setUserCalls(formattedUserCalls);
+      setUserCalls(formatted);
     } catch (err) {
       console.error(err);
       setError("Error al cargar los datos del dashboard.");

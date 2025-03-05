@@ -13,8 +13,21 @@ import {
 import { RiAddLine, RiSearchLine } from "react-icons/ri";
 import GenericTable from "./GenericTable";
 
+interface GenericListPageProps {
+  title?: string;
+  fetchFunction?: any;
+  createFunction?: any;
+  updateFunction?: any;
+  deleteFunction?: any;
+  columns?: any;
+  initialFormState?: any;
+  isMultiSelectFields?: any;
+  isDropdown?: any;
+  multiData?: any;
+}
+
 const GenericListPage = ({
-  title,
+  title = "",
   fetchFunction,
   createFunction,
   updateFunction,
@@ -24,11 +37,11 @@ const GenericListPage = ({
   isMultiSelectFields = {},
   isDropdown = {},
   multiData = {},
-}) => {
+}: GenericListPageProps) => {
   const { user, accessToken } = useAuth();
   const [data, setData] = useState([]);
   const [formState, setFormState] = useState(initialFormState);
-  const [error, setError] = useState(null);
+  const [error, setError] = useState<any>();
   const [loading, setLoading] = useState(true);
   const [page, setPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
@@ -60,7 +73,7 @@ const GenericListPage = ({
     }
   };
 
-  const handleDelete = async (id) => {
+  const handleDelete = async (id: any) => {
     try {
       await deleteFunction(id, accessToken);
       fetchData();
@@ -81,7 +94,7 @@ const GenericListPage = ({
 
     try {
       if (editingId) {
-        await updateFunction(editingId, formState, accessToken, user.id);
+        await updateFunction(editingId, formState, accessToken, user?.id);
       } else {
         await createFunction(formState, accessToken);
       }
@@ -131,7 +144,7 @@ const GenericListPage = ({
             columns={columns}
             data={data}
             loading={loading}
-            onEdit={(item) => {
+            onEdit={(item: any) => {
               setFormState(item);
               setEditingId(item.id);
               setModalOpen(true);
