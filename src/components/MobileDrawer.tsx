@@ -43,13 +43,13 @@ const MobileDrawer: React.FC<MobileDrawerProps & { user: any }> = ({
     <Drawer
       opened={drawerOpened}
       onClose={() => setDrawerOpened(false)}
-      title="Dashboard"
+      // title="Dashboard"
       padding="xl"
-      className="text-white bg-base-100"
+      className="text-white"
     >
-      <nav className="px-2">
+      <nav className="px-1">
         <Box w="100%">
-          <h1 className="text-neutral text-3xl font-bold mb-5">Menu</h1>
+          <h1 className="text-neutral text-5xl font-bold mb-5">HINT</h1>
           {filteredRoutes.map((route) => {
             const hasChildren = Boolean(route.children);
 
@@ -77,7 +77,7 @@ const MobileDrawer: React.FC<MobileDrawerProps & { user: any }> = ({
                                 className={`cursor-pointer mt-2 px-4 py-2 rounded transition-all duration-300 ${
                                   isActive
                                     ? "bg-info text-base-100"
-                                    : "text-gray-300 hover:bg-primary hover:text-white"
+                                    : "text-black hover:bg-primary hover:text-white bg-slate-300"
                                 }`}
                                 onClick={() => setDrawerOpened(false)}
                               >
@@ -97,7 +97,7 @@ const MobileDrawer: React.FC<MobileDrawerProps & { user: any }> = ({
                       className={`cursor-pointer mt-2 px-4 py-2 rounded transition-all duration-300 ${
                         pathname === route.path
                           ? "bg-info text-base-100"
-                          : "text-gray-300 hover:bg-primary hover:text-white"
+                          : "text-black hover:bg-primary hover:text-white bg-slate-300"
                       }`}
                       onClick={() => setDrawerOpened(false)}
                     >

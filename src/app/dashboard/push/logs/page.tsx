@@ -63,8 +63,6 @@ export default function LogPage() {
       user?.role?.is_admin ||
       user?.role?.permissions?.some((perm) => perm.path === "/push/logs");
 
-    // console.log(user?.role?.permissions);
-
     if (hasPermission) {
       setAuthorized(true);
     } else {
@@ -72,21 +70,21 @@ export default function LogPage() {
     }
   }, [user, router]);
 
-  // 🚀 Cargar lista de usuarios al montar el componente
+  // Cargar lista de usuarios al montar el componente
   useEffect(() => {
     if (accessToken) {
       fetchUsers();
     }
   }, [accessToken]);
 
-  // 🚀 Actualizar la tabla cuando cambian los filtros o la página
+  // Actualizar la tabla cuando cambian los filtros o la página
   useEffect(() => {
     if (accessToken) {
       fetchLogs();
     }
   }, [accessToken, page, sentAtGte, sentAtLte, selectedUsers]);
 
-  // 🚀 Actualizar las gráficas solo si hay filtros activos
+  // Actualizar los gráficos cuando hay filtros activos
   useEffect(() => {
     if (accessToken && (sentAtGte || sentAtLte || selectedUsers.length > 0)) {
       fetchLogsReport();
@@ -97,7 +95,7 @@ export default function LogPage() {
     }
   }, [accessToken, sentAtGte, sentAtLte, selectedUsers]);
 
-  // 📌 Obtiene la lista de usuarios disponibles para el filtro
+  // Obtiene la lista de usuarios disponibles para el filtro
   const fetchUsers = async () => {
     try {
       const data = await listUsers(accessToken);
@@ -111,7 +109,7 @@ export default function LogPage() {
     }
   };
 
-  // 📌 Obtiene los logs paginados para la tabla
+  // Obtiene los logs paginados para la tabla
   const fetchLogs = async () => {
     setLoading(true);
     try {
@@ -121,7 +119,7 @@ export default function LogPage() {
         null,
         sentAtGte,
         sentAtLte,
-        selectedUsers // <--- PASA EL ARRAY COMPLETO
+        selectedUsers
       );
       setLogs(data.results);
       setTotalPages(Math.ceil(data.count / 10));
@@ -134,7 +132,7 @@ export default function LogPage() {
     }
   };
 
-  // 📌 Obtiene todos los logs sin paginación para los gráficos
+  // Obtiene todos los logs (sin paginación) para los gráficos
   const fetchLogsReport = async () => {
     try {
       const data = await listLogsReport(
@@ -142,14 +140,11 @@ export default function LogPage() {
         null,
         sentAtGte,
         sentAtLte,
-        selectedUsers // <--- PASA EL ARRAY COMPLETO
+        selectedUsers
       );
-      // 🔹 Contar logs por usuario (`first_name`)
+      // Contar logs por usuario
       const userCounts = data.reduce(
-        (
-          acc: { [x: string]: any },
-          log: { user: { first_name: string | number } }
-        ) => {
+        (acc: any, log: { user: { first_name: string } }) => {
           acc[log.user.first_name] = (acc[log.user.first_name] || 0) + 1;
           return acc;
         },
@@ -162,22 +157,18 @@ export default function LogPage() {
           count: userCounts[first_name],
         })
       );
-
       setUserChartData(userChartDataFormatted);
 
-      // 🔹 Contar logs por tipo de notificación (`notification_type`)
+      // Contar logs por tipo de notificación
       const notificationCounts = data.reduce(
-        (
-          acc: { [x: string]: any },
-          log: { notification_type: string | number }
-        ) => {
+        (acc: any, log: { notification_type: string }) => {
           acc[log.notification_type] = (acc[log.notification_type] || 0) + 1;
           return acc;
         },
         {}
       );
 
-      const notificationTypeChartDataFormatted: any = Object.keys(
+      const notificationTypeChartDataFormatted = Object.keys(
         notificationCounts
       ).map((type) => ({
         type,
@@ -194,7 +185,7 @@ export default function LogPage() {
     }
   };
 
-  // 📌 Limpiar filtros y ocultar las gráficas
+  // Limpiar filtros
   const clearFilters = () => {
     setSentAtGte(null);
     setSentAtLte(null);
@@ -304,8 +295,9 @@ export default function LogPage() {
       {/* Tabla de logs con paginación */}
       <div className="card bg-base-100 shadow-xl">
         <div className="card-body">
+          {/* Vista de tabla solo para pantallas medianas en adelante */}
           <div className="overflow-x-auto rounded-md">
-            <Table className="table">
+            <table className="table w-full hidden md:table">
               <thead className="bg-info text-white text-md uppercase font-bold">
                 <tr>
                   <th>Enviado por</th>
@@ -334,7 +326,9 @@ export default function LogPage() {
                       </td>
                       <td className="uppercase font-bold">{log.email}</td>
                       <td>
-                        <div className="badge uppercase">{log.notification_type}</div>
+                        <div className="badge uppercase">
+                          {log.notification_type}
+                        </div>
                       </td>
                       <td>{log.message}</td>
                       <td>{new Date(log.sent_at).toLocaleString()}</td>
@@ -342,14 +336,59 @@ export default function LogPage() {
                   ))
                 ) : (
                   <tr>
-                    <td colSpan={4} className="text-center py-4 text-gray-500">
+                    <td colSpan={5} className="text-center py-4 text-gray-500">
                       No se encontraron logs.
                     </td>
                   </tr>
                 )}
               </tbody>
-            </Table>
+            </table>
+
+            {/* Vista móvil (pantallas pequeñas) */}
+            <div className="md:hidden space-y-4">
+              {loading ? (
+                <div className="flex flex-col items-center py-4">
+                  <Loader size="sm" color="blue" />
+                  <p className="mt-2 text-gray-500">Cargando...</p>
+                </div>
+              ) : logs.length > 0 ? (
+                logs.map((log: any) => (
+                  <div
+                    key={log.id}
+                    className="border rounded-lg p-4 bg-white shadow-md"
+                  >
+                    <div className="mb-2">
+                      <span className="font-semibold">Enviado por: </span>
+                      <span className="uppercase font-bold">
+                        {log.user.first_name}
+                      </span>
+                    </div>
+                    <div className="mb-2">
+                      <span className="font-semibold">Enviado a: </span>
+                      <span className="uppercase font-bold">{log.email}</span>
+                    </div>
+                    <div className="mb-2">
+                      <span className="font-semibold">Tipo: </span>
+                      <span className="badge uppercase">
+                        {log.notification_type}
+                      </span>
+                    </div>
+                    <div className="mb-2">
+                      <span className="font-semibold">Mensaje: </span>
+                      <span>{log.message}</span>
+                    </div>
+                    <div>
+                      <span className="font-semibold">Fecha de Envío: </span>
+                      <span>{new Date(log.sent_at).toLocaleString()}</span>
+                    </div>
+                  </div>
+                ))
+              ) : (
+                <div className="text-center py-4">No se encontraron logs.</div>
+              )}
+            </div>
           </div>
+          {/* Paginación */}
           <Pagination
             value={page}
             onChange={(newPage) => setPage(newPage)}
