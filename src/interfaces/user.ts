@@ -2,7 +2,7 @@ export interface User {
   id: number;
   email: string;
   first_name: string;
-  last_name: string;
+  last_name: string | null;
   phone_number: string | null;
   is_verified: boolean;
   role: {
@@ -19,12 +19,10 @@ export interface SimpleUser {
   first_name: string | null;
   last_name: string | null;
   phone_number: string | null;
-  role: number | null
+  role: number | null;
 }
 
 export interface AuthState {
   user: User | null;
   accessToken: string | null;
 }
-
-

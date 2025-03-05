@@ -15,7 +15,7 @@ import { useRouter } from "next/navigation";
 import { Loader } from "@mantine/core";
 
 export default function UserPage() {
-  const [roles, setRoles] = useState([]); // Inicializar como array vacío
+  const [roles, setRoles] = useState([]);
   const { accessToken, user } = useAuth();
 
   const router = useRouter();
@@ -25,8 +25,6 @@ export default function UserPage() {
     const hasPermission =
       user?.role?.is_admin ||
       user?.role?.permissions?.some((perm) => perm.path === "/push");
-
-    // console.log(user?.role?.permissions);
 
     if (hasPermission) {
       setAuthorized(true);

@@ -15,41 +15,6 @@ import {
 import { useAuth } from "@/hooks/useAuth";
 import { useRouter } from "next/navigation";
 
-/**
- * Representa un “log” individual en `results`.
- */
-export interface ILog {
-  id: number;
-  email: string;
-  notification_type: string;
-  message: string;
-  sent_at: string;
-  user: {
-    id: number;
-    email: string;
-    first_name: string;
-    last_name: string;
-    phone_number: string | null;
-    is_verified: boolean;
-  };
-}
-
-/**
- * Representa la forma completa de la respuesta paginada.
- */
-export interface IPaginatedLogs {
-  count: number;
-  next: string | null;
-  previous: string | null;
-  results: ILog[];
-}
-
-// 2) Define la interfaz para cada elemento de userCalls
-interface IUserCall {
-  user: string;
-  count: number;
-}
-
 export default function DashboardHome() {
   const { accessToken, user } = useAuth();
   const router = useRouter();
@@ -62,7 +27,7 @@ export default function DashboardHome() {
   const [cost, setCost] = useState<number>(0);
 
   // 3) Tipar userCalls
-  const [userCalls, setUserCalls] = useState<IUserCall[]>([]);
+  const [userCalls, setUserCalls] = useState<any[]>([]);
 
   const [authorized, setAuthorized] = useState<boolean | null>(null);
 
@@ -89,7 +54,7 @@ export default function DashboardHome() {
 
     try {
       // 1) Obtenemos la respuesta Paginada
-      const paginated: IPaginatedLogs = await listLogsReport(
+      const data: any[] = await listLogsReport(
         accessToken,
         null,
         sentAtGte,
@@ -97,14 +62,11 @@ export default function DashboardHome() {
         []
       );
 
-      // 2) Extraemos el array de logs
-      const logs: ILog[] = paginated.results;
-
       // 3) Si vas a llamar a getPrice
       const prices = await getPrice(accessToken);
 
       // 4) Calcular total de llamadas
-      const total = logs.length;
+      const total = data.length;
       setTotalCalls(total);
 
       // 5) Calcular costo
@@ -112,7 +74,7 @@ export default function DashboardHome() {
       setCost(calculatedCost);
 
       // 6) Calcular llamadas por usuario (reduce)
-      const userCounts = logs.reduce<Record<string, number>>((acc, log) => {
+      const userCounts = data.reduce<Record<string, number>>((acc, log) => {
         const userName = log.user.first_name;
         acc[userName] = (acc[userName] || 0) + 1;
         return acc;

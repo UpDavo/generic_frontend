@@ -116,11 +116,12 @@ export const userUpdate = async (
   accessToken: string | null,
   authUserId: number // Nuevo parámetro
 ) => {
+  console.log(sendUser);
   const user_data = {
     email: sendUser.email,
     first_name: sendUser.first_name,
-    last_name: sendUser.last_name,
-    phone_number: sendUser.phone_number,
+    last_name: sendUser.last_name ? sendUser.last_name : "",
+    phone_number: sendUser.phone_number ? sendUser.phone_number : "",
     role: sendUser.role ? sendUser.role.id : 0,
   };
 

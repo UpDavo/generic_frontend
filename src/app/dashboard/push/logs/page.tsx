@@ -318,7 +318,7 @@ export default function LogPage() {
               <tbody className="bg-white">
                 {loading ? (
                   <tr>
-                    <td colSpan={3} className="text-center py-4">
+                    <td colSpan={5} className="text-center py-4">
                       <Loader size="sm" color="blue" />
                       <p className="mt-2 text-gray-500">Cargando...</p>
                     </td>
@@ -334,7 +334,7 @@ export default function LogPage() {
                       </td>
                       <td className="uppercase font-bold">{log.email}</td>
                       <td>
-                        <div className="badge">{log.notification_type}</div>
+                        <div className="badge uppercase">{log.notification_type}</div>
                       </td>
                       <td>{log.message}</td>
                       <td>{new Date(log.sent_at).toLocaleString()}</td>
