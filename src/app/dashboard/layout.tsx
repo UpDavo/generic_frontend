@@ -25,14 +25,32 @@ function DashboardLayout({ children }: RootChildren) {
   const router = useRouter();
 
   // console.log(user);
+  // Busca dentro de un array de rutas (y sus hijos)
+  // la que coincida con el pathname actual.
+  function findCurrentRoute(routes: any[], pathname: string): any | null {
+    for (const route of routes) {
+      // Si la ruta actual tiene path y coincide exactamente con pathname
+      if (route.path === pathname) {
+        return route;
+      }
+
+      // Si hay hijos, buscar en ellos recursivamente
+      if (route.children) {
+        const childMatch = findCurrentRoute(route.children, pathname);
+        if (childMatch) {
+          return childMatch;
+        }
+      }
+    }
+    return null;
+  }
 
   useEffect(() => {
-    const currentRoute = dashboardRoutes.find(
-      (route) => route.path === pathname
-    );
+    const currentRoute = findCurrentRoute(dashboardRoutes, pathname);
     if (currentRoute) {
       setActiveRoute(currentRoute.name);
-      // console.log("Ruta activa:", currentRoute);
+    } else {
+      setActiveRoute("");
     }
   }, [pathname]);
 
@@ -42,7 +60,7 @@ function DashboardLayout({ children }: RootChildren) {
   };
 
   return (
-    <div className="flex h-screen">
+    <div className="flex h-screen-dvh">
       {/* Sidebar y Drawer móvil */}
       <Sidebar routes={dashboardRoutes} user={user} />
       <MobileDrawer
