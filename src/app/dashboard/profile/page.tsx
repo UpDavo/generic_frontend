@@ -43,11 +43,11 @@ export default function ProfilePage() {
 
   return (
     <div className="flex w-full items-center">
-      <div className="card w-full bg-base-100 shadow-xl p-6">
-        <h1 className="text-2xl font-bold text-primary mb-4">
+      <div className="card w-full bg-base-100 shadow-xl p-6 dark:text-white">
+        <h1 className="text-2xl font-bold text-primary mb-4 dark:text-white">
           Perfil de Usuario
         </h1>
-        <div className="space-y-3 text-neutral">
+        <div className="space-y-3 text-neutral dark:text-white">
           <div className="bg-info rounded-full w-32 h-32 flex items-center justify-center text-2xl mt-2 mb-8 font-bold text-white uppercase">
             {user?.first_name?.charAt(0) || "U"}
           </div>
@@ -75,8 +75,9 @@ export default function ProfilePage() {
         onClose={() => setIsEditing(false)}
         title="Editar Perfil"
         centered
+        className="dark:text-slate-700"
       >
-        <div className="space-y-4">
+        <div className="space-y-4 dark:text-slate-700">
           <TextInput
             label="Nombre"
             name="first_name"
@@ -110,11 +111,8 @@ export default function ProfilePage() {
           />
           {error && <p className="text-red-500 text-sm">{error}</p>}
         </div>
-        <div className="mt-8 flex justify-end gap-2">
-          <Button className="btn btn-info" onClick={() => setIsEditing(false)}>
-            Cancelar
-          </Button>
-          <Button onClick={handleSave} className="btn btn-info text-white">
+        <div className="mt-8">
+          <Button onClick={handleSave} className="btn btn-info text-white btn-block">
             Guardar Cambios
           </Button>
         </div>

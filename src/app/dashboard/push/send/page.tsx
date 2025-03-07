@@ -146,7 +146,7 @@ export default function PushPage() {
             placeholder="Busque y seleccione un mensaje"
             data={messages.map((msg) => ({
               value: msg.id.toString(),
-              label: msg.name,
+              label: msg.name.toUpperCase(),
             }))}
             searchable
             value={selectedMessage ? [selectedMessage] : []}

@@ -62,6 +62,7 @@ const GenericListPage = ({
     setLoading(true);
     try {
       const data = await fetchFunction(accessToken, page, searchQuery);
+      console.log(data.results);
       setData(data.results);
       setTotalPages(Math.ceil(data.count / 10));
       setError(null);

@@ -1,6 +1,7 @@
 export interface Message {
   notification_type: string;
   name: string;
+  title: string;
   message: string;
 }
 

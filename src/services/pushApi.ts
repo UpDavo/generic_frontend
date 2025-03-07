@@ -150,6 +150,7 @@ export const updateMessage = async (
   message: Message,
   accessToken: string | null
 ) => {
+  console.log(message);
   const response = await fetch(`${API_BASE_URL}/tada/notifications/${id}/`, {
     method: "PUT",
     headers: {

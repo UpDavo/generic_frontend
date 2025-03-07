@@ -64,6 +64,7 @@ export default function DashboardHome() {
 
       // 3) Si vas a llamar a getPrice
       const prices = await getPrice(accessToken);
+      console.log(prices);
 
       // 4) Calcular total de llamadas
       const total = data.length;
@@ -163,7 +164,7 @@ export default function DashboardHome() {
 
             {/* Llamadas Generales */}
             <div className="card bg-base-100 shadow-xl p-6 text-center">
-              <h2 className="text-lg font-bold mb-2">Llamadas Mensuales</h2>
+              <h2 className="text-lg font-bold mb-2">Push Mensuales</h2>
               <p className="text-4xl font-extrabold text-blue-500">
                 {totalCalls}
               </p>

@@ -21,7 +21,6 @@ export default {
   plugins: [require("daisyui")],
   daisyui: {
     themes: [
-      // "garden",
       {
         mytheme: {
           primary: "#433fe9",
@@ -35,7 +34,20 @@ export default {
           error: "#E95F76",
           black: "#3B3B3B",
         },
+        mydarktheme: {
+          primary: "#756EF3",
+          secondary: "#433fe9",
+          accent: "#A29CF8",
+          neutral: "#1E1E2E",
+          "base-100": "#1A1B26",
+          info: "#5A57EE",
+          success: "#4F9F85",
+          warning: "#F4A261",
+          error: "#E95F76",
+          black: "#000000",
+        },
       },
     ],
   },
+  
 } satisfies Config;

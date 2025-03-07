@@ -4,7 +4,7 @@ export interface User {
   first_name: string;
   last_name: string | null;
   phone_number: string | null;
-  is_verified: boolean;
+  is_verified: boolean | null;
   role: {
     id: number;
     name: string;
@@ -16,6 +16,15 @@ export interface User {
 
 export interface SimpleUser {
   email: string | null;
+  first_name: string | null;
+  last_name: string | null;
+  phone_number: string | null;
+  role: number | null;
+}
+
+export interface SimpleUserPass {
+  email: string | null;
+  password: string | null;
   first_name: string | null;
   last_name: string | null;
   phone_number: string | null;

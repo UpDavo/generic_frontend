@@ -87,14 +87,14 @@ function DashboardLayout({ children }: RootChildren) {
 
           {/* Información de usuario (puedes moverla a tu “sub-header” si prefieres) */}
           {user && (
-            <div className="flex flex-row items-center gap-2">
+            <div className="flex flex-row items-center gap-2 ">
               <div className="dropdown dropdown-end">
                 <label tabIndex={0} className="btn rounded-full btn-ghost">
                   <RiSettings3Line className="text-xl" />
                 </label>
                 <ul
                   tabIndex={0}
-                  className="dropdown-content menu bg-base-100 text-black rounded-box w-52 mt-3 z-[100] gap-2 shadow-md"
+                  className="dropdown-content menu bg-base-100 text-black dark:text-white rounded-box w-52 mt-3 z-[100] gap-2 shadow-md"
                 >
                   <li>
                     <Link href="/dashboard/profile">Ver Perfil</Link>

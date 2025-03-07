@@ -1,6 +1,6 @@
 import { useAuth } from "@/hooks/useAuth";
 import API_BASE_URL from "../config/apiConfig";
-import { SimpleUser, User } from "@/interfaces/user";
+import { SimpleUser, SimpleUserPass, User } from "@/interfaces/user";
 
 export const updateUser = async (
   sipleUser: SimpleUser,
@@ -67,13 +67,17 @@ export const usersList = async (
 };
 
 // Crear un nuevo usuario
-export const createUser = async (user: User, accessToken: string | null) => {
+export const createUser = async (
+  user: SimpleUserPass,
+  accessToken: string | null
+) => {
   const user_data = {
     email: user.email,
+    password: user.password,
     first_name: user.first_name,
     last_name: user.last_name,
     phone_number: user.phone_number,
-    role: user.role ? user.role.id : 0,
+    role: user.role ? user.role : 0,
   };
 
   const response = await fetch(`${API_BASE_URL}/auth/users-list/`, {
@@ -112,9 +116,9 @@ export const getUser = async (id: number, accessToken: string | null) => {
 // Actualizar un usuario por ID
 export const userUpdate = async (
   id: number,
-  sendUser: User,
+  sendUser: SimpleUser,
   accessToken: string | null,
-  authUserId: number // Nuevo parámetro
+  authUserId?: number // Nuevo parámetro
 ) => {
   console.log(sendUser);
   const user_data = {
@@ -122,7 +126,7 @@ export const userUpdate = async (
     first_name: sendUser.first_name,
     last_name: sendUser.last_name ? sendUser.last_name : "",
     phone_number: sendUser.phone_number ? sendUser.phone_number : "",
-    role: sendUser.role ? sendUser.role.id : 0,
+    role: sendUser.role ? sendUser.role : 0,
   };
 
   try {
