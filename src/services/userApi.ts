@@ -78,6 +78,7 @@ export const createUser = async (
     last_name: user.last_name,
     phone_number: user.phone_number,
     role: user.role ? user.role : 0,
+    is_verified: true,
   };
 
   const response = await fetch(`${API_BASE_URL}/auth/users-list/`, {
