@@ -222,13 +222,13 @@ export default function MessagePage() {
                       <td className="uppercase badge badge-info font-bold mx-3">
                         {item.notification_type || "—"}
                       </td>
-                      <td className="uppercase dark:text-slate-700">
+                      <td className="uppercase ">
                         {item.name || "—"}
                       </td>
-                      <td className="uppercase dark:text-slate-700">
+                      <td className="uppercase ">
                         {item.title || "—"}
                       </td>
-                      <td className="dark:text-slate-700">
+                      <td className="">
                         {item.message || "—"}
                       </td>
                       <td className="flex gap-2">
@@ -277,7 +277,7 @@ export default function MessagePage() {
                 data.map((item) => (
                   <div
                     key={item.id}
-                    className="border rounded-lg p-4 bg-white shadow-md dark:text-slate-700"
+                    className="border rounded-lg p-4 bg-white shadow-md "
                   >
                     <div className="mb-2">
                       <span className="font-semibold">ID: </span>
@@ -351,9 +351,9 @@ export default function MessagePage() {
         }}
         title={editingId ? "Editar Mensaje" : "Nuevo Mensaje"}
         centered
-        className="dark:text-slate-700"
+        className=""
       >
-        <div className="space-y-4 dark:text-slate-700">
+        <div className="space-y-4 ">
           <TextInput
             label="Tipo"
             placeholder="Identificador único"

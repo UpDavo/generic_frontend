@@ -21,7 +21,15 @@ export default function RootLayout({ children }: RootChildren) {
     <html lang="en">
       <head>
         <title>HINT - Integraciones</title>
-        <meta name="description" content="Descripción de mi aplicación" />
+        <meta
+          name="description"
+          content="HINT by heimdal, integraciones múltiples"
+        />
+        <meta name="robots" content="noindex, nofollow" />
+        <meta
+          name="viewport"
+          content="width=device-width, initial-scale=1, maximum-scale=1"
+        />
         <link
           rel="icon"
           href="https://heimdal.ec/wp-content/uploads/2023/01/cropped-Icono.png"

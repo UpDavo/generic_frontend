@@ -319,7 +319,7 @@ export default function LogPage() {
                   logs.map((log: any) => (
                     <tr
                       key={log.id}
-                      className="hover:bg-slate-200 hover:border-slate-200 dark:text-slate-700"
+                      className="hover:bg-slate-200 hover:border-slate-200 "
                     >
                       <td className="uppercase font-bold">
                         {log.user.first_name}
@@ -355,7 +355,7 @@ export default function LogPage() {
                 logs.map((log: any) => (
                   <div
                     key={log.id}
-                    className="border rounded-lg p-4 bg-white shadow-md dark:text-slate-700"
+                    className="border rounded-lg p-4 bg-white shadow-md "
                   >
                     <div className="mb-2">
                       <span className="font-semibold">Enviado por: </span>

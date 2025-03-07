@@ -267,13 +267,13 @@ export default function UserPage() {
                 ) : data.length > 0 ? (
                   data.map((item) => (
                     <tr key={item.id}>
-                      <td className="dark:text-slate-700">{item.email}</td>
-                      <td className="dark:text-slate-700">{item.first_name}</td>
-                      <td className="dark:text-slate-700">{item.last_name}</td>
-                      <td className="dark:text-slate-700">
+                      <td className="">{item.email}</td>
+                      <td className="">{item.first_name}</td>
+                      <td className="">{item.last_name}</td>
+                      <td className="">
                         {item.phone_number || "—"}
                       </td>
-                      <td className="dark:text-slate-700">
+                      <td className="">
                         {item.role_name || "—"}
                       </td>
                       <td className="flex gap-2">
@@ -323,7 +323,7 @@ export default function UserPage() {
                 data.map((item) => (
                   <div
                     key={item.id}
-                    className="border rounded-lg p-4 bg-white shadow-md dark:text-slate-700"
+                    className="border rounded-lg p-4 bg-white shadow-md "
                   >
                     <div className="mb-2">
                       <span className="font-semibold">Email: </span>
@@ -398,9 +398,9 @@ export default function UserPage() {
         }}
         title={editingId ? "Editar Usuario" : "Nuevo Usuario"}
         centered
-        className="dark:text-slate-700"
+        className=""
       >
-        <div className="space-y-4 dark:text-slate-700">
+        <div className="space-y-4 ">
           <TextInput
             label="Email"
             placeholder="Email"
@@ -445,7 +445,7 @@ export default function UserPage() {
             }
           />
           <Select
-            className="dark:text-slate-700"
+            className=""
             label="Rol"
             placeholder="Selecciona un rol"
             data={roleOptions}
