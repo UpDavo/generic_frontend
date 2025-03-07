@@ -133,7 +133,7 @@ export default function PushPage() {
             label="Email"
             placeholder="Ingrese el email"
             value={email}
-            onChange={(e) => setEmail(e.target.value)}
+            onChange={(e) => setEmail(e.target.value.toLocaleLowerCase())}
           />
           <MultiSelect
             label="Seleccionar Mensaje"
