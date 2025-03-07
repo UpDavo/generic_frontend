@@ -58,6 +58,7 @@ function DashboardLayout({ children }: RootChildren) {
     <div className="flex h-screen-dvh">
       {/* Sidebar Desktop */}
       <Sidebar2
+        user={user}
         className={`fixed left-0 top-0 h-screen transition-transform duration-300 ${
           sidebarVisible ? "translate-x-0" : "-translate-x-full"
         }`}

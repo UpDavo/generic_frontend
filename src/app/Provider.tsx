@@ -19,7 +19,7 @@ function AuthLoader({ children }: { children: React.ReactNode }) {
 
   if (checkingAuth) {
     return (
-      <Container className="flex flex-col items-center justify-center min-h-screen">
+      <Container className="flex flex-col items-center justify-center h-screen-dvh">
         <Loader size="xl" variant="bars" color="blue" />
         <Text className="mt-4 text-xl">Cargando sesión...</Text>
       </Container>
