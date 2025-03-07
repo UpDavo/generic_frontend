@@ -26,6 +26,8 @@ import {
   RiDeleteBin6Line,
 } from "react-icons/ri";
 import { SimpleUser, SimpleUserPass } from "@/interfaces/user";
+import { Unauthorized } from "@/components/Unauthorized";
+import ConfirmDeleteModal from "@/components/ConfirmDeleteModal";
 
 interface FormState {
   email: string;
@@ -39,6 +41,37 @@ interface FormState {
 export default function UserPage() {
   const router = useRouter();
   const { user, accessToken } = useAuth();
+
+  //delete
+  const [confirmDeleteOpen, setConfirmDeleteOpen] = useState(false);
+  const [deleteTargetId, setDeleteTargetId] = useState<number | null>(null);
+  const [deleteTargetName, setDeleteTargetName] = useState<string | null>(null);
+  const [isDeleting, setIsDeleting] = useState(false);
+
+  const openConfirmDelete = (id: number, name: string) => {
+    setDeleteTargetId(id);
+    setDeleteTargetName(name);
+    setConfirmDeleteOpen(true);
+  };
+
+  const handleDeleteConfirmed = async () => {
+    if (deleteTargetId) {
+      setIsDeleting(true);
+      try {
+        await deleteUser(deleteTargetId, accessToken);
+        await fetchData();
+        setError(null);
+      } catch (err) {
+        console.error(err);
+        setError("Error al eliminar el registro");
+      } finally {
+        setIsDeleting(false);
+        setConfirmDeleteOpen(false);
+        setDeleteTargetId(null);
+        setDeleteTargetName(null);
+      }
+    }
+  };
 
   // Estado para verificar permisos de acceso
   const [authorized, setAuthorized] = useState<boolean | null>(null);
@@ -128,17 +161,17 @@ export default function UserPage() {
     }
   };
 
-  // Manejar eliminación
-  const handleDelete = async (id: number) => {
-    try {
-      await deleteUser(id, accessToken);
-      await fetchData();
-      setError(null);
-    } catch (err) {
-      console.error(err);
-      setError("Error al eliminar el registro");
-    }
-  };
+  // // Manejar eliminación
+  // const handleDelete = async (id: number) => {
+  //   try {
+  //     await deleteUser(id, accessToken);
+  //     await fetchData();
+  //     setError(null);
+  //   } catch (err) {
+  //     console.error(err);
+  //     setError("Error al eliminar el registro");
+  //   }
+  // };
 
   // Manejar guardado (crear o editar)
   const handleSave = async () => {
@@ -194,14 +227,7 @@ export default function UserPage() {
 
   // Si no tiene permiso
   if (!authorized) {
-    return (
-      <div className="flex flex-col justify-center items-center mt-64">
-        <h1 className="text-3xl font-bold text-red-500">Acceso Denegado</h1>
-        <p className="mt-2 text-gray-600">
-          No tienes permisos para ver esta página.
-        </p>
-      </div>
-    );
+    return <Unauthorized />;
   }
 
   return (
@@ -250,8 +276,8 @@ export default function UserPage() {
                 <tr className="text-white">
                   <th>Email</th>
                   <th>Nombre</th>
-                  <th>Apellido</th>
-                  <th>Teléfono</th>
+                  {/* <th>Apellido</th>
+                  <th>Teléfono</th> */}
                   <th>Rol</th>
                   <th>Acciones</th>
                 </tr>
@@ -269,13 +295,9 @@ export default function UserPage() {
                     <tr key={item.id}>
                       <td className="">{item.email}</td>
                       <td className="">{item.first_name}</td>
-                      <td className="">{item.last_name}</td>
-                      <td className="">
-                        {item.phone_number || "—"}
-                      </td>
-                      <td className="">
-                        {item.role_name || "—"}
-                      </td>
+                      {/* <td className="">{item.last_name}</td>
+                      <td className="">{item.phone_number || "—"}</td> */}
+                      <td className="">{item.role_name || "—"}</td>
                       <td className="flex gap-2">
                         <Button
                           onClick={() => {
@@ -294,7 +316,9 @@ export default function UserPage() {
                           <RiEdit2Line />
                         </Button>
                         <Button
-                          onClick={() => handleDelete(item.id)}
+                          onClick={() =>
+                            openConfirmDelete(item.id, item.first_name)
+                          }
                           className="btn btn-error btn-sm text-white"
                         >
                           <RiDeleteBin6Line />
@@ -333,14 +357,14 @@ export default function UserPage() {
                       <span className="font-semibold">Nombre: </span>
                       {item.first_name}
                     </div>
-                    <div className="mb-2">
+                    {/* <div className="mb-2">
                       <span className="font-semibold">Apellido: </span>
                       {item.last_name}
                     </div>
                     <div className="mb-2">
                       <span className="font-semibold">Teléfono: </span>
                       {item.phone_number || "—"}
-                    </div>
+                    </div> */}
                     <div className="mb-2">
                       <span className="font-semibold">Rol: </span>
                       {item.role_name || "—"}
@@ -363,7 +387,9 @@ export default function UserPage() {
                         <RiEdit2Line className="mr-1" /> Editar
                       </Button>
                       <Button
-                        onClick={() => handleDelete(item.id)}
+                        onClick={() =>
+                          openConfirmDelete(item.id, item.first_name)
+                        }
                         className="btn btn-error btn-sm text-white w-full"
                       >
                         <RiDeleteBin6Line className="mr-1" /> Eliminar
@@ -388,6 +414,14 @@ export default function UserPage() {
           )}
         </div>
       </div>
+
+      <ConfirmDeleteModal
+        opened={confirmDeleteOpen}
+        onClose={() => setConfirmDeleteOpen(false)}
+        onConfirm={handleDeleteConfirmed}
+        itemName={deleteTargetName}
+        loading={isDeleting}
+      />
 
       {/* Modal para Crear/Editar */}
       <Modal

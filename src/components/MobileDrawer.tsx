@@ -14,7 +14,7 @@ const MobileDrawer: React.FC<MobileDrawerProps & { user: any }> = ({
   const [openSubmenus, setOpenSubmenus] = useState<{ [key: string]: boolean }>(
     {}
   );
-  const pathname = usePathname(); // ← Importamos la ruta actual
+  const pathname = usePathname();
 
   const toggleSubmenu = (menu: string) => {
     setOpenSubmenus((prev) => ({ ...prev, [menu]: !prev[menu] }));
@@ -26,15 +26,25 @@ const MobileDrawer: React.FC<MobileDrawerProps & { user: any }> = ({
   const isAdmin = user?.role?.is_admin;
 
   const filterRoutes = (routeList: any[]) => {
-    return routeList.filter((route) => {
-      if (isAdmin) return true;
-      if (route.children) {
-        route.children = filterRoutes(route.children);
-        return route.children.length > 0;
-      }
-      if (!route.permission) return true;
-      return userPermissions.includes(route.permission);
-    });
+    return routeList
+      .map((section) => ({
+        ...section,
+        children: section.children.filter((route: any) => {
+          if (isAdmin) return true;
+          if (route.children) {
+            route.children = route.children.filter((child: any) => {
+              return (
+                !child.permission || userPermissions.includes(child.permission)
+              );
+            });
+            return route.children.length > 0;
+          }
+          return (
+            !route.permission || userPermissions.includes(route.permission)
+          );
+        }),
+      }))
+      .filter((section) => section.children.length > 0);
   };
 
   const filteredRoutes = filterRoutes(routes);
@@ -43,73 +53,92 @@ const MobileDrawer: React.FC<MobileDrawerProps & { user: any }> = ({
     <Drawer
       opened={drawerOpened}
       onClose={() => setDrawerOpened(false)}
-      // title="Dashboard"
       padding="xl"
-      className="text-white"
+      className="p-0"
+      styles={{
+        body: { padding: 0 },
+      }}
+      title="HINT"
     >
-      <nav className="px-1">
-        <Box w="100%">
-          <h1 className="text-neutral text-5xl font-bold mb-5">HINT</h1>
-          {filteredRoutes.map((route) => {
-            const hasChildren = Boolean(route.children);
+      <div className="w-full h-full bg-primary text-white">
+        <nav className="px-4 py-4">
+          {/* Logo y título */}
+          {/* <h1 className="text-white text-5xl font-bold mb-5 text-center">
+            HINT
+          </h1> */}
 
-            return (
-              <div key={route.name}>
-                {hasChildren ? (
-                  <>
-                    {/* CABECERA DE SUBMENÚ */}
-                    <div
-                      className="cursor-pointer mt-2 px-4 py-2 rounded bg-gray-700 hover:bg-gray-600"
-                      onClick={() => toggleSubmenu(route.name)}
-                    >
-                      {route.name}
-                    </div>
-
-                    {openSubmenus[route.name] && (
-                      <div className="ml-4">
-                        {route.children.map((child: any) => {
-                          // Verificamos si ESTE child está activo
-                          const isActive = pathname === child.path;
-
-                          return (
-                            <Link key={child.path} href={child.path} passHref>
-                              <div
-                                className={`cursor-pointer mt-2 px-4 py-2 rounded transition-all duration-300 ${
-                                  isActive
-                                    ? "bg-info text-base-100"
-                                    : "text-black hover:bg-primary hover:text-white bg-slate-300"
-                                }`}
-                                onClick={() => setDrawerOpened(false)}
-                              >
-                                {child.name}
-                              </div>
-                            </Link>
-                          );
-                        })}
-                      </div>
-                    )}
-                  </>
-                ) : (
-                  // RUTA SIN CHILDREN
-                  <Link key={route.path} href={route.path} passHref>
-                    {/* Detectamos si el path es la ruta activa */}
-                    <div
-                      className={`cursor-pointer mt-2 px-4 py-2 rounded transition-all duration-300 ${
-                        pathname === route.path
-                          ? "bg-info text-base-100"
-                          : "text-black hover:bg-primary hover:text-white bg-slate-300"
-                      }`}
-                      onClick={() => setDrawerOpened(false)}
-                    >
-                      {route.name}
-                    </div>
-                  </Link>
-                )}
+          {filteredRoutes.map((section) => (
+            <div key={section.section} className="mb-4">
+              {/* Divider (título de sección) */}
+              <div className="divider divider-accent text-white text-md">
+                {section.section}
               </div>
-            );
-          })}
-        </Box>
-      </nav>
+
+              {section.children.map((route: any) => {
+                const hasChildren = Boolean(route.children);
+
+                return (
+                  <div key={route.name}>
+                    {hasChildren ? (
+                      <>
+                        {/* Título del submenú */}
+                        <div
+                          className="cursor-pointer mt-2 px-4 py-2 rounded bg-slate-200 bg-opacity-35 text-white"
+                          onClick={() => toggleSubmenu(route.name)}
+                        >
+                          {route.name}
+                        </div>
+
+                        {/* Links dentro del submenú */}
+                        {openSubmenus[route.name] && (
+                          <div className="ml-4">
+                            {route.children.map((child: any) => {
+                              const isActive = pathname === child.path;
+
+                              return (
+                                <Link
+                                  key={child.path}
+                                  href={child.path}
+                                  passHref
+                                >
+                                  <div
+                                    className={`cursor-pointer mt-2 px-4 py-2 rounded transition-all duration-300 ${
+                                      isActive
+                                        ? "bg-base-100 text-primary"
+                                        : "hover:bg-base-100 hover:text-primary"
+                                    }`}
+                                    onClick={() => setDrawerOpened(false)}
+                                  >
+                                    {child.name}
+                                  </div>
+                                </Link>
+                              );
+                            })}
+                          </div>
+                        )}
+                      </>
+                    ) : (
+                      // Link directo sin hijos
+                      <Link key={route.path} href={route.path} passHref>
+                        <div
+                          className={`cursor-pointer mt-2 px-4 py-2 rounded transition-all duration-300 ${
+                            pathname === route.path
+                              ? "bg-base-100 text-primary"
+                              : "hover:bg-base-100 hover:text-primary"
+                          }`}
+                          onClick={() => setDrawerOpened(false)}
+                        >
+                          {route.name}
+                        </div>
+                      </Link>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+          ))}
+        </nav>
+      </div>
     </Drawer>
   );
 };

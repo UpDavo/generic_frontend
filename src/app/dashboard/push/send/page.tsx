@@ -13,6 +13,7 @@ import {
   MultiSelect,
 } from "@mantine/core";
 import { useRouter } from "next/navigation";
+import { Unauthorized } from "@/components/Unauthorized";
 
 export default function PushPage() {
   const router = useRouter();
@@ -85,7 +86,7 @@ export default function PushPage() {
       setEmail("");
       setSelectedMessage(null);
     } catch (err) {
-      console.log(err);
+      // console.log(err);
       setError("Error al enviar la notificación");
     } finally {
       setLoading(false);
@@ -101,14 +102,7 @@ export default function PushPage() {
   }
 
   if (!authorized) {
-    return (
-      <div className="flex flex-col justify-center items-center mt-64">
-        <h1 className="text-3xl font-bold text-red-500">Acceso Denegado</h1>
-        <p className="mt-2 text-gray-600">
-          No tienes permisos para ver esta página.
-        </p>
-      </div>
-    );
+    return <Unauthorized />;
   }
 
   return (

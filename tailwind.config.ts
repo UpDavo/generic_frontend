@@ -10,7 +10,7 @@ export default {
   theme: {
     extend: {
       height: {
-        'screen-dvh': '100dvh',
+        "screen-dvh": "100dvh",
       },
       colors: {
         background: "var(--background)",
@@ -23,31 +23,30 @@ export default {
     themes: [
       {
         mytheme: {
-          primary: "#433fe9",
-          secondary: "#756EF3",
-          accent: "#A29CF8",
-          neutral: "#2E2E2E",
-          "base-100": "#F4F4FC",
-          info: "#5A57EE",
-          success: "#4F9F85",
-          warning: "#F4A261",
-          error: "#E95F76",
-          black: "#3B3B3B",
+          primary: "#5A57EE", // Tu color principal, es el info convertido en primary
+          secondary: "#433fe9", // Un tono más oscuro para contraste o botones secundarios
+          accent: "#A29CF8", // Un tono más claro, ideal para hover o detalles
+          neutral: "#2E2E2E", // Mantengo un buen neutral oscuro
+          "base-100": "#E5E7EB", // Fondo claro que ya tenías, combina bien
+          info: "#5A57EE", // Mantengo el info como estaba
+          success: "#4CAF50", // Verde material design clásico
+          warning: "#FB8C00", // Naranja material design clásico
+          error: "#E53935", // Rojo material design clásico
+          black: "#212121", // Negro más en línea con Material Design
         },
         mydarktheme: {
-          primary: "#433fe9",
-          secondary: "#756EF3",
-          accent: "#A29CF8",
-          neutral: "#2E2E2E",
-          "base-100": "#F4F4FC",
-          info: "#5A57EE",
-          success: "#4F9F85",
-          warning: "#F4A261",
-          error: "#E95F76",
-          black: "#3B3B3B",
+          primary: "#5A57EE", // Tu color principal, es el info convertido en primary
+          secondary: "#433fe9", // Un tono más oscuro para contraste o botones secundarios
+          accent: "#A29CF8", // Un tono más claro, ideal para hover o detalles
+          neutral: "#2E2E2E", // Mantengo un buen neutral oscuro
+          "base-100": "#E5E7EB",// Fondo claro que ya tenías, combina bien
+          info: "#5A57EE", // Mantengo el info como estaba
+          success: "#4CAF50", // Verde material design clásico
+          warning: "#FB8C00", // Naranja material design clásico
+          error: "#E53935", // Rojo material design clásico
+          black: "#212121", // Negro más en línea con Material Design
         },
       },
     ],
   },
-  
 } satisfies Config;

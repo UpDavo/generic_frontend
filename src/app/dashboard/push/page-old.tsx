@@ -11,6 +11,7 @@ import {
 import GenericListPage from "@/components/GenericListPage";
 import { Loader } from "@mantine/core";
 import { useAuth } from "@/hooks/useAuth";
+import { Unauthorized } from "@/components/Unauthorized";
 
 export default function MessagePage() {
   const router = useRouter();
@@ -38,14 +39,7 @@ export default function MessagePage() {
   }
 
   if (!authorized) {
-    return (
-      <div className="flex flex-col justify-center items-center mt-64">
-        <h1 className="text-3xl font-bold text-red-500">Acceso Denegado</h1>
-        <p className="mt-2 text-gray-600">
-          No tienes permisos para ver esta página.
-        </p>
-      </div>
-    );
+    return <Unauthorized />;
   }
 
   return (

@@ -13,6 +13,7 @@ import GenericListPage from "@/components/GenericListPage";
 import { useAuth } from "@/hooks/useAuth";
 import { useRouter } from "next/navigation";
 import { Loader } from "@mantine/core";
+import { Unauthorized } from "@/components/Unauthorized";
 
 export default function UserPage() {
   const [roles, setRoles] = useState([]);
@@ -64,14 +65,7 @@ export default function UserPage() {
   }
 
   if (!authorized) {
-    return (
-      <div className="flex flex-col justify-center items-center mt-64">
-        <h1 className="text-3xl font-bold text-red-500">Acceso Denegado</h1>
-        <p className="mt-2 text-gray-600">
-          No tienes permisos para ver esta página.
-        </p>
-      </div>
-    );
+    return <Unauthorized />;
   }
 
   return (

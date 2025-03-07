@@ -23,6 +23,7 @@ import {
   ResponsiveContainer,
 } from "recharts";
 import { useRouter } from "next/navigation";
+import { Unauthorized } from "@/components/Unauthorized";
 
 interface UserChartItem {
   first_name: string;
@@ -203,14 +204,7 @@ export default function LogPage() {
   }
 
   if (!authorized) {
-    return (
-      <div className="flex flex-col justify-center items-center mt-64">
-        <h1 className="text-3xl font-bold text-red-500">Acceso Denegado</h1>
-        <p className="mt-2 text-gray-600">
-          No tienes permisos para ver esta página.
-        </p>
-      </div>
-    );
+    return <Unauthorized />;
   }
 
   return (

@@ -18,7 +18,7 @@ export interface SidebarProps {
 }
 
 export interface MobileDrawerProps {
-  routes: SidebarRoute[];
+  routes: any;
   drawerOpened: boolean;
   setDrawerOpened: (open: boolean) => void;
   user?: User | null;

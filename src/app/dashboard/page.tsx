@@ -14,6 +14,7 @@ import {
 } from "recharts";
 import { useAuth } from "@/hooks/useAuth";
 import { useRouter } from "next/navigation";
+import { Unauthorized } from "@/components/Unauthorized";
 
 export default function DashboardHome() {
   const { accessToken, user } = useAuth();
@@ -104,14 +105,7 @@ export default function DashboardHome() {
   }
 
   if (!authorized) {
-    return (
-      <div className="flex flex-col justify-center items-center md:mt-64 mt-20">
-        <h1 className="text-3xl font-bold text-red-500">Acceso Denegado</h1>
-        <p className="mt-2 text-gray-600">
-          No tienes permisos para ver esta página.
-        </p>
-      </div>
-    );
+    return <Unauthorized />;
   }
 
   return (
@@ -157,15 +151,15 @@ export default function DashboardHome() {
             {/* Costo Total */}
             <div className="card bg-base-100 shadow-xl p-6 text-center">
               <h2 className="text-lg font-bold mb-2">Costo Mensual</h2>
-              <p className="text-4xl font-extrabold text-green-500">
+              <p className="text-4xl font-extrabold text-success">
                 ${cost.toFixed(2)}
               </p>
             </div>
 
             {/* Llamadas Generales */}
             <div className="card bg-base-100 shadow-xl p-6 text-center">
-              <h2 className="text-lg font-bold mb-2">Push Mensuales</h2>
-              <p className="text-4xl font-extrabold text-blue-500">
+              <h2 className="text-lg font-bold mb-2">Total de Push Mensuales</h2>
+              <p className="text-4xl font-extrabold text-info">
                 {totalCalls}
               </p>
             </div>
@@ -182,7 +176,7 @@ export default function DashboardHome() {
                   <XAxis dataKey="user" />
                   <YAxis />
                   <Tooltip />
-                  <Bar dataKey="count" fill="#3498db" />
+                  <Bar dataKey="count" fill="#5A57EE" />
                 </BarChart>
               </ResponsiveContainer>
             ) : (

@@ -23,6 +23,8 @@ import {
   RiDeleteBin6Line,
 } from "react-icons/ri";
 import { useAuth } from "@/hooks/useAuth";
+import { Unauthorized } from "@/components/Unauthorized";
+import ConfirmDeleteModal from "@/components/ConfirmDeleteModal";
 
 export default function MessagePage() {
   const router = useRouter();
@@ -48,6 +50,37 @@ export default function MessagePage() {
   const [searchQuery, setSearchQuery] = useState("");
   const [modalOpen, setModalOpen] = useState(false);
   const [editingId, setEditingId] = useState<number | null>(null);
+
+  //delete
+  const [confirmDeleteOpen, setConfirmDeleteOpen] = useState(false);
+  const [deleteTargetId, setDeleteTargetId] = useState<number | null>(null);
+  const [deleteTargetName, setDeleteTargetName] = useState<string | null>(null);
+  const [isDeleting, setIsDeleting] = useState(false);
+
+  const openConfirmDelete = (id: number, name: string) => {
+    setDeleteTargetId(id);
+    setDeleteTargetName(name);
+    setConfirmDeleteOpen(true);
+  };
+
+  const handleDeleteConfirmed = async () => {
+    if (deleteTargetId) {
+      setIsDeleting(true);
+      try {
+        await deleteMessage(deleteTargetId, accessToken);
+        await fetchData();
+        setError(null);
+      } catch (err) {
+        console.error(err);
+        setError("Error al eliminar el registro");
+      } finally {
+        setIsDeleting(false);
+        setConfirmDeleteOpen(false);
+        setDeleteTargetId(null);
+        setDeleteTargetName(null);
+      }
+    }
+  };
 
   // Verifica permisos al montar el componente o cuando cambie "user"
   useEffect(() => {
@@ -91,16 +124,16 @@ export default function MessagePage() {
   };
 
   // Maneja la eliminación de un item
-  const handleDelete = async (id: number) => {
-    try {
-      await deleteMessage(id, accessToken);
-      await fetchData();
-      setError(null);
-    } catch (err) {
-      console.error(err);
-      setError("Error al eliminar el registro");
-    }
-  };
+  // const handleDelete = async (id: number) => {
+  //   try {
+  //     await deleteMessage(id, accessToken);
+  //     await fetchData();
+  //     setError(null);
+  //   } catch (err) {
+  //     console.error(err);
+  //     setError("Error al eliminar el registro");
+  //   }
+  // };
 
   // Maneja la creación/edición de un item
   const handleSave = async () => {
@@ -144,16 +177,8 @@ export default function MessagePage() {
     );
   }
 
-  // Si no tiene permiso, se muestra mensaje de acceso denegado
   if (!authorized) {
-    return (
-      <div className="flex flex-col justify-center items-center mt-64">
-        <h1 className="text-3xl font-bold text-red-500">Acceso Denegado</h1>
-        <p className="mt-2 text-gray-600">
-          No tienes permisos para ver esta página.
-        </p>
-      </div>
-    );
+    return <Unauthorized />;
   }
 
   return (
@@ -222,15 +247,9 @@ export default function MessagePage() {
                       <td className="uppercase badge badge-info font-bold mx-3">
                         {item.notification_type || "—"}
                       </td>
-                      <td className="uppercase ">
-                        {item.name || "—"}
-                      </td>
-                      <td className="uppercase ">
-                        {item.title || "—"}
-                      </td>
-                      <td className="">
-                        {item.message || "—"}
-                      </td>
+                      <td className="uppercase ">{item.name || "—"}</td>
+                      <td className="uppercase ">{item.title || "—"}</td>
+                      <td className="">{item.message || "—"}</td>
                       <td className="flex gap-2">
                         <Button
                           onClick={() => {
@@ -248,7 +267,9 @@ export default function MessagePage() {
                           <RiEdit2Line />
                         </Button>
                         <Button
-                          onClick={() => handleDelete(item.id)}
+                          onClick={() =>
+                            openConfirmDelete(item.id, item.first_name)
+                          }
                           className="btn btn-error btn-sm text-white"
                         >
                           <RiDeleteBin6Line />
@@ -316,7 +337,9 @@ export default function MessagePage() {
                         <RiEdit2Line className="mr-1" /> Editar
                       </Button>
                       <Button
-                        onClick={() => handleDelete(item.id)}
+                        onClick={() =>
+                          openConfirmDelete(item.id, item.first_name)
+                        }
                         className="btn btn-error btn-sm text-white w-full"
                       >
                         <RiDeleteBin6Line className="mr-1" /> Eliminar
@@ -329,6 +352,14 @@ export default function MessagePage() {
               )}
             </div>
           </div>
+
+          <ConfirmDeleteModal
+            opened={confirmDeleteOpen}
+            onClose={() => setConfirmDeleteOpen(false)}
+            onConfirm={handleDeleteConfirmed}
+            itemName={deleteTargetName}
+            loading={isDeleting}
+          />
 
           {/* Paginación */}
           {totalPages > 1 && (

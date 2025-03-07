@@ -22,27 +22,41 @@
 // ];
 
 export const dashboardRoutes = [
-  { path: "/dashboard", name: "Inicio" },
   {
-    name: "Push",
+    section: "Menu",
     children: [
+      { path: "/dashboard", name: "Inicio" },
       {
-        path: "/dashboard/push/send",
-        name: "Enviar Push",
-        permission: "/push/send",
-      },
-      { path: "/dashboard/push", name: "Crear Mensajes", permission: "/push" },
-      {
-        path: "/dashboard/push/logs",
-        name: "Obtener Logs",
-        permission: "/push/logs",
+        name: "Push",
+        children: [
+          {
+            path: "/dashboard/push/send",
+            name: "Enviar Push",
+            permission: "/push/send",
+          },
+          {
+            path: "/dashboard/push",
+            name: "Crear Mensajes",
+            permission: "/push",
+          },
+          {
+            path: "/dashboard/push/logs",
+            name: "Obtener Logs",
+            permission: "/push/logs",
+          },
+        ],
       },
     ],
   },
   {
-    name: "Configuracion",
+    section: "Ajustes",
     children: [
-      { path: "/dashboard/user", name: "Usuarios", permission: "/users" },
+      {
+        name: "Configuracion",
+        children: [
+          { path: "/dashboard/user", name: "Usuarios", permission: "/users" },
+        ],
+      },
     ],
   },
 ];
