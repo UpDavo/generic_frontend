@@ -21,7 +21,7 @@ function LoginPage() {
   if (checkingAuth) return null;
 
   return (
-    <div className="flex items-center justify-center h-screen bg-gradient-to-r from-secondary to-info">
+    <div className="flex items-center justify-center h-screen-dvh bg-gradient-to-r from-secondary to-info">
       <Container
         fluid
         className="flex flex-col items-center justify-center px-4 py-10 bg-white shadow-lg rounded-xl max-w-md w-full mx-10 md:mx-0"
