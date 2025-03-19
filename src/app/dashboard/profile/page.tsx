@@ -42,7 +42,7 @@ export default function ProfilePage() {
   };
 
   return (
-    <div className="flex w-full items-center">
+    <div className="flex w-full items-center text-black">
       <div className="card w-full bg-base-100 shadow-xl p-6 ">
         <h1 className="text-2xl font-bold text-primary mb-4 ">
           Perfil de Usuario
@@ -75,9 +75,9 @@ export default function ProfilePage() {
         onClose={() => setIsEditing(false)}
         title="Editar Perfil"
         centered
-        className=""
+        className="text-black"
       >
-        <div className="space-y-4 ">
+        <div className="space-y-4 text-black">
           <TextInput
             label="Nombre"
             name="first_name"

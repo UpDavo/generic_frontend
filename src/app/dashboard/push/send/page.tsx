@@ -31,8 +31,6 @@ export default function PushPage() {
       user?.role?.is_admin ||
       user?.role?.permissions?.some((perm) => perm.path === "/push/send");
 
-    // console.log(user?.role?.permissions);
-
     if (hasPermission) {
       setAuthorized(true);
     } else {
@@ -56,9 +54,35 @@ export default function PushPage() {
     }
   };
 
+  const validDomains = [
+    "gmail.com",
+    "hotmail.com",
+    "outlook.com",
+    "yahoo.com",
+    "icloud.com",
+    "live.com",
+    "aol.com",
+    "protonmail.com",
+  ];
+
+  const isValidEmail = (email: string) => {
+    const emailRegex = /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/;
+    if (!emailRegex.test(email)) return false;
+    
+    const domain = email.split("@")[1];
+    
+    // Permitir dominios externos, pero validar los más comunes
+    return validDomains.includes(domain) || /^[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/.test(domain);
+  };
+
   const handleSend = async () => {
     if (!selectedMessage || !email) {
       setError("Por favor, seleccione un mensaje y escriba un email");
+      return;
+    }
+
+    if (!isValidEmail(email)) {
+      setError("El email ingresado no es válido");
       return;
     }
 
@@ -86,7 +110,6 @@ export default function PushPage() {
       setEmail("");
       setSelectedMessage(null);
     } catch (err) {
-      // console.log(err);
       setError("Error al enviar la notificación");
     } finally {
       setLoading(false);
@@ -127,13 +150,14 @@ export default function PushPage() {
         </Notification>
       )}
 
-      <div className="card bg-base-100 shadow-xl w-full">
+      <div className="card bg-base-100 shadow-xl w-full text-black">
         <div className="card-body">
           <TextInput
             label="Email"
             placeholder="Ingrese el email"
             value={email}
             onChange={(e) => setEmail(e.target.value.toLocaleLowerCase())}
+            error={!isValidEmail(email) && email !== "" ? "Email inválido" : undefined}
           />
           <MultiSelect
             label="Seleccionar Mensaje"

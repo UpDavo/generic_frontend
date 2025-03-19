@@ -18,6 +18,7 @@ export default {
       },
     },
   },
+  safelist: ["badge-info", "badge-warning", "badge-error", "badge-success"],
   plugins: [require("daisyui")],
   daisyui: {
     themes: [
@@ -39,7 +40,7 @@ export default {
           secondary: "#433fe9", // Un tono más oscuro para contraste o botones secundarios
           accent: "#A29CF8", // Un tono más claro, ideal para hover o detalles
           neutral: "#2E2E2E", // Mantengo un buen neutral oscuro
-          "base-100": "#E5E7EB",// Fondo claro que ya tenías, combina bien
+          "base-100": "#E5E7EB", // Fondo claro que ya tenías, combina bien
           info: "#5A57EE", // Mantengo el info como estaba
           success: "#4CAF50", // Verde material design clásico
           warning: "#FB8C00", // Naranja material design clásico

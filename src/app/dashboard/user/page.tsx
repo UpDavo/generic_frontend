@@ -231,7 +231,7 @@ export default function UserPage() {
   }
 
   return (
-    <div>
+    <div className="text-black">
       {/* Barra de búsqueda y botón de agregar */}
       <div className="flex justify-between items-center mb-4 gap-2">
         <TextInput
@@ -432,9 +432,9 @@ export default function UserPage() {
         }}
         title={editingId ? "Editar Usuario" : "Nuevo Usuario"}
         centered
-        className=""
+        className="text-black"
       >
-        <div className="space-y-4 ">
+        <div className="space-y-4 text-black">
           <TextInput
             label="Email"
             placeholder="Email"

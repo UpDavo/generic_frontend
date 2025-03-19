@@ -13,7 +13,7 @@ import {
   Button,
   MultiSelect,
 } from "@mantine/core";
-import { RiSearchLine, RiCloseCircleLine } from "react-icons/ri";
+import { RiSearchLine, RiCloseCircleLine, RiRefreshLine } from "react-icons/ri";
 import {
   BarChart,
   Bar,
@@ -21,9 +21,12 @@ import {
   YAxis,
   Tooltip,
   ResponsiveContainer,
+  Cell,
 } from "recharts";
 import { useRouter } from "next/navigation";
 import { Unauthorized } from "@/components/Unauthorized";
+import NotificationTD from "@/components/NotificationTD";
+import { getColor } from "@/config/genericVariables";
 
 interface UserChartItem {
   first_name: string;
@@ -33,6 +36,7 @@ interface UserChartItem {
 interface UserChartType {
   type: string;
   count: number;
+  fill: any;
 }
 
 export default function LogPage() {
@@ -174,9 +178,11 @@ export default function LogPage() {
       ).map((type) => ({
         type,
         count: notificationCounts[type],
+        fill: getColor(type),
       }));
 
       setNotificationTypeChartData(notificationTypeChartDataFormatted);
+
       setShowCharts(true);
     } catch (err) {
       console.log(err);
@@ -184,6 +190,10 @@ export default function LogPage() {
       setNotificationTypeChartData([]);
       setShowCharts(false);
     }
+  };
+
+  const refreshData = () => {
+    fetchLogs();
   };
 
   // Limpiar filtros
@@ -208,7 +218,7 @@ export default function LogPage() {
   }
 
   return (
-    <div>
+    <div className="text-black">
       {error && (
         <Notification color="red" className="mb-4">
           {error}
@@ -239,19 +249,31 @@ export default function LogPage() {
         />
         <MultiSelect
           data={users}
+          searchable
           label="Filtrar por usuarios"
           placeholder="Selecciona usuarios"
           value={selectedUsers}
           onChange={setSelectedUsers}
+          className="text-black"
         />
-        <Button
-          onClick={clearFilters}
-          variant="outline"
-          leftSection={<RiCloseCircleLine />}
-          className="btn btn-info text-white hover:text-white btn-sm mb-1"
-        >
-          Limpiar Filtros
-        </Button>
+        <div className="grid grid-cols-2 gap-2">
+          <Button
+            onClick={clearFilters}
+            variant="outline"
+            leftSection={<RiCloseCircleLine />}
+            className="btn btn-info text-white hover:text-white btn-sm mb-1"
+          >
+            Limpiar Filtros
+          </Button>
+          <Button
+            onClick={refreshData}
+            variant="filled"
+            leftSection={<RiRefreshLine />}
+            className="btn btn-primary text-white hover:text-white btn-sm"
+          >
+            Refrescar
+          </Button>
+        </div>
       </div>
 
       {/* Gráficos solo si hay filtros aplicados */}
@@ -259,27 +281,48 @@ export default function LogPage() {
         <div className="grid md:grid-cols-2 grid-cols-1 gap-6 mb-4">
           <div className="card bg-base-100 shadow-xl p-4">
             <h2 className="text-lg font-bold text-center mb-4">
-              Reportes por Usuario
+              Push Enviados por Usuario
             </h2>
             <ResponsiveContainer width="100%" height={300}>
               <BarChart data={userChartData}>
                 <XAxis dataKey="first_name" />
                 <YAxis />
-                <Tooltip />
-                <Bar dataKey="count" fill="#3498db" />
+                <Tooltip
+                  contentStyle={{
+                    backgroundColor: "white",
+                    color: "black",
+                    border: "1px solid #ddd",
+                  }}
+                />
+                <Bar
+                  dataKey="count"
+                  fill="#5A57EE"
+                  label={{ fill: "white", fontSize: 22 }}
+                />
               </BarChart>
             </ResponsiveContainer>
           </div>
           <div className="card bg-base-100 shadow-xl p-4">
             <h2 className="text-lg font-bold text-center mb-4">
-              Reportes por Tipo de Notificación
+              Tipos de Push
             </h2>
             <ResponsiveContainer width="100%" height={300}>
               <BarChart data={notificationTypeChartData}>
                 <XAxis dataKey="type" />
                 <YAxis />
-                <Tooltip />
-                <Bar dataKey="count" fill="#e67e22" />
+                <Tooltip
+                  contentStyle={{
+                    backgroundColor: "white",
+                    color: "black",
+                    border: "1px solid #ddd",
+                  }}
+                />
+                {/* Se asigna un solo Bar y se usa el callback para asignar color por barra */}
+                <Bar dataKey="count" label={{ fill: "white", fontSize: 22 }}>
+                  {notificationTypeChartData.map((entry, index) => (
+                    <Cell key={`cell-${index}`} fill={entry.fill} />
+                  ))}
+                </Bar>
               </BarChart>
             </ResponsiveContainer>
           </div>
@@ -297,7 +340,7 @@ export default function LogPage() {
                   <th>Enviado por</th>
                   <th>Enviado a</th>
                   <th>Tipo</th>
-                  <th>Mensaje</th>
+                  <th>Título</th>
                   <th>Fecha de Envío</th>
                 </tr>
               </thead>
@@ -318,13 +361,13 @@ export default function LogPage() {
                       <td className="uppercase font-bold">
                         {log.user.first_name}
                       </td>
-                      <td className="uppercase font-bold">{log.email}</td>
-                      <td>
-                        <div className="badge uppercase">
-                          {log.notification_type}
-                        </div>
-                      </td>
-                      <td>{log.message}</td>
+                      <td className="lowercase italic">{log.email}</td>
+                      <NotificationTD
+                        type={log.notification_type}
+                        td={true}
+                        className="mt-2"
+                      />
+                      <td>{log.title}</td>
                       <td>{new Date(log.sent_at).toLocaleString()}</td>
                     </tr>
                   ))
@@ -353,27 +396,25 @@ export default function LogPage() {
                   >
                     <div className="mb-2">
                       <span className="font-semibold">Enviado por: </span>
-                      <span className="uppercase font-bold">
-                        {log.user.first_name}
-                      </span>
+                      <br />
+                      <span className="uppercase">{log.user.first_name}</span>
                     </div>
                     <div className="mb-2">
                       <span className="font-semibold">Enviado a: </span>
-                      <span className="uppercase font-bold">{log.email}</span>
+                      <br />
+                      <span className="lowercase">{log.email}</span>
                     </div>
                     <div className="mb-2">
-                      <span className="font-semibold">Tipo: </span>
-                      <span className="badge uppercase">
-                        {log.notification_type}
-                      </span>
+                      <NotificationTD type={log.notification_type} td={false} />
                     </div>
                     <div className="mb-2">
-                      <span className="font-semibold">Mensaje: </span>
-                      <span>{log.message}</span>
+                      <span className="font-semibold">Título: </span>
+                      <span>{log.title}</span>
                     </div>
                     <div>
-                      <span className="font-semibold">Fecha de Envío: </span>
-                      <span>{new Date(log.sent_at).toLocaleString()}</span>
+                      <span className="font-thin text-gray-500">
+                        {new Date(log.sent_at).toLocaleString()}
+                      </span>
                     </div>
                   </div>
                 ))

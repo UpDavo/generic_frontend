@@ -22,9 +22,10 @@ export default function ConfirmDeleteModal({
       opened={opened}
       onClose={() => !loading && onClose()} // Evitar cerrar si está en proceso
       title="Confirmar eliminación"
+      className="text-black"
       centered
     >
-      <div className="space-y-4">
+      <div className="space-y-4 text-black">
         <p className="text-gray-700">
           ¿Estás seguro que deseas eliminar{" "}
           {itemName ? <strong>{itemName}</strong> : "este registro"}? Esta

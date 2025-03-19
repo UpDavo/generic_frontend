@@ -113,7 +113,13 @@ export default function ReportPage() {
                   <BarChart data={chartData}>
                     <XAxis dataKey="period" />
                     <YAxis />
-                    <Tooltip />
+                    <Tooltip
+                      contentStyle={{
+                        backgroundColor: "white",
+                        color: "black",
+                        border: "1px solid #ddd",
+                      }}
+                    />
 
                     {/* Score en la parte superior de la barra */}
                     <Bar dataKey="score" fill="transparent">

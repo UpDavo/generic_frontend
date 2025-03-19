@@ -15,16 +15,21 @@ import {
   Notification,
   Pagination,
   Modal,
+  Select,
+  Textarea,
 } from "@mantine/core";
 import {
   RiAddLine,
   RiSearchLine,
   RiEdit2Line,
   RiDeleteBin6Line,
+  RiRefreshLine,
 } from "react-icons/ri";
 import { useAuth } from "@/hooks/useAuth";
 import { Unauthorized } from "@/components/Unauthorized";
 import ConfirmDeleteModal from "@/components/ConfirmDeleteModal";
+import { notificationTypes } from "@/config/genericVariables";
+import NotificationTD from "@/components/NotificationTD";
 
 export default function MessagePage() {
   const router = useRouter();
@@ -123,18 +128,6 @@ export default function MessagePage() {
     }
   };
 
-  // Maneja la eliminación de un item
-  // const handleDelete = async (id: number) => {
-  //   try {
-  //     await deleteMessage(id, accessToken);
-  //     await fetchData();
-  //     setError(null);
-  //   } catch (err) {
-  //     console.error(err);
-  //     setError("Error al eliminar el registro");
-  //   }
-  // };
-
   // Maneja la creación/edición de un item
   const handleSave = async () => {
     // Validación sencilla para asegurarnos que no haya campos vacíos
@@ -168,6 +161,10 @@ export default function MessagePage() {
     }
   };
 
+  const refreshData = () => {
+    fetchData();
+  };
+
   // Si todavía no se sabe si está autorizado o no, mostramos un Loader
   if (authorized === null) {
     return (
@@ -192,22 +189,32 @@ export default function MessagePage() {
           onChange={(e) => setSearchQuery(e.target.value)}
           className="w-full"
         />
-        <Button
-          onClick={() => {
-            setFormState({
-              notification_type: "",
-              name: "",
-              title: "",
-              message: "",
-            });
-            setEditingId(null);
-            setModalOpen(true);
-          }}
-          leftSection={<RiAddLine />}
-          className="btn btn-info btn-sm"
-        >
-          Agregar
-        </Button>
+        <div className="grid grid-cols-2 gap-2">
+          <Button
+            onClick={() => {
+              setFormState({
+                notification_type: "",
+                name: "",
+                title: "",
+                message: "",
+              });
+              setEditingId(null);
+              setModalOpen(true);
+            }}
+            leftSection={<RiAddLine />}
+            className="btn btn-info btn-sm"
+          >
+            Agregar
+          </Button>
+          <Button
+            onClick={refreshData}
+            variant="filled"
+            leftSection={<RiRefreshLine />}
+            className="btn btn-primary btn-sm"
+          >
+            Refrescar
+          </Button>
+        </div>
       </div>
 
       {/* Notificación de error (si existe) */}
@@ -221,7 +228,7 @@ export default function MessagePage() {
       <div className="card bg-base-100 shadow-xl">
         <div className="card-body">
           <div className="overflow-x-auto rounded-md">
-            <table className="table w-full hidden md:table">
+            <table className="table w-full hidden md:table text-black">
               <thead className="bg-info text-white text-md uppercase font-bold">
                 <tr className="text-white font-bold">
                   {/* <th>ID</th> */}
@@ -244,9 +251,8 @@ export default function MessagePage() {
                   data.map((item) => (
                     <tr key={item.id}>
                       {/* <td>{item.id}</td> */}
-                      <td className="uppercase badge badge-info font-bold mx-3">
-                        {item.notification_type || "—"}
-                      </td>
+
+                      <NotificationTD type={item.notification_type} td={true} />
                       <td className="uppercase ">{item.name || "—"}</td>
                       <td className="uppercase ">{item.title || "—"}</td>
                       <td className="">{item.message || "—"}</td>
@@ -288,7 +294,7 @@ export default function MessagePage() {
             </table>
 
             {/* Vista Móvil */}
-            <div className="md:hidden space-y-4">
+            <div className="md:hidden space-y-4 text-black">
               {loading ? (
                 <div className="flex flex-col items-center py-4">
                   <Loader size="sm" color="blue" />
@@ -300,10 +306,10 @@ export default function MessagePage() {
                     key={item.id}
                     className="border rounded-lg p-4 bg-white shadow-md "
                   >
-                    <div className="mb-2">
+                    {/* <div className="mb-2">
                       <span className="font-semibold">ID: </span>
                       {item.id}
-                    </div>
+                    </div> */}
                     <div className="mb-2">
                       <span className="font-semibold">Tipo: </span>
                       {item.notification_type || "—"}
@@ -381,24 +387,17 @@ export default function MessagePage() {
           setEditingId(null);
         }}
         title={editingId ? "Editar Mensaje" : "Nuevo Mensaje"}
+        className="text-black"
         centered
-        className=""
       >
-        <div className="space-y-4 ">
-          <TextInput
-            label="Tipo"
-            placeholder="Identificador único"
+        <div className="space-y-4 text-black">
+          <Select
+            label="Tipo de Notificación"
+            placeholder="Selecciona un tipo"
+            data={notificationTypes}
             value={formState.notification_type}
-            onChange={(e) =>
-              setFormState({ ...formState, notification_type: e.target.value })
-            }
-          />
-          <TextInput
-            label="Título"
-            placeholder="Título"
-            value={formState.title}
-            onChange={(e) =>
-              setFormState({ ...formState, title: e.target.value })
+            onChange={(value) =>
+              setFormState({ ...formState, notification_type: value || "" })
             }
           />
           <TextInput
@@ -410,14 +409,24 @@ export default function MessagePage() {
             }
           />
           <TextInput
+            label="Título"
+            placeholder="Título"
+            value={formState.title}
+            onChange={(e) =>
+              setFormState({ ...formState, title: e.target.value })
+            }
+          />
+          <Textarea
             label="Mensaje"
-            placeholder="Mensaje"
+            placeholder="Escribe tu mensaje aquí..."
             value={formState.message}
             onChange={(e) =>
               setFormState({ ...formState, message: e.target.value })
             }
+            autosize
+            minRows={4}
+            maxRows={10}
           />
-
           <Button
             className="btn btn-info btn-sm"
             fullWidth
