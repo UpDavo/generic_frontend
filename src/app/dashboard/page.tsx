@@ -130,9 +130,10 @@ export default function DashboardHome() {
               cliente.
             </p>
             <p className="text-gray-600 italic">
-              "🚀 ¡Tu pedido ya está en camino! 🍻✨ [Nombre], nuestro
+              &quot;🚀 ¡Tu pedido ya está en camino! 🍻✨ [Nombre], nuestro
               motorizado está en ruta llevando la magia de Tada hasta tu puerta.
-              📦 📍 Sigue su ubicación en la app y prepárate para recibirlo."
+              📦 📍 Sigue su ubicación en la app y prepárate para
+              recibirlo.&quot;
             </p>
           </div>
 
@@ -145,9 +146,9 @@ export default function DashboardHome() {
               cliente.
             </p>
             <p className="text-gray-600 italic">
-              "📦 ¡Tu pedido ha llegado! 🏡🍻 [Nombre], la magia de Tada ya está
-              en tu puerta. Nuestro motorizado te espera para entregarte tu
-              pedido. ¡Nos vemos en un segundo!"
+              &quot;📦 ¡Tu pedido ha llegado! 🏡🍻 [Nombre], la magia de Tada ya
+              está en tu puerta. Nuestro motorizado te espera para entregarte tu
+              pedido. ¡Nos vemos en un segundo!&quot;
             </p>
           </div>
 
@@ -160,9 +161,9 @@ export default function DashboardHome() {
               de contacto.
             </p>
             <p className="text-gray-600 italic">
-              "📦 ¡Tu cerveza está a punto de irse! 🍻✨ [Nombre], intentamos
-              contactarte, pero no recibimos respuesta. 😔 Escríbenos antes de
-              que el pedido sea cancelado."
+              &quot;📦 ¡Tu cerveza está a punto de irse! 🍻✨ [Nombre],
+              intentamos contactarte, pero no recibimos respuesta. 😔 Escríbenos
+              antes de que el pedido sea cancelado.&quot;
             </p>
           </div>
 
@@ -175,9 +176,9 @@ export default function DashboardHome() {
               contactar al cliente.
             </p>
             <p className="text-gray-600 italic">
-              "⚠️ Tu pedido ha sido cancelado 🍻❌ [Nombre], intentamos
+              &quot;⚠️ Tu pedido ha sido cancelado 🍻❌ [Nombre], intentamos
               comunicarnos contigo, pero no tuvimos respuesta. 😔 Si tienes
-              alguna novedad, escríbenos al 099 373 2628."
+              alguna novedad, escríbenos al 099 373 2628.&quot;
             </p>
           </div>
 
