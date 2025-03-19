@@ -112,38 +112,44 @@ export default function DashboardHome() {
     return (
       <div className="p-6 bg-white shadow-md rounded-xl text-black">
         <h1 className="text-2xl font-bold text-start mb-4">
-          📢 Centro de Notificaciones
+          📢 Centro de Notificaciones - POCs
         </h1>
         <p className="text-gray-700 mb-6">
-          ✨ Aquí encontrarás los mensajes automáticos que se enviarán a los
-          clientes en diferentes escenarios de su pedido. Estas notificaciones
-          ayudan a mejorar la comunicación y la experiencia del usuario.
+          ✨ Aquí encontrarás los mensajes que puedes enviar a los clientes en
+          diferentes escenarios de su pedido. Es importante seguir los tiempos
+          establecidos para garantizar una comunicación efectiva y mejorar la
+          experiencia del usuario.
         </p>
 
         <div className="space-y-6">
           <div className="bg-gray-100 p-4 rounded-lg">
             <h2 className="text-lg font-semibold">
-              📌 1. Motorizado en camino 🏍️
+              📌 1. Motorizado en camino 🏍️ (Opcional, decisión del POC)
             </h2>
             <p>
-              ✅ Se enviará cuando el pedido se asigne y esté en ruta hacia el
-              cliente.
+              ✅ Se puede enviar cuando el pedido ha sido recogido y está en
+              ruta.
+            </p>
+            <p>
+              ✅ Cada POC decide si lo envía, ya que conoce mejor a sus
+              clientes.
             </p>
             <p className="text-gray-600 italic">
               &quot;🚀 ¡Tu pedido ya está en camino! 🍻✨ [Nombre], nuestro
               motorizado está en ruta llevando la magia de Tada hasta tu puerta.
-              📦 📍 Sigue su ubicación en la app y prepárate para
+              📦📍 Sigue su ubicación en la app y prepárate para
               recibirlo.&quot;
             </p>
           </div>
 
           <div className="bg-gray-100 p-4 rounded-lg">
             <h2 className="text-lg font-semibold">
-              📌 2. Motorizado llegó al punto de entrega 🏡
+              📌 2. Motorizado llegó al punto de entrega 🏡 (Enviar si el
+              cliente no responde en los primeros 5 minutos)
             </h2>
             <p>
-              ✅ Se enviará cuando el motorizado haya llegado a la dirección del
-              cliente.
+              ✅ Si al llegar a la dirección el cliente no responde en los
+              primeros 5 minutos, el POC debe enviar esta notificación.
             </p>
             <p className="text-gray-600 italic">
               &quot;📦 ¡Tu pedido ha llegado! 🏡🍻 [Nombre], la magia de Tada ya
@@ -154,11 +160,13 @@ export default function DashboardHome() {
 
           <div className="bg-gray-100 p-4 rounded-lg">
             <h2 className="text-lg font-semibold">
-              📌 3. Pedido será cancelado por falta de respuesta 📞
+              📌 3. Advertencia de cancelación por falta de respuesta 📞 (Enviar
+              si han pasado 10 minutos y el cliente sigue sin responder)
             </h2>
             <p>
-              ✅ Se enviará cuando el cliente no responda tras varios intentos
-              de contacto.
+              ✅ Si pasan 5 minutos después del mensaje anterior (total 10 min
+              desde la llegada) y el cliente aún no responde, el POC debe enviar
+              esta notificación.
             </p>
             <p className="text-gray-600 italic">
               &quot;📦 ¡Tu cerveza está a punto de irse! 🍻✨ [Nombre],
@@ -169,11 +177,13 @@ export default function DashboardHome() {
 
           <div className="bg-gray-100 p-4 rounded-lg">
             <h2 className="text-lg font-semibold">
-              📌 4. Pedido cancelado por falta de respuesta ❌
+              📌 4. Pedido cancelado por falta de respuesta ❌ (Enviar si han
+              pasado 15 minutos y el cliente sigue sin responder)
             </h2>
             <p>
-              ✅ Se enviará cuando el pedido haya sido cancelado por no lograr
-              contactar al cliente.
+              ✅ Si pasan otros 5 minutos (total 15 min desde la llegada del
+              motorizado) y el cliente sigue sin responder, el POC debe enviar
+              esta notificación.
             </p>
             <p className="text-gray-600 italic">
               &quot;⚠️ Tu pedido ha sido cancelado 🍻❌ [Nombre], intentamos
@@ -184,22 +194,31 @@ export default function DashboardHome() {
 
           <div className="bg-gray-100 p-4 rounded-lg">
             <h2 className="text-lg font-semibold">
-              📍 Consideraciones Importantes
+              📍 Proceso Completo de Notificaciones y Tiempos
             </h2>
             <ul className="list-disc list-inside text-gray-700">
+              <li>1️⃣ Motorizado en camino (Opcional, decisión del POC).</li>
               <li>
-                ✅ Se debe copiar y pegar el correo del cliente, ya que solo
-                funciona con el correo del cliente.
+                2️⃣ Motorizado llegó → Si después de 5 min el cliente no
+                responde, enviar notificación.
               </li>
               <li>
-                ✅ Son notificaciones informativas para mejorar la comunicación
-                con los clientes.
+                3️⃣ Advertencia de cancelación → Si después de 10 min el cliente
+                sigue sin responder, enviar notificación.
               </li>
               <li>
-                ✅ En caso de dudas o problemas con las notificaciones, pueden
-                contactar a soporte.
+                4️⃣ Pedido cancelado → Si después de 15 min el cliente sigue sin
+                responder, enviar notificación.
               </li>
             </ul>
+            <p className="mt-2">
+              ✅ Los POCs deben enviar manualmente cada notificación según los
+              tiempos establecidos.
+            </p>
+            <p>
+              ✅ El mensaje de &quot;Pedido en camino&quot; es opcional y queda
+              a criterio del POC.
+            </p>
           </div>
         </div>
       </div>
