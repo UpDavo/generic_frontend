@@ -10,7 +10,7 @@ import {
   Button,
   Notification,
   Loader,
-  MultiSelect,
+  Select,
 } from "@mantine/core";
 import { useRouter } from "next/navigation";
 import { Unauthorized } from "@/components/Unauthorized";
@@ -24,6 +24,7 @@ export default function PushPage() {
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
+  const [loadingMessages, setLoadingMessages] = useState(true); // Estado de carga para los mensajes
   const [authorized, setAuthorized] = useState<boolean | null>(null);
 
   useEffect(() => {
@@ -45,12 +46,15 @@ export default function PushPage() {
   }, [accessToken]);
 
   const fetchMessages = async () => {
+    setLoadingMessages(true); // Inicia la carga
     try {
       const data = await listMessages(accessToken, 1);
       setMessages(data.results);
     } catch (err) {
       console.log(err);
       setError("Error al cargar los mensajes");
+    } finally {
+      setLoadingMessages(false); // Finaliza la carga
     }
   };
 
@@ -68,11 +72,13 @@ export default function PushPage() {
   const isValidEmail = (email: string) => {
     const emailRegex = /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/;
     if (!emailRegex.test(email)) return false;
-    
+
     const domain = email.split("@")[1];
-    
-    // Permitir dominios externos, pero validar los más comunes
-    return validDomains.includes(domain) || /^[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/.test(domain);
+
+    return (
+      validDomains.includes(domain) ||
+      /^[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/.test(domain)
+    );
   };
 
   const handleSend = async () => {
@@ -157,20 +163,24 @@ export default function PushPage() {
             placeholder="Ingrese el email"
             value={email}
             onChange={(e) => setEmail(e.target.value.toLocaleLowerCase())}
-            error={!isValidEmail(email) && email !== "" ? "Email inválido" : undefined}
+            error={
+              !isValidEmail(email) && email !== ""
+                ? "Email inválido"
+                : undefined
+            }
           />
-          <MultiSelect
+          <Select
             label="Seleccionar Mensaje"
-            placeholder="Busque y seleccione un mensaje"
+            placeholder={loadingMessages ? "Cargando mensajes..." : "Seleccione un mensaje"}
             data={messages.map((msg) => ({
               value: msg.id.toString(),
               label: msg.name.toUpperCase(),
             }))}
             searchable
-            value={selectedMessage ? [selectedMessage] : []}
-            onChange={(values) =>
-              setSelectedMessage(values.length > 0 ? values[0] : null)
-            }
+            value={selectedMessage}
+            onChange={setSelectedMessage}
+            disabled={loadingMessages} // Desactiva el dropdown mientras carga
+            rightSection={loadingMessages ? <Loader size="sm" /> : null} // Agrega un loader dentro del select
           />
         </div>
         <div className="card-actions px-8 pb-6">

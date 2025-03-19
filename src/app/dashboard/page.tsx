@@ -4,14 +4,7 @@ import { useEffect, useState } from "react";
 import { listLogsReport, getPrice } from "@/services/pushApi";
 import { TextInput, Loader, Notification, Button } from "@mantine/core";
 import { RiRefreshLine, RiSearchLine } from "react-icons/ri";
-import {
-  BarChart,
-  Bar,
-  XAxis,
-  YAxis,
-  Tooltip,
-  ResponsiveContainer,
-} from "recharts";
+import { PieChart, Pie, Tooltip, ResponsiveContainer, Cell } from "recharts";
 import { useAuth } from "@/hooks/useAuth";
 import { useRouter } from "next/navigation";
 import { Unauthorized } from "@/components/Unauthorized";
@@ -95,6 +88,12 @@ export default function DashboardHome() {
       setLoading(false);
     }
   };
+
+  const generateRandomColor = () => {
+    return `#${Math.floor(Math.random() * 16777215).toString(16)}`;
+  };
+
+  const colors = userCalls.map(() => generateRandomColor());
 
   const refreshData = () => {
     fetchDashboardData();
@@ -297,25 +296,48 @@ export default function DashboardHome() {
             <h2 className="text-lg font-bold text-center mb-4 text-black">
               Pushs por Usuario
             </h2>
+
             {userCalls.length > 0 ? (
-              <ResponsiveContainer width="100%" height={400}>
-                <BarChart data={userCalls}>
-                  <XAxis dataKey="user" />
-                  <YAxis />
-                  <Tooltip
-                    contentStyle={{
-                      backgroundColor: "white",
-                      color: "black",
-                      border: "1px solid #ddd",
-                    }}
-                  />
-                  <Bar
-                    dataKey="count"
-                    fill="#5A57EE"
-                    label={{ fill: "white", fontSize: 22 }}
-                  />
-                </BarChart>
-              </ResponsiveContainer>
+              <>
+                {/* Gráfico de Pastel */}
+                <ResponsiveContainer width="100%" height={400}>
+                  <PieChart>
+                    <Pie
+                      data={userCalls}
+                      dataKey="count"
+                      nameKey="user"
+                      cx="50%"
+                      cy="50%"
+                      outerRadius={120}
+                      fill="#8884d8"
+                    >
+                      {userCalls.map((_, index) => (
+                        <Cell key={`cell-${index}`} fill={colors[index]} />
+                      ))}
+                    </Pie>
+                    <Tooltip
+                      contentStyle={{
+                        backgroundColor: "white",
+                        color: "black",
+                        border: "1px solid #ddd",
+                      }}
+                    />
+                  </PieChart>
+                </ResponsiveContainer>
+
+                {/* Leyenda personalizada */}
+                <div className="flex flex-wrap justify-center mt-4">
+                  {userCalls.map((user, index) => (
+                    <div key={user.user} className="flex items-center m-2">
+                      <span
+                        className="w-4 h-4 rounded-full mr-2"
+                        style={{ backgroundColor: colors[index] }}
+                      />
+                      <span className="text-black">{user.user}</span>
+                    </div>
+                  ))}
+                </div>
+              </>
             ) : (
               <p className="text-center text-black">
                 No hay datos disponibles.
