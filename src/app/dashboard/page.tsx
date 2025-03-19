@@ -110,7 +110,7 @@ export default function DashboardHome() {
 
   if (!authorized) {
     return (
-      <div className="p-6 bg-white shadow-md rounded-xl">
+      <div className="p-6 bg-white shadow-md rounded-xl text-black">
         <h1 className="text-2xl font-bold text-start mb-4">
           📢 Centro de Notificaciones
         </h1>

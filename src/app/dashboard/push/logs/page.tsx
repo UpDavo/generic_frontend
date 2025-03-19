@@ -181,6 +181,8 @@ export default function LogPage() {
         fill: getColor(type),
       }));
 
+      // console.log(notificationTypeChartDataFormatted)
+
       setNotificationTypeChartData(notificationTypeChartDataFormatted);
 
       setShowCharts(true);
