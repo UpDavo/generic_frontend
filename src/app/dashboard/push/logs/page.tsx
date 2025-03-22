@@ -156,12 +156,13 @@ export default function LogPage() {
         {}
       );
 
-      const userChartDataFormatted = Object.keys(userCounts).map(
-        (first_name) => ({
+      const userChartDataFormatted = Object.keys(userCounts)
+        .map((first_name) => ({
           first_name,
           count: userCounts[first_name],
-        })
-      );
+        }))
+        // Orden descendente por la propiedad 'count'
+        .sort((a, b) => b.count - a.count);
       setUserChartData(userChartDataFormatted);
 
       // Contar logs por tipo de notificación
@@ -173,13 +174,14 @@ export default function LogPage() {
         {}
       );
 
-      const notificationTypeChartDataFormatted = Object.keys(
-        notificationCounts
-      ).map((type) => ({
-        type,
-        count: notificationCounts[type],
-        fill: getColor(type),
-      }));
+      const notificationTypeChartDataFormatted = Object.keys(notificationCounts)
+        .map((type) => ({
+          type,
+          count: notificationCounts[type],
+          fill: getColor(type),
+        }))
+        // Orden descendente por la propiedad 'count'
+        .sort((a, b) => b.count - a.count);
 
       // console.log(notificationTypeChartDataFormatted)
 

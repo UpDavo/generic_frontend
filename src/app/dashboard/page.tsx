@@ -4,10 +4,12 @@ import { useEffect, useState } from "react";
 import { listLogsReport, getPrice } from "@/services/pushApi";
 import { TextInput, Loader, Notification, Button } from "@mantine/core";
 import { RiRefreshLine, RiSearchLine } from "react-icons/ri";
-import { PieChart, Pie, Tooltip, ResponsiveContainer, Cell } from "recharts";
 import { useAuth } from "@/hooks/useAuth";
 import { useRouter } from "next/navigation";
 import { Unauthorized } from "@/components/Unauthorized";
+
+/* IMPORTAMOS EL COMPONENTE DE TABLA */
+import { DataTable, DataTableSortStatus } from "mantine-datatable";
 
 export default function DashboardHome() {
   const { accessToken, user } = useAuth();
@@ -20,10 +22,19 @@ export default function DashboardHome() {
   const [totalCalls, setTotalCalls] = useState<number>(0);
   const [cost, setCost] = useState<number>(0);
 
-  // 3) Tipar userCalls
+  // Datos agrupados por usuario
   const [userCalls, setUserCalls] = useState<any[]>([]);
 
   const [authorized, setAuthorized] = useState<boolean | null>(null);
+
+  // Estado para la búsqueda en la tabla
+  const [searchValue, setSearchValue] = useState<string>("");
+
+  // Estado para el manejo de la ordenación en la tabla
+  const [sortStatus, setSortStatus] = useState<DataTableSortStatus>({
+    columnAccessor: "count", // Ordenamos por defecto por la columna 'count'
+    direction: "desc",       // De mayor a menor
+  });
 
   useEffect(() => {
     const hasPermission =
@@ -47,7 +58,7 @@ export default function DashboardHome() {
     setError(null);
 
     try {
-      // 1) Obtenemos la respuesta Paginada
+      // 1) Obtenemos la respuesta paginada
       const data: any[] = await listLogsReport(
         accessToken,
         null,
@@ -56,19 +67,18 @@ export default function DashboardHome() {
         []
       );
 
-      // 3) Si vas a llamar a getPrice
+      // 2) Obtenemos el precio
       const prices = await getPrice(accessToken);
-      console.log(prices);
 
-      // 4) Calcular total de llamadas
+      // 3) Calcular total de llamadas
       const total = data.length;
       setTotalCalls(total);
 
-      // 5) Calcular costo
+      // 4) Calcular costo
       const calculatedCost = total * prices.value;
       setCost(calculatedCost);
 
-      // 6) Calcular llamadas por usuario (reduce)
+      // 5) Calcular llamadas por usuario (reduce)
       const userCounts = data.reduce<Record<string, number>>((acc, log) => {
         const userName = log.user.first_name;
         acc[userName] = (acc[userName] || 0) + 1;
@@ -89,12 +99,6 @@ export default function DashboardHome() {
     }
   };
 
-  const generateRandomColor = () => {
-    return `#${Math.floor(Math.random() * 16777215).toString(16)}`;
-  };
-
-  const colors = userCalls.map(() => generateRandomColor());
-
   const refreshData = () => {
     fetchDashboardData();
   };
@@ -108,121 +112,28 @@ export default function DashboardHome() {
   }
 
   if (!authorized) {
-    return (
-      <div className="p-6 bg-white shadow-md rounded-xl text-black">
-        <h1 className="text-2xl font-bold text-start mb-4">
-          📢 Centro de Notificaciones - POCs
-        </h1>
-        <p className="text-gray-700 mb-6">
-          ✨ Aquí encontrarás los mensajes que puedes enviar a los clientes en
-          diferentes escenarios de su pedido. Es importante seguir los tiempos
-          establecidos para garantizar una comunicación efectiva y mejorar la
-          experiencia del usuario.
-        </p>
-
-        <div className="space-y-6">
-          <div className="bg-gray-100 p-4 rounded-lg">
-            <h2 className="text-lg font-semibold">
-              📌 1. Motorizado en camino 🏍️ (Opcional, decisión del POC)
-            </h2>
-            <p>
-              ✅ Se puede enviar cuando el pedido ha sido recogido y está en
-              ruta.
-            </p>
-            <p>
-              ✅ Cada POC decide si lo envía, ya que conoce mejor a sus
-              clientes.
-            </p>
-            <p className="text-gray-600 italic">
-              &quot;🚀 ¡Tu pedido ya está en camino! 🍻✨ [Nombre], nuestro
-              motorizado está en ruta llevando la magia de Tada hasta tu puerta.
-              📦📍 Sigue su ubicación en la app y prepárate para
-              recibirlo.&quot;
-            </p>
-          </div>
-
-          <div className="bg-gray-100 p-4 rounded-lg">
-            <h2 className="text-lg font-semibold">
-              📌 2. Motorizado llegó al punto de entrega 🏡 (Enviar si el
-              cliente no responde en los primeros 5 minutos)
-            </h2>
-            <p>
-              ✅ Si al llegar a la dirección el cliente no responde en los
-              primeros 5 minutos, el POC debe enviar esta notificación.
-            </p>
-            <p className="text-gray-600 italic">
-              &quot;📦 ¡Tu pedido ha llegado! 🏡🍻 [Nombre], la magia de Tada ya
-              está en tu puerta. Nuestro motorizado te espera para entregarte tu
-              pedido. ¡Nos vemos en un segundo!&quot;
-            </p>
-          </div>
-
-          <div className="bg-gray-100 p-4 rounded-lg">
-            <h2 className="text-lg font-semibold">
-              📌 3. Advertencia de cancelación por falta de respuesta 📞 (Enviar
-              si han pasado 10 minutos y el cliente sigue sin responder)
-            </h2>
-            <p>
-              ✅ Si pasan 5 minutos después del mensaje anterior (total 10 min
-              desde la llegada) y el cliente aún no responde, el POC debe enviar
-              esta notificación.
-            </p>
-            <p className="text-gray-600 italic">
-              &quot;📦 ¡Tu cerveza está a punto de irse! 🍻✨ [Nombre],
-              intentamos contactarte, pero no recibimos respuesta. 😔 Escríbenos
-              antes de que el pedido sea cancelado.&quot;
-            </p>
-          </div>
-
-          <div className="bg-gray-100 p-4 rounded-lg">
-            <h2 className="text-lg font-semibold">
-              📌 4. Pedido cancelado por falta de respuesta ❌ (Enviar si han
-              pasado 15 minutos y el cliente sigue sin responder)
-            </h2>
-            <p>
-              ✅ Si pasan otros 5 minutos (total 15 min desde la llegada del
-              motorizado) y el cliente sigue sin responder, el POC debe enviar
-              esta notificación.
-            </p>
-            <p className="text-gray-600 italic">
-              &quot;⚠️ Tu pedido ha sido cancelado 🍻❌ [Nombre], intentamos
-              comunicarnos contigo, pero no tuvimos respuesta. 😔 Si tienes
-              alguna novedad, escríbenos al 099 373 2628.&quot;
-            </p>
-          </div>
-
-          <div className="bg-gray-100 p-4 rounded-lg">
-            <h2 className="text-lg font-semibold">
-              📍 Proceso Completo de Notificaciones y Tiempos
-            </h2>
-            <ul className="list-disc list-inside text-gray-700">
-              <li>1️⃣ Motorizado en camino (Opcional, decisión del POC).</li>
-              <li>
-                2️⃣ Motorizado llegó → Si después de 5 min el cliente no
-                responde, enviar notificación.
-              </li>
-              <li>
-                3️⃣ Advertencia de cancelación → Si después de 10 min el cliente
-                sigue sin responder, enviar notificación.
-              </li>
-              <li>
-                4️⃣ Pedido cancelado → Si después de 15 min el cliente sigue sin
-                responder, enviar notificación.
-              </li>
-            </ul>
-            <p className="mt-2">
-              ✅ Los POCs deben enviar manualmente cada notificación según los
-              tiempos establecidos.
-            </p>
-            <p>
-              ✅ El mensaje de &quot;Pedido en camino&quot; es opcional y queda
-              a criterio del POC.
-            </p>
-          </div>
-        </div>
-      </div>
-    );
+    return <Unauthorized />;
   }
+
+  // Filtrado por nombre de usuario
+  const filteredRecords = userCalls.filter((item) =>
+    item.user.toLowerCase().includes(searchValue.toLowerCase())
+  );
+
+  // Ordenamos los datos según el estado de sortStatus
+  const sortedRecords = [...filteredRecords].sort((a, b) => {
+    const { columnAccessor, direction } = sortStatus;
+
+    // Ordenamiento simple: 'user' o 'count'
+    if (columnAccessor === "user") {
+      const comp = a.user.localeCompare(b.user);
+      return direction === "asc" ? comp : -comp;
+    } else if (columnAccessor === "count") {
+      const comp = a.count - b.count;
+      return direction === "asc" ? comp : -comp;
+    }
+    return 0;
+  });
 
   return (
     <div>
@@ -233,14 +144,14 @@ export default function DashboardHome() {
           label="Desde"
           value={sentAtGte || ""}
           onChange={(e) => setSentAtGte(e.target.value || null)}
-          leftSection={<RiSearchLine />}
+          // icon={<RiSearchLine />}
         />
         <TextInput
           type="date"
           label="Hasta"
           value={sentAtLte || ""}
           onChange={(e) => setSentAtLte(e.target.value || null)}
-          leftSection={<RiSearchLine />}
+          // icon={<RiSearchLine />}
         />
         <Button
           onClick={refreshData}
@@ -291,52 +202,44 @@ export default function DashboardHome() {
             </div>
           </div>
 
-          {/* Gráfico de llamadas por usuario */}
+          {/* Tabla de llamadas por usuario */}
           <div className="card bg-gray-100 shadow-xl p-6 col-span-3">
-            <h2 className="text-lg font-bold text-center mb-4 text-black">
+            <h2 className="text-lg font-bold mb-4 text-black text-center">
               Pushs por Usuario
             </h2>
 
             {userCalls.length > 0 ? (
               <>
-                {/* Gráfico de Pastel */}
-                <ResponsiveContainer width="100%" height={400}>
-                  <PieChart>
-                    <Pie
-                      data={userCalls}
-                      dataKey="count"
-                      nameKey="user"
-                      cx="50%"
-                      cy="50%"
-                      outerRadius={120}
-                      fill="#8884d8"
-                    >
-                      {userCalls.map((_, index) => (
-                        <Cell key={`cell-${index}`} fill={colors[index]} />
-                      ))}
-                    </Pie>
-                    <Tooltip
-                      contentStyle={{
-                        backgroundColor: "white",
-                        color: "black",
-                        border: "1px solid #ddd",
-                      }}
-                    />
-                  </PieChart>
-                </ResponsiveContainer>
+                {/* Input para filtrar por usuario */}
+                <TextInput
+                  placeholder="Filtrar por nombre de usuario..."
+                  value={searchValue}
+                  onChange={(e) => setSearchValue(e.currentTarget.value)}
+                  // left={<RiSearchLine />}
+                  className="mb-4"
+                />
 
-                {/* Leyenda personalizada */}
-                <div className="flex flex-wrap justify-center mt-4">
-                  {userCalls.map((user, index) => (
-                    <div key={user.user} className="flex items-center m-2">
-                      <span
-                        className="w-4 h-4 rounded-full mr-2"
-                        style={{ backgroundColor: colors[index] }}
-                      />
-                      <span className="text-black">{user.user}</span>
-                    </div>
-                  ))}
-                </div>
+                {/* DataTable con ordenamiento y filtrado */}
+                <DataTable
+                  records={sortedRecords}
+                  columns={[
+                    {
+                      accessor: "user",
+                      title: "Usuario",
+                      sortable: true,
+                    },
+                    {
+                      accessor: "count",
+                      title: "Pushs Enviados",
+                      sortable: true,
+                    },
+                  ]}
+                  sortStatus={sortStatus}
+                  onSortStatusChange={setSortStatus}
+                  highlightOnHover
+                  verticalSpacing="sm"
+                  noRecordsText="Total de Registros"
+                />
               </>
             ) : (
               <p className="text-center text-black">
