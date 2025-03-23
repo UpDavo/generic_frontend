@@ -181,6 +181,7 @@ export default function PushPage() {
             onChange={setSelectedMessage}
             disabled={loadingMessages} // Desactiva el dropdown mientras carga
             rightSection={loadingMessages ? <Loader size="sm" /> : null} // Agrega un loader dentro del select
+            className="text-black"
           />
         </div>
         <div className="card-actions px-8 pb-6">

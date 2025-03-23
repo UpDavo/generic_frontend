@@ -181,7 +181,7 @@ export default function MessagePage() {
   return (
     <div>
       {/* Barra de búsqueda y botón de agregar */}
-      <div className="flex justify-between items-center mb-4 gap-2">
+      <div className="md:flex grid grid-cols-1 w-full justify-between items-center mb-4 gap-2">
         <TextInput
           leftSection={<RiSearchLine />}
           placeholder="Buscar por nombre..."
@@ -189,7 +189,7 @@ export default function MessagePage() {
           onChange={(e) => setSearchQuery(e.target.value)}
           className="w-full"
         />
-        <div className="grid grid-cols-2 gap-2">
+        <div className="grid md:grid-cols-2 grid-cols-1 gap-2">
           <Button
             onClick={() => {
               setFormState({
@@ -310,18 +310,17 @@ export default function MessagePage() {
                       <span className="font-semibold">ID: </span>
                       {item.id}
                     </div> */}
+                    <div className="mb-2 mt-2">
+                      <NotificationTD type={item.notification_type} td={false} />
+                    </div>
                     <div className="mb-2">
-                      <span className="font-semibold">Tipo: </span>
-                      {item.notification_type || "—"}
+                      <span className="font-semibold">{item.name || "—"}</span>
                     </div>
                     <div className="mb-2">
                       <span className="font-semibold">Título: </span>
                       {item.title || "—"}
                     </div>
-                    <div className="mb-2">
-                      <span className="font-semibold">Nombre: </span>
-                      {item.name || "—"}
-                    </div>
+                    
                     <div className="mb-2">
                       <span className="font-semibold">Mensaje: </span>
                       {item.message || "—"}

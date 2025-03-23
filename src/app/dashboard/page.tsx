@@ -203,7 +203,7 @@ export default function DashboardHome() {
           </div>
 
           {/* Tabla de llamadas por usuario */}
-          <div className="card bg-gray-100 shadow-xl p-6 col-span-3">
+          <div className="card bg-gray-100 shadow-xl p-6 col-span-3 text-black">
             <h2 className="text-lg font-bold mb-4 text-black text-center">
               Pushs por Usuario
             </h2>
@@ -239,6 +239,7 @@ export default function DashboardHome() {
                   highlightOnHover
                   verticalSpacing="sm"
                   noRecordsText="Total de Registros"
+                  className="text-black"
                 />
               </>
             ) : (
