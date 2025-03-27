@@ -33,7 +33,7 @@ export default function DashboardHome() {
   // Estado para el manejo de la ordenación en la tabla
   const [sortStatus, setSortStatus] = useState<DataTableSortStatus>({
     columnAccessor: "count", // Ordenamos por defecto por la columna 'count'
-    direction: "desc",       // De mayor a menor
+    direction: "desc", // De mayor a menor
   });
 
   useEffect(() => {
@@ -112,7 +112,101 @@ export default function DashboardHome() {
   }
 
   if (!authorized) {
-    return <Unauthorized />;
+    return (
+      <div className="p-6 bg-white shadow-md rounded-xl text-black">
+        <h1 className="text-2xl font-bold text-start mb-4">
+          📢 Centro de Notificaciones
+        </h1>
+        <p className="text-gray-700 mb-6">
+          ✨ Aquí encontrarás los mensajes automáticos que se enviarán a los
+          clientes en diferentes escenarios de su pedido. Estas notificaciones
+          ayudan a mejorar la comunicación y la experiencia del usuario.
+        </p>
+
+        <div className="space-y-6">
+          <div className="bg-gray-100 p-4 rounded-lg">
+            <h2 className="text-lg font-semibold">
+              📌 1. Motorizado en camino 🏍️
+            </h2>
+            <p>
+              ✅ Se enviará cuando el pedido se asigne y esté en ruta hacia el
+              cliente.
+            </p>
+            <p className="text-gray-600 italic">
+              &quot;🚀 ¡Tu pedido ya está en camino! 🍻✨ [Nombre], nuestro
+              motorizado está en ruta llevando la magia de Tada hasta tu puerta.
+              📦 📍 Sigue su ubicación en la app y prepárate para
+              recibirlo.&quot;
+            </p>
+          </div>
+
+          <div className="bg-gray-100 p-4 rounded-lg">
+            <h2 className="text-lg font-semibold">
+              📌 2. Motorizado llegó al punto de entrega 🏡
+            </h2>
+            <p>
+              ✅ Se enviará cuando el motorizado haya llegado a la dirección del
+              cliente.
+            </p>
+            <p className="text-gray-600 italic">
+              &quot;📦 ¡Tu pedido ha llegado! 🏡🍻 [Nombre], la magia de Tada ya
+              está en tu puerta. Nuestro motorizado te espera para entregarte tu
+              pedido. ¡Nos vemos en un segundo!&quot;
+            </p>
+          </div>
+
+          <div className="bg-gray-100 p-4 rounded-lg">
+            <h2 className="text-lg font-semibold">
+              📌 3. Pedido será cancelado por falta de respuesta 📞
+            </h2>
+            <p>
+              ✅ Se enviará cuando el cliente no responda tras varios intentos
+              de contacto.
+            </p>
+            <p className="text-gray-600 italic">
+              &quot;📦 ¡Tu cerveza está a punto de irse! 🍻✨ [Nombre],
+              intentamos contactarte, pero no recibimos respuesta. 😔 Escríbenos
+              antes de que el pedido sea cancelado.&quot;
+            </p>
+          </div>
+
+          <div className="bg-gray-100 p-4 rounded-lg">
+            <h2 className="text-lg font-semibold">
+              📌 4. Pedido cancelado por falta de respuesta ❌
+            </h2>
+            <p>
+              ✅ Se enviará cuando el pedido haya sido cancelado por no lograr
+              contactar al cliente.
+            </p>
+            <p className="text-gray-600 italic">
+              &quot;⚠️ Tu pedido ha sido cancelado 🍻❌ [Nombre], intentamos
+              comunicarnos contigo, pero no tuvimos respuesta. 😔 Si tienes
+              alguna novedad, escríbenos al 099 373 2628.&quot;
+            </p>
+          </div>
+
+          <div className="bg-gray-100 p-4 rounded-lg">
+            <h2 className="text-lg font-semibold">
+              📍 Consideraciones Importantes
+            </h2>
+            <ul className="list-disc list-inside text-gray-700">
+              <li>
+                ✅ Se debe copiar y pegar el correo del cliente, ya que solo
+                funciona con el correo del cliente.
+              </li>
+              <li>
+                ✅ Son notificaciones informativas para mejorar la comunicación
+                con los clientes.
+              </li>
+              <li>
+                ✅ En caso de dudas o problemas con las notificaciones, pueden
+                contactar a soporte.
+              </li>
+            </ul>
+          </div>
+        </div>
+      </div>
+    );
   }
 
   // Filtrado por nombre de usuario
