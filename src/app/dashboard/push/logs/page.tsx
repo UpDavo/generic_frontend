@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback } from "react";
 import { listLogs, listLogsReport } from "@/services/pushApi";
 import { listUsers } from "@/services/userApi";
 import { useAuth } from "@/hooks/useAuth";
@@ -28,187 +28,196 @@ import { Unauthorized } from "@/components/Unauthorized";
 import NotificationTD from "@/components/NotificationTD";
 import { getColor } from "@/config/genericVariables";
 
+/* ------------------- TIPOS AUXILIARES ------------------- */
 interface UserChartItem {
   first_name: string;
   count: number;
 }
-
 interface UserChartType {
   type: string;
   count: number;
-  fill: any;
+  fill: string;
 }
 
+/* =================== COMPONENTE =================== */
 export default function LogPage() {
   const { accessToken, user } = useAuth();
-  const [logs, setLogs] = useState([]);
-  const [error, setError] = useState<string | null>(null);
-  const [loading, setLoading] = useState<boolean>(true);
-  const [page, setPage] = useState(1);
-  const [totalPages, setTotalPages] = useState(1);
+  const router = useRouter();
 
-  // Estados para la búsqueda por fecha y usuarios
+  /* ------------------- AUTORIZACIÓN ------------------- */
+  const [authorized, setAuthorized] = useState<boolean | null>(null);
+  useEffect(() => {
+    const ok =
+      user?.role?.is_admin ||
+      user?.role?.permissions?.some((p) => p.path === "/push/logs");
+    setAuthorized(!!ok);
+  }, [user]);
+
+  /* ------------------- FILTROS (inputs) ------------------- */
   const [sentAtGte, setSentAtGte] = useState<string | null>(null);
   const [sentAtLte, setSentAtLte] = useState<string | null>(null);
   const [selectedUsers, setSelectedUsers] = useState<string[]>([]);
-  const [users, setUsers] = useState([]); // Lista de usuarios disponibles para el filtro
+  const [users, setUsers] = useState<{ value: string; label: string }[]>([]);
 
-  // Datos de los gráficos
+  /* ------------------- FILTROS APLICADOS ------------------- */
+  const [appliedFilters, setAppliedFilters] = useState<{
+    gte: string | null;
+    lte: string | null;
+    users: string[];
+  }>({ gte: null, lte: null, users: [] });
+
+  /* ------------------- TABLA ------------------- */
+  const [logs, setLogs] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [page, setPage] = useState(1);
+  const [totalPages, setTotalPages] = useState(1);
+
+  /* ------------------- GRÁFICOS ------------------- */
   const [userChartData, setUserChartData] = useState<UserChartItem[]>([]);
   const [notificationTypeChartData, setNotificationTypeChartData] = useState<
     UserChartType[]
   >([]);
   const [showCharts, setShowCharts] = useState(false);
 
-  const router = useRouter();
-  const [authorized, setAuthorized] = useState<boolean | null>(null);
-
+  /* =========================================================
+     1. Carga inicial de usuarios
+  ========================================================= */
   useEffect(() => {
-    const hasPermission =
-      user?.role?.is_admin ||
-      user?.role?.permissions?.some((perm) => perm.path === "/push/logs");
-
-    if (hasPermission) {
-      setAuthorized(true);
-    } else {
-      setAuthorized(false);
-    }
-  }, [user, router]);
-
-  // Cargar lista de usuarios al montar el componente
-  useEffect(() => {
-    if (accessToken) {
-      fetchUsers();
-    }
+    if (!accessToken) return;
+    (async () => {
+      try {
+        const data = await listUsers(accessToken);
+        setUsers(
+          data.map((u: any) => ({
+            value: u.email,
+            label: `${u.first_name} ${u.last_name}`,
+          }))
+        );
+      } catch (err) {
+        console.error(err);
+      }
+    })();
   }, [accessToken]);
 
-  // Actualizar la tabla cuando cambian los filtros o la página
-  useEffect(() => {
-    if (accessToken) {
-      fetchLogs();
-    }
-  }, [accessToken, page, sentAtGte, sentAtLte, selectedUsers]);
-
-  // Actualizar los gráficos cuando hay filtros activos
-  useEffect(() => {
-    if (accessToken && (sentAtGte || sentAtLte || selectedUsers.length > 0)) {
-      fetchLogsReport();
-    } else {
-      setUserChartData([]);
-      setNotificationTypeChartData([]);
-      setShowCharts(false);
-    }
-  }, [accessToken, sentAtGte, sentAtLte, selectedUsers]);
-
-  // Obtiene la lista de usuarios disponibles para el filtro
-  const fetchUsers = async () => {
-    try {
-      const data = await listUsers(accessToken);
-      const formattedUsers = data.map((user: any) => ({
-        value: user.email,
-        label: `${user.first_name} ${user.last_name}`,
-      }));
-      setUsers(formattedUsers);
-    } catch (err) {
-      console.log(err);
-    }
-  };
-
-  // Obtiene los logs paginados para la tabla
-  const fetchLogs = async () => {
+  /* =========================================================
+     2. Traer LOGS cada vez que cambian page o appliedFilters
+  ========================================================= */
+  const fetchLogs = useCallback(async () => {
+    if (!accessToken) return;
     setLoading(true);
     try {
-      const data = await listLogs(
+      const { results, count } = await listLogs(
         accessToken,
         page,
         null,
-        sentAtGte,
-        sentAtLte,
-        selectedUsers
+        appliedFilters.gte,
+        appliedFilters.lte,
+        appliedFilters.users
       );
-      setLogs(data.results);
-      setTotalPages(Math.ceil(data.count / 10));
+      setLogs(results);
+      setTotalPages(Math.ceil(count / 10));
       setError(null);
     } catch (err) {
-      console.log(err);
+      console.error(err);
       setError("Error al cargar los logs");
     } finally {
       setLoading(false);
     }
-  };
+  }, [accessToken, page, appliedFilters]);
 
-  // Obtiene todos los logs (sin paginación) para los gráficos
-  const fetchLogsReport = async () => {
+  useEffect(() => {
+    fetchLogs();
+  }, [fetchLogs]);
+
+  /* =========================================================
+     3. Traer datos para GRÁFICOS cuando cambian appliedFilters
+  ========================================================= */
+  const fetchLogsReport = useCallback(async () => {
+    if (!accessToken) return;
     try {
       const data = await listLogsReport(
         accessToken,
         null,
-        sentAtGte,
-        sentAtLte,
-        selectedUsers
-      );
-      // Contar logs por usuario
-      const userCounts = data.reduce(
-        (acc: any, log: { user: { first_name: string } }) => {
-          acc[log.user.first_name] = (acc[log.user.first_name] || 0) + 1;
-          return acc;
-        },
-        {}
-      );
+        appliedFilters.gte,
+        appliedFilters.lte,
+        appliedFilters.users
+      ) as any[];
 
-      const userChartDataFormatted = Object.keys(userCounts)
-        .map((first_name) => ({
-          first_name,
-          count: userCounts[first_name],
-        }))
-        // Orden descendente por la propiedad 'count'
-        .sort((a, b) => b.count - a.count);
-      setUserChartData(userChartDataFormatted);
-
-      // Contar logs por tipo de notificación
-      const notificationCounts = data.reduce(
-        (acc: any, log: { notification_type: string }) => {
-          acc[log.notification_type] = (acc[log.notification_type] || 0) + 1;
-          return acc;
-        },
-        {}
+      /* -- Por usuario -- */
+      const userCounts = data.reduce<Record<string, number>>((acc, log) => {
+        const name = log.user.first_name;
+        acc[name] = (acc[name] || 0) + 1;
+        return acc;
+      }, {});
+      setUserChartData(
+        Object.entries(userCounts)
+          .map(([first_name, count]) => ({ first_name, count }))
+          .sort((a, b) => b.count - a.count)
       );
 
-      const notificationTypeChartDataFormatted = Object.keys(notificationCounts)
-        .map((type) => ({
-          type,
-          count: notificationCounts[type],
-          fill: getColor(type),
-        }))
-        // Orden descendente por la propiedad 'count'
-        .sort((a, b) => b.count - a.count);
-
-      // console.log(notificationTypeChartDataFormatted)
-
-      setNotificationTypeChartData(notificationTypeChartDataFormatted);
+      /* -- Por tipo -- */
+      const notifCounts = data.reduce<Record<string, number>>((acc, log) => {
+        acc[log.notification_type] = (acc[log.notification_type] || 0) + 1;
+        return acc;
+      }, {});
+      setNotificationTypeChartData(
+        Object.entries(notifCounts)
+          .map(([type, count]) => ({
+            type,
+            count,
+            fill: getColor(type),
+          }))
+          .sort((a, b) => b.count - a.count)
+      );
 
       setShowCharts(true);
     } catch (err) {
-      console.log(err);
+      console.error(err);
       setUserChartData([]);
       setNotificationTypeChartData([]);
       setShowCharts(false);
     }
+  }, [accessToken, appliedFilters]);
+
+  useEffect(() => {
+    /* Solo si hay algún filtro aplicado */
+    if (
+      appliedFilters.gte ||
+      appliedFilters.lte ||
+      appliedFilters.users.length
+    ) {
+      fetchLogsReport();
+    } else {
+      setShowCharts(false);
+      setUserChartData([]);
+      setNotificationTypeChartData([]);
+    }
+  }, [fetchLogsReport]);
+
+  /* =========================================================
+     4. Handlers
+  ========================================================= */
+  const applyFilters = () => {
+    setAppliedFilters({
+      gte: sentAtGte,
+      lte: sentAtLte,
+      users: selectedUsers,
+    });
+    setPage(1); // reset paginación
   };
 
-  const refreshData = () => {
-    fetchLogs();
-  };
-
-  // Limpiar filtros
   const clearFilters = () => {
     setSentAtGte(null);
     setSentAtLte(null);
     setSelectedUsers([]);
-    setShowCharts(false);
+    setAppliedFilters({ gte: null, lte: null, users: [] });
     setPage(1);
   };
 
+  /* =========================================================
+     5. Render
+  ========================================================= */
   if (authorized === null) {
     return (
       <div className="flex justify-center items-center mt-64">
@@ -216,10 +225,7 @@ export default function LogPage() {
       </div>
     );
   }
-
-  if (!authorized) {
-    return <Unauthorized />;
-  }
+  if (!authorized) return <Unauthorized />;
 
   return (
     <div className="text-black">
@@ -229,63 +235,54 @@ export default function LogPage() {
         </Notification>
       )}
 
-      {/* Filtros de búsqueda */}
-      <div className="grid md:grid-cols-4 grid-cols-1 align-bottom items-end gap-2 mx-2 mb-4">
+      {/* ---------------- FILTROS ---------------- */}
+      <div className="grid md:grid-cols-5 grid-cols-1 gap-2 mb-4 mx-2 items-end">
         <TextInput
           type="date"
           label="Desde"
           value={sentAtGte || ""}
-          onChange={(e) => {
-            setSentAtGte(e.target.value || null);
-            setPage(1);
-          }}
+          onChange={(e) => setSentAtGte(e.target.value || null)}
           leftSection={<RiSearchLine />}
         />
         <TextInput
           type="date"
           label="Hasta"
           value={sentAtLte || ""}
-          onChange={(e) => {
-            setSentAtLte(e.target.value || null);
-            setPage(1);
-          }}
+          onChange={(e) => setSentAtLte(e.target.value || null)}
           leftSection={<RiSearchLine />}
         />
         <MultiSelect
           data={users}
           searchable
-          label="Filtrar por usuarios"
+          label="Usuarios"
           placeholder="Selecciona usuarios"
           value={selectedUsers}
           onChange={setSelectedUsers}
-          className="text-black"
         />
-        <div className="grid grid-cols-2 gap-2">
-          <Button
-            onClick={clearFilters}
-            variant="outline"
-            leftSection={<RiCloseCircleLine />}
-            className="btn btn-info text-white hover:text-white btn-sm mb-1"
-          >
-            Limpiar Filtros
-          </Button>
-          <Button
-            onClick={refreshData}
-            variant="filled"
-            leftSection={<RiRefreshLine />}
-            className="btn btn-primary text-white hover:text-white btn-sm"
-          >
-            Refrescar
-          </Button>
-        </div>
+        <Button
+          onClick={applyFilters}
+          variant="filled"
+          leftSection={<RiSearchLine />}
+          disabled={loading}
+        >
+          Buscar
+        </Button>
+        <Button
+          onClick={clearFilters}
+          variant="outline"
+          leftSection={<RiCloseCircleLine />}
+          disabled={loading}
+        >
+          Limpiar
+        </Button>
       </div>
 
-      {/* Gráficos solo si hay filtros aplicados */}
+      {/* ---------------- GRÁFICOS ---------------- */}
       {showCharts && (
         <div className="grid md:grid-cols-2 grid-cols-1 gap-6 mb-4">
           <div className="card bg-base-100 shadow-xl p-4">
             <h2 className="text-lg font-bold text-center mb-4">
-              Push Enviados por Usuario
+              Push por Usuario
             </h2>
             <ResponsiveContainer width="100%" height={300}>
               <BarChart data={userChartData}>
@@ -298,14 +295,11 @@ export default function LogPage() {
                     border: "1px solid #ddd",
                   }}
                 />
-                <Bar
-                  dataKey="count"
-                  fill="#5A57EE"
-                  label={{ fill: "white", fontSize: 22 }}
-                />
+                <Bar dataKey="count" fill="#5A57EE" />
               </BarChart>
             </ResponsiveContainer>
           </div>
+
           <div className="card bg-base-100 shadow-xl p-4">
             <h2 className="text-lg font-bold text-center mb-4">
               Tipos de Push
@@ -321,10 +315,9 @@ export default function LogPage() {
                     border: "1px solid #ddd",
                   }}
                 />
-                {/* Se asigna un solo Bar y se usa el callback para asignar color por barra */}
-                <Bar dataKey="count" label={{ fill: "white", fontSize: 22 }}>
-                  {notificationTypeChartData.map((entry, index) => (
-                    <Cell key={`cell-${index}`} fill={entry.fill} />
+                <Bar dataKey="count">
+                  {notificationTypeChartData.map((entry, idx) => (
+                    <Cell key={idx} fill={entry.fill} />
                   ))}
                 </Bar>
               </BarChart>
@@ -333,19 +326,19 @@ export default function LogPage() {
         </div>
       )}
 
-      {/* Tabla de logs con paginación */}
+      {/* ---------------- TABLA + PAGINACIÓN ---------------- */}
       <div className="card bg-base-100 shadow-xl">
         <div className="card-body">
-          {/* Vista de tabla solo para pantallas medianas en adelante */}
-          <div className="overflow-x-auto rounded-md">
-            <table className="table w-full hidden md:table">
+          {/* Tabla (desktop) */}
+          <div className="overflow-x-auto rounded-md hidden md:block">
+            <table className="table w-full">
               <thead className="bg-info text-white text-md uppercase font-bold">
-                <tr className="text-white">
+                <tr>
                   <th>Enviado por</th>
                   <th>Enviado a</th>
                   <th>Tipo</th>
                   <th>Título</th>
-                  <th>Fecha de Envío</th>
+                  <th>Fecha</th>
                 </tr>
               </thead>
               <tbody className="bg-white">
@@ -353,84 +346,67 @@ export default function LogPage() {
                   <tr>
                     <td colSpan={5} className="text-center py-4">
                       <Loader size="sm" color="blue" />
-                      <p className="mt-2 text-gray-500">Cargando...</p>
                     </td>
                   </tr>
-                ) : logs.length > 0 ? (
+                ) : logs.length ? (
                   logs.map((log: any) => (
-                    <tr
-                      key={log.id}
-                      className="hover:bg-slate-200 hover:border-slate-200 "
-                    >
+                    <tr key={log.id} className="hover:bg-slate-200">
                       <td className="uppercase font-bold">
                         {log.user.first_name}
                       </td>
                       <td className="lowercase italic">{log.email}</td>
-                      <NotificationTD
-                        type={log.notification_type}
-                        td={true}
-                        className="mt-2"
-                      />
+                      <NotificationTD type={log.notification_type} td className="mt-2"/>
                       <td>{log.title}</td>
                       <td>{new Date(log.sent_at).toLocaleString()}</td>
                     </tr>
                   ))
                 ) : (
                   <tr>
-                    <td colSpan={5} className="text-center py-4 text-gray-500">
+                    <td colSpan={5} className="text-center py-4">
                       No se encontraron logs.
                     </td>
                   </tr>
                 )}
               </tbody>
             </table>
-
-            {/* Vista móvil (pantallas pequeñas) */}
-            <div className="md:hidden space-y-4">
-              {loading ? (
-                <div className="flex flex-col items-center py-4">
-                  <Loader size="sm" color="blue" />
-                  <p className="mt-2 text-gray-500">Cargando...</p>
-                </div>
-              ) : logs.length > 0 ? (
-                logs.map((log: any) => (
-                  <div
-                    key={log.id}
-                    className="border rounded-lg p-4 bg-white shadow-md "
-                  >
-                    <div className="mb-2">
-                      <span className="font-semibold">Enviado por: </span>
-                      <br />
-                      <span className="uppercase">{log.user.first_name}</span>
-                    </div>
-                    <div className="mb-2">
-                      <span className="font-semibold">Enviado a: </span>
-                      <br />
-                      <span className="lowercase">{log.email}</span>
-                    </div>
-                    <div className="mb-2">
-                      <NotificationTD type={log.notification_type} td={false} />
-                    </div>
-                    <div className="mb-2">
-                      <span className="font-semibold">Título: </span>
-                      <span>{log.title}</span>
-                    </div>
-                    <div>
-                      <span className="font-thin text-gray-500">
-                        {new Date(log.sent_at).toLocaleString()}
-                      </span>
-                    </div>
-                  </div>
-                ))
-              ) : (
-                <div className="text-center py-4">No se encontraron logs.</div>
-              )}
-            </div>
           </div>
-          {/* Paginación */}
+
+          {/* Vista móvil */}
+          <div className="md:hidden space-y-4">
+            {loading ? (
+              <div className="flex flex-col items-center py-4">
+                <Loader size="sm" color="blue" />
+              </div>
+            ) : logs.length ? (
+              logs.map((log: any) => (
+                <div
+                  key={log.id}
+                  className="border rounded-lg p-4 bg-white shadow-md"
+                >
+                  <div className="mb-1 font-semibold">Enviado por:</div>
+                  <div className="uppercase mb-2">{log.user.first_name}</div>
+
+                  <div className="mb-1 font-semibold">Enviado a:</div>
+                  <div className="lowercase mb-2">{log.email}</div>
+
+                  <NotificationTD type={log.notification_type} td={false} />
+
+                  <div className="mt-2 font-semibold">Título:</div>
+                  <div>{log.title}</div>
+
+                  <div className="text-xs text-gray-500 mt-2">
+                    {new Date(log.sent_at).toLocaleString()}
+                  </div>
+                </div>
+              ))
+            ) : (
+              <div className="text-center py-4">No se encontraron logs.</div>
+            )}
+          </div>
+
           <Pagination
             value={page}
-            onChange={(newPage) => setPage(newPage)}
+            onChange={setPage}
             total={totalPages}
             className="mt-6"
           />
