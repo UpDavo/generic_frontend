@@ -65,7 +65,7 @@ export default function LoginForm() {
           value={email}
           onChange={(e) => setEmail(e.target.value.toLocaleLowerCase())}
           required
-          className="w-full"
+          className="w-full text-black"
           error={emailError}
         />
         <TextInput
@@ -75,7 +75,7 @@ export default function LoginForm() {
           value={password}
           onChange={(e) => setPassword(e.target.value)}
           required
-          className="w-full"
+          className="w-full text-black"
           error={passwordError}
         />
         <Button

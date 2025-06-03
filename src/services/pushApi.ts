@@ -87,6 +87,43 @@ export const listLogs = async (
   return await response.json();
 };
 
+export const downloadLogsExcel = async (
+  accessToken: string,
+  sentAtGte: string | null = null,
+  sentAtLte: string | null = null,
+  users: string[] = []
+) => {
+  const params = new URLSearchParams();
+
+  if (sentAtGte) params.append("sent_at__gte", sentAtGte);
+  if (sentAtLte) params.append("sent_at__lte", sentAtLte);
+  users.forEach((u) => params.append("user", u));
+
+  const response = await fetch(
+    `${API_BASE_URL}/tada/notification-logs/report/download?${params.toString()}`,
+    {
+      method: "GET",
+      headers: {
+        Authorization: `Bearer ${accessToken}`,
+      },
+    }
+  );
+
+  if (!response.ok) throw new Error("Error al descargar el Excel");
+
+  const blob = await response.blob();
+  const url = window.URL.createObjectURL(blob);
+
+  const a = document.createElement("a");
+  a.href = url;
+  const today = new Date();
+  const formattedDate = today.toISOString().split("T")[0]; // yyyy-mm-dd
+  a.download = `notification_logs_${formattedDate}.xlsx`;
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+};
+
 export const listLogsReport = async (
   accessToken: string | null,
   sentAt: string | null = null, // Fecha exacta

@@ -1,7 +1,11 @@
 "use client";
 
 import { useEffect, useState, useCallback } from "react";
-import { listLogs, listLogsReport } from "@/services/pushApi";
+import {
+  listLogs,
+  listLogsReport,
+  downloadLogsExcel,
+} from "@/services/pushApi";
 import { listUsers } from "@/services/userApi";
 import { useAuth } from "@/hooks/useAuth";
 import {
@@ -13,7 +17,12 @@ import {
   Button,
   MultiSelect,
 } from "@mantine/core";
-import { RiSearchLine, RiCloseCircleLine, RiRefreshLine } from "react-icons/ri";
+import {
+  RiSearchLine,
+  RiCloseCircleLine,
+  RiRefreshLine,
+  RiDownloadCloudLine,
+} from "react-icons/ri";
 import {
   BarChart,
   Bar,
@@ -58,6 +67,8 @@ export default function LogPage() {
   const [sentAtLte, setSentAtLte] = useState<string | null>(null);
   const [selectedUsers, setSelectedUsers] = useState<string[]>([]);
   const [users, setUsers] = useState<{ value: string; label: string }[]>([]);
+  const [downloadingExcel, setDownloadingExcel] = useState(false);
+  const [filtering, setFiltering] = useState(false);
 
   /* ------------------- FILTROS APLICADOS ------------------- */
   const [appliedFilters, setAppliedFilters] = useState<{
@@ -136,13 +147,13 @@ export default function LogPage() {
   const fetchLogsReport = useCallback(async () => {
     if (!accessToken) return;
     try {
-      const data = await listLogsReport(
+      const data = (await listLogsReport(
         accessToken,
         null,
         appliedFilters.gte,
         appliedFilters.lte,
         appliedFilters.users
-      ) as any[];
+      )) as any[];
 
       /* -- Por usuario -- */
       const userCounts = data.reduce<Record<string, number>>((acc, log) => {
@@ -198,21 +209,31 @@ export default function LogPage() {
   /* =========================================================
      4. Handlers
   ========================================================= */
-  const applyFilters = () => {
-    setAppliedFilters({
-      gte: sentAtGte,
-      lte: sentAtLte,
-      users: selectedUsers,
-    });
-    setPage(1); // reset paginación
+  const applyFilters = async () => {
+    setFiltering(true);
+    try {
+      setAppliedFilters({
+        gte: sentAtGte,
+        lte: sentAtLte,
+        users: selectedUsers,
+      });
+      setPage(1);
+    } finally {
+      setFiltering(false);
+    }
   };
 
-  const clearFilters = () => {
-    setSentAtGte(null);
-    setSentAtLte(null);
-    setSelectedUsers([]);
-    setAppliedFilters({ gte: null, lte: null, users: [] });
-    setPage(1);
+  const clearFilters = async () => {
+    setFiltering(true);
+    try {
+      setSentAtGte(null);
+      setSentAtLte(null);
+      setSelectedUsers([]);
+      setAppliedFilters({ gte: null, lte: null, users: [] });
+      setPage(1);
+    } finally {
+      setFiltering(false);
+    }
   };
 
   /* =========================================================
@@ -236,7 +257,7 @@ export default function LogPage() {
       )}
 
       {/* ---------------- FILTROS ---------------- */}
-      <div className="grid md:grid-cols-5 grid-cols-1 gap-2 mb-4 mx-2 items-end">
+      <div className="grid md:grid-cols-3 grid-cols-1 gap-2 mb-4 mx-2 items-end">
         <TextInput
           type="date"
           label="Desde"
@@ -263,17 +284,47 @@ export default function LogPage() {
           onClick={applyFilters}
           variant="filled"
           leftSection={<RiSearchLine />}
-          disabled={loading}
+          disabled={loading || filtering || downloadingExcel}
         >
-          Buscar
+          {filtering ? <Loader size="xs" color="white" /> : "Buscar"}
         </Button>
+
+        <Button
+          onClick={async () => {
+            try {
+              setDownloadingExcel(true);
+              await downloadLogsExcel(
+                accessToken!,
+                sentAtGte,
+                sentAtLte,
+                selectedUsers
+              );
+            } catch (err) {
+              console.error("Error al descargar:", err);
+            } finally {
+              setDownloadingExcel(false);
+            }
+          }}
+          variant="filled"
+          leftSection={
+            downloadingExcel ? (
+              <Loader size="xs" color="white" />
+            ) : (
+              <RiDownloadCloudLine />
+            )
+          }
+          disabled={loading || filtering || downloadingExcel}
+        >
+          {downloadingExcel ? "Descargando..." : "Descargar Excel"}
+        </Button>
+
         <Button
           onClick={clearFilters}
           variant="outline"
           leftSection={<RiCloseCircleLine />}
-          disabled={loading}
+          disabled={loading || filtering || downloadingExcel}
         >
-          Limpiar
+          {filtering ? <Loader size="xs" color="gray" /> : "Limpiar"}
         </Button>
       </div>
 
@@ -355,7 +406,11 @@ export default function LogPage() {
                         {log.user.first_name}
                       </td>
                       <td className="lowercase italic">{log.email}</td>
-                      <NotificationTD type={log.notification_type} td className="mt-2"/>
+                      <NotificationTD
+                        type={log.notification_type}
+                        td
+                        className="mt-2"
+                      />
                       <td>{log.title}</td>
                       <td>{new Date(log.sent_at).toLocaleString()}</td>
                     </tr>
