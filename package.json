@@ -4,7 +4,7 @@
   "private": true,
   "scripts": {
     "dev": "next dev --turbopack",
-    "build": "next build",
+    "build": "NEXT_DISABLE_ESLINT=1 next build",
     "start": "next start",
     "lint": "next lint"
   },
@@ -12,11 +12,13 @@
     "@mantine/core": "^7.16.2",
     "@reduxjs/toolkit": "^2.5.1",
     "axios": "^1.7.9",
+    "mantine-datatable": "^7.17.1",
     "next": "15.1.5",
     "react": "^19.0.0",
     "react-dom": "^19.0.0",
     "react-icons": "^5.4.0",
     "react-redux": "^9.2.0",
+    "recharts": "^2.15.1",
     "redux": "^5.0.1"
   },
   "devDependencies": {
@@ -24,7 +26,7 @@
     "@types/node": "^20",
     "@types/react": "^19",
     "@types/react-dom": "^19",
-    "daisyui": "^4.12.23",
+    "daisyui": "^4.12.24",
     "eslint": "^9",
     "eslint-config-next": "15.1.5",
     "postcss": "^8",

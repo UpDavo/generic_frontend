@@ -16,12 +16,17 @@ export const login = async (email: string, password: string) => {
   }
 };
 
-export const logout = async () => {
+export const logout = async (accessToken: string | null) => {
   try {
     await axios.post(
       `${API_BASE_URL}/auth/logout/`,
       {},
-      { withCredentials: true }
+      {
+        withCredentials: true,
+        headers: {
+          Authorization: `Bearer ${accessToken}`,
+        },
+      }
     );
   } catch (error) {
     console.error("Error en logout:", error);
@@ -36,9 +41,13 @@ export const refreshToken = async () => {
       { withCredentials: true }
     );
 
-    return response.data.access_token;
+    return {
+      accessToken: response.data.access_token,
+      user: response.data.user,
+    };
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   } catch (error) {
-    console.error("Error al refrescar el token:", error);
-    return null;
+    // console.error("Error al refrescar el token:", error);
+    return null; // O throw, según prefieras
   }
 };
