@@ -11,8 +11,8 @@ import {
   ResponsiveContainer,
   LabelList,
 } from "recharts";
-import { createReport } from "@/services/pocsApi";
-import { useAuth } from "@/hooks/useAuth";
+import { createReport } from "@/tada/services/pocsApi";
+import { useAuth } from "@/auth/hooks/useAuth";
 
 export default function ReportPage() {
   const { accessToken } = useAuth();
