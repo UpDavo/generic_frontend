@@ -1,6 +1,123 @@
-@tailwind base;
-@tailwind components;
-@tailwind utilities;
+@import "tailwindcss";
+@plugin "daisyui";
+@plugin "daisyui/theme" {
+  name: "light";
+  default: true; /* set as default */
+  prefersdark: true; /* set as default dark mode (prefers-color-scheme:dark) */
+  color-scheme: light; /* color of browser-provided UI */
+
+  --color-primary: #18181b; /* Botones primarios: blanco */
+  --color-primary-content: #ffffff;
+
+  --color-secondary: #d4d4d8; /* Gris claro como botón secundario */
+  --color-secondary-content: #1a1a1a;
+
+  --color-accent: #7d8eff;
+  --color-accent-content: #ffffff;
+
+  --color-success: #4caf50;
+  --color-success-content: #ffffff;
+
+  --color-warning: #ffa726;
+  --color-warning-content: #ffffff;
+
+  --color-error: #ef5350;
+  --color-error-content: #ffffff;
+
+  --color-info: #5c6bc0;
+  --color-info-content: #ffffff;
+
+  --color-neutral: #2e2e2e; /* Sidebar y bordes oscuros */
+  --color-neutral-content: #ffffff;
+
+  --color-base-100: #f9fafb; /* Fondo general */
+  --color-base-200: #f3f4f6; /* Tarjetas claras */
+  --color-base-300: #e5e7eb; /* Bordes suaves */
+  --color-base-content: #1a1a1a;
+
+  /* Extra grays */
+  --color-gray-50: #fafafa;
+  --color-gray-100: #f4f4f5;
+  --color-gray-200: #e4e4e7;
+  --color-gray-300: #d4d4d8;
+  --color-gray-400: #a1a1aa;
+  --color-gray-500: #71717a;
+  --color-gray-600: #52525b;
+  --color-gray-700: #3f3f46;
+  --color-gray-800: #27272a;
+  --color-gray-900: #18181b;
+
+  --color-black: #000000;
+  --color-white: #ffffff;
+
+  --radius-selector: 0.75rem;
+  --radius-field: 0.375rem;
+  --radius-box: 0.5rem;
+
+  --size-selector: 0.25rem;
+  --size-field: 0.25rem;
+
+  --border: 1px;
+  --depth: 1;
+  --noise: 0;
+}
+
+/* Fuentes personalizadas SF Pro Display */
+@font-face {
+  font-family: "SF Pro Display";
+  src: url("../assets/fonts/SFPRODISPLAYBLACKITALIC.OTF") format("opentype");
+  font-weight: 900;
+  font-style: italic;
+}
+@font-face {
+  font-family: "SF Pro Display";
+  src: url("../assets/fonts/SFPRODISPLAYBOLD.OTF") format("opentype");
+  font-weight: 700;
+  font-style: normal;
+}
+@font-face {
+  font-family: "SF Pro Display";
+  src: url("../assets/fonts/SFPRODISPLAYHEAVYITALIC.OTF") format("opentype");
+  font-weight: 800;
+  font-style: italic;
+}
+@font-face {
+  font-family: "SF Pro Display";
+  src: url("../assets/fonts/SFPRODISPLAYLIGHTITALIC.OTF") format("opentype");
+  font-weight: 300;
+  font-style: italic;
+}
+@font-face {
+  font-family: "SF Pro Display";
+  src: url("../assets/fonts/SFPRODISPLAYMEDIUM.OTF") format("opentype");
+  font-weight: 500;
+  font-style: normal;
+}
+@font-face {
+  font-family: "SF Pro Display";
+  src: url("../assets/fonts/SFPRODISPLAYREGULAR.OTF") format("opentype");
+  font-weight: 400;
+  font-style: normal;
+}
+@font-face {
+  font-family: "SF Pro Display";
+  src: url("../assets/fonts/SFPRODISPLAYSEMIBOLDITALIC.OTF") format("opentype");
+  font-weight: 600;
+  font-style: italic;
+}
+@font-face {
+  font-family: "SF Pro Display";
+  src: url("../assets/fonts/SFPRODISPLAYTHINITALIC.OTF") format("opentype");
+  font-weight: 100;
+  font-style: italic;
+}
+@font-face {
+  font-family: "SF Pro Display";
+  src: url("../assets/fonts/SFPRODISPLAYULTRALIGHTITALIC.OTF")
+    format("opentype");
+  font-weight: 200;
+  font-style: italic;
+}
 
 :root {
   --background: #ffffff;
@@ -17,42 +134,46 @@
 body {
   color: var(--foreground);
   background: var(--background);
-  font-family: Arial, Helvetica, sans-serif;
+  font-family: "SF Pro Display" !important;
+}
+
+body,
+*,
+*:before,
+*:after {
+  font-family: "SF Pro Display" !important;
 }
 
 .mantine-Drawer-title {
   font-size: 3rem;
-  color: white;
-  background-color: #5a57ee;
+  color: #18181b;
+  /* background-color: #5a57ee; */
   text-transform: uppercase;
   font-weight: bold;
 }
-.mantine-Drawer-content {
-  background-color: #5a57ee;
-}
 
 .mantine-Drawer-header {
-  background-color: #5a57ee;
+  background-color: #ffffff;
 }
 
 .mantine-Drawer-close {
   font-size: 3rem;
-  color: white;
-  background-color: #5a57ee;
+  color: #18181b;
+  /* background-color: #5a57ee; */
   text-transform: uppercase;
 }
 
 .mantine-Drawer-close:hover {
   font-size: 3rem;
-  color: white;
-  background-color: #5a57ee;
+  color: #18181b;
+  /* background-color: #5a57ee; */
   text-transform: uppercase;
 }
 
 .mantine-Drawer-close:active {
   font-size: 3rem;
-  color: white;
-  background-color: #5a57ee;
+  color: #18181b;
+  /* background-color: #5a57ee; */
   text-transform: uppercase;
 }
 

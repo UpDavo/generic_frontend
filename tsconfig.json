@@ -23,6 +23,15 @@
       "@/*": ["./src/*"]
     }
   },
-  "include": ["next-env.d.ts", "**/*.ts", "**/*.tsx", ".next/types/**/*.ts"],
+  "include": [
+    "next-env.d.ts",
+    "**/*.ts",
+    "**/*.tsx",
+    ".next/types/**/*.ts",
+    "src/app/dashboard/push/logs/page.jsx",
+    "src/core/components/NotificationTD.jsx",
+    "src/app/dashboard/push/page.jsx",
+    "src/app/dashboard/push/send/page.jsx"
+  ],
   "exclude": ["node_modules"]
 }

@@ -11,6 +11,7 @@
   "dependencies": {
     "@mantine/core": "^7.16.2",
     "@reduxjs/toolkit": "^2.5.1",
+    "@tailwindcss/postcss": "^4.1.10",
     "axios": "^1.7.9",
     "mantine-datatable": "^7.17.1",
     "next": "15.1.5",
@@ -26,11 +27,12 @@
     "@types/node": "^20",
     "@types/react": "^19",
     "@types/react-dom": "^19",
-    "daisyui": "^4.12.24",
+    "autoprefixer": "^10.4.21",
+    "daisyui": "^5.0.43",
     "eslint": "^9",
     "eslint-config-next": "15.1.5",
-    "postcss": "^8",
-    "tailwindcss": "^3.4.1",
+    "postcss": "^8.5.5",
+    "tailwindcss": "^4.1.10",
     "typescript": "^5"
   }
 }
