@@ -31,7 +31,8 @@
     "src/app/dashboard/push/logs/page.jsx",
     "src/core/components/NotificationTD.jsx",
     "src/app/dashboard/push/page.jsx",
-    "src/app/dashboard/push/send/page.jsx"
+    "src/app/dashboard/push/send/page.jsx",
+    "tailwind.config.js"
   ],
   "exclude": ["node_modules"]
 }
