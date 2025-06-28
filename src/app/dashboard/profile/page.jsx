@@ -5,7 +5,7 @@ import { useState } from "react";
 import { useAuth } from "@/auth/hooks/useAuth";
 import { Modal, Button, TextInput } from "@mantine/core";
 import { RiEdit2Line } from "react-icons/ri";
-import { updateUser } from "@/auth/services/userApi";
+import { userUpdate } from "@/auth/services/userApi";
 import { useDispatch } from "react-redux";
 import { updateUserState } from "@/auth/redux/authSlice";
 
@@ -19,7 +19,7 @@ export default function ProfilePage() {
     last_name: user?.last_name || "",
     email: user?.email || "",
     phone_number: user?.phone_number || "",
-    role: user?.role?.id || 1,
+    role: user?.role?.name || "",
   });
 
   const handleChange = (e) => {
@@ -29,7 +29,22 @@ export default function ProfilePage() {
   const handleSave = async () => {
     setError("");
     try {
-      const updatedUser = await updateUser(formData, accessToken);
+      // Preparar los datos para enviar (sin el rol ya que es solo lectura)
+      const userDataToUpdate = {
+        email: formData.email,
+        first_name: formData.first_name,
+        last_name: formData.last_name,
+        phone_number: formData.phone_number,
+        role: user?.role?.id || null, // Enviar el ID del rol, no el nombre
+      };
+
+      const updatedUser = await userUpdate(
+        user?.id, // ID del usuario actual
+        userDataToUpdate, // Datos actualizados
+        accessToken, // Token de acceso
+        user?.id // ID del usuario autenticado (para recargar si es necesario)
+      );
+
       if (updatedUser && !updatedUser.error) {
         dispatch(updateUserState(updatedUser));
         setIsEditing(false);
@@ -60,14 +75,17 @@ export default function ProfilePage() {
           <p>
             <strong>Teléfono:</strong> {user?.phone_number || "No disponible"}
           </p>
+          <p>
+            <strong>Rol:</strong> {user?.role?.name || "No asignado"}
+          </p>
         </div>
 
-        <Button
+        {/* <Button
           className="mt-4 w-full btn btn-info"
           onClick={() => setIsEditing(true)}
         >
           <RiEdit2Line /> Editar Perfil
-        </Button>
+        </Button> */}
       </div>
 
       <Modal

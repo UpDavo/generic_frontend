@@ -1,27 +1,6 @@
 import API_BASE_URL from "@/config/apiConfig";
-import { Message, SendPush } from "@/tada/interfaces/message";
 
-export const getPrice = async (accessToken: string | null) => {
-  const response = await fetch(`${API_BASE_URL}/tada/prices/last/`, {
-    method: "GET",
-    headers: {
-      "Content-Type": "application/json",
-      Authorization: `Bearer ${accessToken}`,
-    },
-  });
-
-  if (!response.ok) {
-    throw new Error("Error al obtener los mensajes");
-  }
-
-  return await response.json();
-};
-
-export const listMessages = async (
-  accessToken: string | null,
-  page: number = 1,
-  name: string | null = null // Nuevo parámetro opcional
-) => {
+export const listCanvasMessages = async (accessToken, page, name) => {
   const params = new URLSearchParams({ page: page.toString() });
 
   if (name) {
@@ -29,7 +8,7 @@ export const listMessages = async (
   }
 
   const response = await fetch(
-    `${API_BASE_URL}/tada/notifications/?${params.toString()}`,
+    `${API_BASE_URL}/tada/canvas/messages/?${params.toString()}`,
     {
       method: "GET",
       headers: {
@@ -46,13 +25,13 @@ export const listMessages = async (
   return await response.json();
 };
 
-export const listLogs = async (
-  accessToken: string | null,
-  page: number = 1,
-  sentAt: string | null = null, // Fecha exacta
-  sentAtGte: string | null = null, // Fecha desde
-  sentAtLte: string | null = null, // Fecha hasta
-  users: string[] = [] // Lista de emails de usuarios
+export const listCanvasLogs = async (
+  accessToken,
+  page,
+  sentAt,
+  sentAtGte,
+  sentAtLte,
+  users
 ) => {
   const params = new URLSearchParams({ page: page.toString() });
 
@@ -70,7 +49,7 @@ export const listLogs = async (
   }
 
   const response = await fetch(
-    `${API_BASE_URL}/tada/notification-logs/?${params.toString()}`,
+    `${API_BASE_URL}/tada/canvas-logs/?${params.toString()}`,
     {
       method: "GET",
       headers: {
@@ -87,11 +66,11 @@ export const listLogs = async (
   return await response.json();
 };
 
-export const downloadLogsExcel = async (
-  accessToken: string,
-  sentAtGte: string | null = null,
-  sentAtLte: string | null = null,
-  users: string[] = []
+export const downloadCanvasLogsExcel = async (
+  accessToken,
+  sentAtGte,
+  sentAtLte,
+  users
 ) => {
   const params = new URLSearchParams();
 
@@ -100,7 +79,7 @@ export const downloadLogsExcel = async (
   users.forEach((u) => params.append("user", u));
 
   const response = await fetch(
-    `${API_BASE_URL}/tada/notification-logs/report/download?${params.toString()}`,
+    `${API_BASE_URL}/tada/canvas-logs/report/download?${params.toString()}`,
     {
       method: "GET",
       headers: {
@@ -124,12 +103,12 @@ export const downloadLogsExcel = async (
   a.remove();
 };
 
-export const listLogsReport = async (
-  accessToken: string | null,
-  sentAt: string | null = null, // Fecha exacta
-  sentAtGte: string | null = null, // Fecha desde
-  sentAtLte: string | null = null, // Fecha hasta
-  users: string[] = [] // Lista de emails de usuarios
+export const listCanvasLogsReport = async (
+  accessToken,
+  sentAt,
+  sentAtGte,
+  sentAtLte,
+  users
 ) => {
   const params = new URLSearchParams();
 
@@ -147,7 +126,7 @@ export const listLogsReport = async (
   }
 
   const response = await fetch(
-    `${API_BASE_URL}/tada/notification-logs/report/?${params.toString()}`,
+    `${API_BASE_URL}/tada/canvas-logs/report/?${params.toString()}`,
     {
       method: "GET",
       headers: {
@@ -164,11 +143,8 @@ export const listLogsReport = async (
   return await response.json();
 };
 
-export const createMessage = async (
-  message: Message,
-  accessToken: string | null
-) => {
-  const response = await fetch(`${API_BASE_URL}/tada/notifications/`, {
+export const createCanvasMessage = async (message, accessToken) => {
+  const response = await fetch(`${API_BASE_URL}/tada/canvas/messages/`, {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
@@ -182,13 +158,9 @@ export const createMessage = async (
   return returned;
 };
 
-export const updateMessage = async (
-  id: number,
-  message: Message,
-  accessToken: string | null
-) => {
+export const updateCanvasMessage = async (id, message, accessToken) => {
   console.log(message);
-  const response = await fetch(`${API_BASE_URL}/tada/notifications/${id}/`, {
+  const response = await fetch(`${API_BASE_URL}/tada/canvas/messages/${id}/`, {
     method: "PUT",
     headers: {
       "Content-Type": "application/json",
@@ -202,9 +174,9 @@ export const updateMessage = async (
   return returned;
 };
 
-export const deleteMessage = async (id: number, accessToken: string | null) => {
+export const deleteCanvasMessage = async (id, accessToken) => {
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  const response = await fetch(`${API_BASE_URL}/tada/notifications/${id}/`, {
+  const response = await fetch(`${API_BASE_URL}/tada/canvas/messages/${id}/`, {
     method: "DELETE",
     headers: {
       "Content-Type": "application/json",
@@ -214,11 +186,8 @@ export const deleteMessage = async (id: number, accessToken: string | null) => {
   return "OK";
 };
 
-export const sendMessage = async (
-  sendObject: SendPush,
-  accessToken: string | null
-) => {
-  const response = await fetch(`${API_BASE_URL}/tada/send/push/`, {
+export const sendCanvasMessage = async (sendObject, accessToken) => {
+  const response = await fetch(`${API_BASE_URL}/tada/send/canvas/`, {
     method: "POST",
     headers: {
       "Content-Type": "application/json",

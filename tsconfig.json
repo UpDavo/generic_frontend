@@ -32,7 +32,11 @@
     "src/core/components/NotificationTD.jsx",
     "src/app/dashboard/push/page.jsx",
     "src/app/dashboard/push/send/page.jsx",
-    "tailwind.config.js"
+    "tailwind.config.js",
+    "src/tada/services/canvasApi.js",
+    "src/tada/services/priceApi.js",
+    "src/tada/services/pushApi.js",
+    "src/tada/services/pocsApi.js"
   ],
   "exclude": ["node_modules"]
 }

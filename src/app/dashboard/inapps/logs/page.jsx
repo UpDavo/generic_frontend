@@ -2,10 +2,10 @@
 
 import { useEffect, useState, useCallback } from "react";
 import {
-  listLogs,
-  listLogsReport,
-  downloadLogsExcel,
-} from "@/tada/services/pushApi";
+  listCanvasLogs,
+  listCanvasLogsReport,
+  downloadCanvasLogsExcel,
+} from "@/tada/services/canvasApi";
 import { listUsers } from "@/auth/services/userApi";
 import { useAuth } from "@/auth/hooks/useAuth";
 import {
@@ -36,7 +36,7 @@ import { Unauthorized } from "@/core/components/Unauthorized";
 import NotificationTD from "@/core/components/NotificationTD";
 import { getColor } from "@/config/genericVariables";
 
-const PERMISSION_PATH = "/push/logs";
+const PERMISSION_PATH = "/dashboard/inapps/logs";
 
 /* =================== COMPONENTE =================== */
 export default function LogPage() {
@@ -108,7 +108,7 @@ export default function LogPage() {
     if (!accessToken) return;
     setLoading(true);
     try {
-      const { results, count } = await listLogs(
+      const { results, count } = await listCanvasLogs(
         accessToken,
         page,
         null,
@@ -137,7 +137,7 @@ export default function LogPage() {
   const fetchLogsReport = useCallback(async () => {
     if (!accessToken) return;
     try {
-      const data = await listLogsReport(
+      const data = await listCanvasLogsReport(
         accessToken,
         null,
         appliedFilters.gte,
@@ -159,7 +159,7 @@ export default function LogPage() {
 
       /* -- Por tipo -- */
       const notifCounts = data.reduce((acc, log) => {
-        acc[log.notification_type] = (acc[log.notification_type] || 0) + 1;
+        acc[log.name] = (acc[log.name] || 0) + 1;
         return acc;
       }, {});
       setNotificationTypeChartData(
@@ -283,7 +283,7 @@ export default function LogPage() {
           onClick={async () => {
             try {
               setDownloadingExcel(true);
-              await downloadLogsExcel(
+              await downloadCanvasLogsExcel(
                 accessToken,
                 sentAtGte,
                 sentAtLte,
@@ -323,7 +323,7 @@ export default function LogPage() {
         <div className="grid md:grid-cols-2 grid-cols-1 gap-6 mb-4">
           <div className="card bg-base-100 shadow-xl p-4">
             <h2 className="text-lg font-bold text-center mb-4">
-              Push por Usuario
+              In-Apps por Usuario
             </h2>
             <ResponsiveContainer width="100%" height={300}>
               <BarChart data={userChartData}>
@@ -343,7 +343,7 @@ export default function LogPage() {
 
           <div className="card bg-base-100 shadow-xl p-4">
             <h2 className="text-lg font-bold text-center mb-4">
-              Tipos de Push
+              Tipos de In-App
             </h2>
             <ResponsiveContainer width="100%" height={300}>
               <BarChart data={notificationTypeChartData}>
@@ -375,7 +375,6 @@ export default function LogPage() {
               <th>Enviado por</th>
               <th>Enviado a</th>
               <th>Tipo</th>
-              <th>Título</th>
               <th>Fecha</th>
             </tr>
           </thead>
@@ -388,15 +387,10 @@ export default function LogPage() {
               </tr>
             ) : logs.length ? (
               logs.map((log) => (
-                <tr key={log.id} className="hover:bg-gray-100">
+                <tr key={log.id} className="hover:bg-gray-100 text-black">
                   <td className="uppercase font-bold">{log.user.first_name}</td>
                   <td className="lowercase italic">{log.email}</td>
-                  <NotificationTD
-                    type={log.notification_type}
-                    td
-                    className="mt-2"
-                  />
-                  <td>{log.title}</td>
+                  <td className="lowercase italic">{log.name}</td>
                   <td>{new Date(log.sent_at).toLocaleString()}</td>
                 </tr>
               ))

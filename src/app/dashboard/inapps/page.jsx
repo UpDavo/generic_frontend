@@ -3,11 +3,11 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import {
-  listMessages,
-  createMessage,
-  updateMessage,
-  deleteMessage,
-} from "@/tada/services/pushApi";
+  deleteCanvasMessage,
+  createCanvasMessage,
+  updateCanvasMessage,
+  listCanvasMessages,
+} from "@/tada/services/canvasApi";
 import {
   Loader,
   TextInput,
@@ -15,8 +15,6 @@ import {
   Notification,
   Pagination,
   Modal,
-  Select,
-  Textarea,
 } from "@mantine/core";
 import {
   RiAddLine,
@@ -28,10 +26,9 @@ import {
 import { useAuth } from "@/auth/hooks/useAuth";
 import { Unauthorized } from "@/core/components/Unauthorized";
 import ConfirmDeleteModal from "@/core/components/ConfirmDeleteModal";
-import { notificationTypes } from "@/config/genericVariables";
 import NotificationTD from "@/core/components/NotificationTD";
 
-const PERMISSION_PATH = "/push";
+const PERMISSION_PATH = "/dashboard/inapps";
 
 export default function MessagePage() {
   const router = useRouter();
@@ -43,10 +40,8 @@ export default function MessagePage() {
   // Estados para la data, form y manejo de errores/carga
   const [data, setData] = useState([]);
   const [formState, setFormState] = useState({
-    notification_type: "",
     name: "",
-    title: "",
-    message: "",
+    braze_id: "",
   });
   const [error, setError] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -74,7 +69,7 @@ export default function MessagePage() {
     if (deleteTargetId) {
       setIsDeleting(true);
       try {
-        await deleteMessage(deleteTargetId, accessToken);
+        await deleteCanvasMessage(deleteTargetId, accessToken);
         await fetchData();
         setError(null);
       } catch (err) {
@@ -117,7 +112,7 @@ export default function MessagePage() {
   const fetchData = async () => {
     setLoading(true);
     try {
-      const response = await listMessages(accessToken, page, searchQuery);
+      const response = await listCanvasMessages(accessToken, page, searchQuery);
       setData(response.results || []);
       const pages = Math.ceil(response.count / 10);
       setTotalPages(pages);
@@ -133,12 +128,7 @@ export default function MessagePage() {
   // Maneja la creación/edición de un item
   const handleSave = async () => {
     // Validación sencilla para asegurarnos que no haya campos vacíos
-    if (
-      !formState.notification_type.trim() ||
-      !formState.name.trim() ||
-      !formState.title.trim() ||
-      !formState.message.trim()
-    ) {
+    if (!formState.name.trim() || !formState.braze_id.trim()) {
       // Podrías mostrar un mensaje más descriptivo
       console.log("Formulario incompleto:", formState);
       return;
@@ -147,13 +137,13 @@ export default function MessagePage() {
     try {
       if (editingId) {
         // Actualiza
-        await updateMessage(editingId, formState, accessToken);
+        await updateCanvasMessage(editingId, formState, accessToken);
       } else {
         // Crea nuevo
-        await createMessage(formState, accessToken);
+        await createCanvasMessage(formState, accessToken);
       }
       await fetchData();
-      setFormState({ notification_type: "", name: "", title: "", message: "" });
+      setFormState({ braze_id: "", name: "" });
       setModalOpen(false);
       setEditingId(null);
       setError(null);
@@ -204,7 +194,7 @@ export default function MessagePage() {
               setModalOpen(true);
             }}
             leftSection={<RiAddLine />}
-            className="btn btn-sm"
+            className="btn btn-info btn-sm"
           >
             Agregar
           </Button>
@@ -212,7 +202,7 @@ export default function MessagePage() {
             onClick={refreshData}
             variant="filled"
             leftSection={<RiRefreshLine />}
-            className="btn btn-sm"
+            className="btn btn-primary btn-sm"
           >
             Refrescar
           </Button>
@@ -232,10 +222,8 @@ export default function MessagePage() {
           <thead className="bg-primary text-white text-md uppercase font-bold">
             <tr className="text-white font-bold">
               {/* <th>ID</th> */}
-              <th>Tipo</th>
               <th>Nombre</th>
-              <th>Título</th>
-              <th>Mensaje</th>
+              <th>Identificador</th>
               <th>Acciones</th>
             </tr>
           </thead>
@@ -252,31 +240,25 @@ export default function MessagePage() {
                 <tr key={item.id}>
                   {/* <td>{item.id}</td> */}
 
-                  <NotificationTD type={item.notification_type} td={true} />
                   <td className="uppercase ">{item.name || "—"}</td>
-                  <td className="uppercase ">{item.title || "—"}</td>
-                  <td className="">{item.message || "—"}</td>
+                  <td className="">{item.braze_id || "—"}</td>
                   <td className="flex gap-2">
                     <Button
                       onClick={() => {
                         setFormState({
-                          notification_type: item.notification_type,
                           name: item.name,
-                          title: item.title,
-                          message: item.message,
+                          braze_id: item.braze_id,
                         });
                         setEditingId(item.id);
                         setModalOpen(true);
                       }}
-                      className="btn btn-info btn-sm"
+                      className="btn btn-sm"
                     >
                       <RiEdit2Line />
                     </Button>
                     <Button
-                      onClick={() =>
-                        openConfirmDelete(item.id, item.first_name)
-                      }
-                      className="btn btn-error btn-sm text-white"
+                      onClick={() => openConfirmDelete(item.id, item.name)}
+                      className="btn btn-sm text-white"
                     >
                       <RiDeleteBin6Line />
                     </Button>
@@ -386,15 +368,6 @@ export default function MessagePage() {
         centered
       >
         <div className="space-y-4 text-black">
-          <Select
-            label="Tipo de Notificación"
-            placeholder="Selecciona un tipo"
-            data={notificationTypes}
-            value={formState.notification_type}
-            onChange={(value) =>
-              setFormState({ ...formState, notification_type: value || "" })
-            }
-          />
           <TextInput
             label="Nombre"
             placeholder="Nombre"
@@ -404,23 +377,12 @@ export default function MessagePage() {
             }
           />
           <TextInput
-            label="Título"
-            placeholder="Título"
-            value={formState.title}
+            label="Identificador"
+            placeholder="Identificador"
+            value={formState.braze_id}
             onChange={(e) =>
-              setFormState({ ...formState, title: e.target.value })
+              setFormState({ ...formState, braze_id: e.target.value })
             }
-          />
-          <Textarea
-            label="Mensaje"
-            placeholder="Escribe tu mensaje aquí..."
-            value={formState.message}
-            onChange={(e) =>
-              setFormState({ ...formState, message: e.target.value })
-            }
-            autosize
-            minRows={4}
-            maxRows={10}
           />
           <Button
             className="btn btn-info btn-sm"

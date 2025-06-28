@@ -1,17 +1,17 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { sendMessage } from "@/tada/services/pushApi";
-import { listMessages } from "@/tada/services/pushApi";
+import {
+  listCanvasMessages,
+  sendCanvasMessage,
+} from "@/tada/services/canvasApi";
 import { useAuth } from "@/auth/hooks/useAuth";
 import { Button, Notification, Loader, Select, Accordion } from "@mantine/core";
 import { useRouter } from "next/navigation";
 import { Unauthorized } from "@/core/components/Unauthorized";
-import Instructions from "@/tada/components/Instructions";
 import EmailManager from "@/tada/components/EmailManager";
-import { send } from "process";
 
-const PERMISSION_PATH = "/push/send";
+const PERMISSION_PATH = "/dashboard/inapps/send";
 
 export default function PushPage() {
   const router = useRouter();
@@ -44,15 +44,15 @@ export default function PushPage() {
   }, [accessToken]);
 
   const fetchMessages = async () => {
-    setLoadingMessages(true);
+    setLoadingMessages(true); // Inicia la carga
     try {
-      const data = await listMessages(accessToken, 1);
+      const data = await listCanvasMessages(accessToken, 1);
       setMessages(data.results);
     } catch (err) {
       console.log(err);
       setError("Error al cargar los mensajes");
     } finally {
-      setLoadingMessages(false);
+      setLoadingMessages(false); // Finaliza la carga
     }
   };
 
@@ -78,11 +78,10 @@ export default function PushPage() {
 
       const sendObject = {
         emails: emails,
-        notification_type: messageToSend.notification_type,
+        notification_type: messageToSend.id,
       };
-      console.log(sendObject);
-      await sendMessage(sendObject, accessToken);
 
+      await sendCanvasMessage(sendObject, accessToken);
       setSuccess(
         `Notificaciones enviadas con éxito a ${emails.length} destinatarios`
       );
@@ -129,17 +128,6 @@ export default function PushPage() {
         </Notification>
       )}
 
-      <Accordion variant="contained" className="mb-4">
-        <Accordion.Item value="instructions" className="border border-gray-700">
-          <Accordion.Control>
-            <span className="font-medium">Ver mensajes a enviar</span>
-          </Accordion.Control>
-          <Accordion.Panel className="bg-white rounded-b-lg">
-            <Instructions />
-          </Accordion.Panel>
-        </Accordion.Item>
-      </Accordion>
-
       <EmailManager
         emails={emails}
         setEmails={setEmails}
@@ -163,6 +151,7 @@ export default function PushPage() {
         rightSection={loadingMessages ? <Loader size="sm" /> : null}
         className="text-black my-4"
       />
+
       <div className="mt-4">
         <Button
           className="btn btn-md"

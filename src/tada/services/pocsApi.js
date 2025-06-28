@@ -1,10 +1,6 @@
 import API_BASE_URL from "@/config/apiConfig";
-import { Report } from "@/tada/interfaces/pocs";
 
-export const createReport = async (
-  message: Report,
-  accessToken: string | null
-) => {
+export const createReport = async (message, accessToken) => {
   const response = await fetch(`${API_BASE_URL}/tada/pocs/report/`, {
     method: "POST",
     headers: {

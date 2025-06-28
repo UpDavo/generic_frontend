@@ -1,19 +1,19 @@
 "use client";
 
 import { useEffect, useState, useCallback } from "react";
-import { listLogsReport, getPrice } from "@/tada/services/pushApi";
+import { listLogsReport } from "@/tada/services/pushApi";
+import { listCanvasLogsReport } from "@/tada/services/canvasApi";
+import { getPrice } from "@/tada/services/priceApi";
 import { TextInput, Loader, Notification, Button } from "@mantine/core";
 import { RiRefreshLine, RiSearchLine } from "react-icons/ri";
 import { useAuth } from "@/auth/hooks/useAuth";
-import { useRouter } from "next/navigation";
-import { DataTable, DataTableSortStatus } from "mantine-datatable";
+import { DataTable } from "mantine-datatable";
 import Instructions from "../../tada/components/Instructions";
 
 const PERMISSION_PATH = "/";
 
 export default function DashboardHome() {
   const { accessToken, user } = useAuth();
-  const router = useRouter();
 
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
@@ -66,12 +66,23 @@ export default function DashboardHome() {
         []
       );
 
+      const data2 = await listCanvasLogsReport(
+        accessToken,
+        null,
+        sentAtGte,
+        sentAtLte,
+        []
+      );
+
+      console.log("Logs fetched:", data, data2);
+
       const { value: price } = await getPrice(accessToken);
 
       /* Totales y agrupaciones */
-      const total = data.length;
-      setTotalCalls(total);
-      setCost(total * price);
+      const total = data.length; // Suma de ambos reportes
+      const total2 = data2.length;
+      setTotalCalls(total + total2);
+      setCost(total * price + total2 * (price + 0.02));
 
       const counts = data.reduce((acc, log) => {
         const name = log.user.first_name;
@@ -157,7 +168,7 @@ export default function DashboardHome() {
             setSentAtLte(null);
             fetchDashboardData();
           }}
-          variant="light"
+          variant="filled"
           leftSection={<RiRefreshLine />}
           disabled={loading}
         >

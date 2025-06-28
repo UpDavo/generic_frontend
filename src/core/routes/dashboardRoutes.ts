@@ -4,10 +4,14 @@ import {
   RiTeamLine,
   RiKey2Line,
   RiSettingsLine,
-  RiMailSendLine,
-  RiMailAddLine,
+  RiNotification2Line,
+  RiPlayListAddFill,
   RiFileListLine,
-  RiMessage2Line,
+  RiApps2AddLine,
+  RiGridLine,
+  RiSendPlaneLine,
+  RiFileList2Line,
+  RiSmartphoneLine,
 } from "react-icons/ri";
 export const dashboardRoutes = [
   {
@@ -16,25 +20,49 @@ export const dashboardRoutes = [
       { path: "/dashboard", name: "Inicio", icon: RiDashboardLine },
       {
         name: "Push",
-        icon: RiMessage2Line,
+        icon: RiSmartphoneLine,
         children: [
           {
             path: "/dashboard/push/send",
-            icon: RiMailSendLine,
+            icon: RiNotification2Line,
             name: "Enviar Push",
             permission: "/push/send",
           },
           {
             path: "/dashboard/push",
-            name: "Crear Mensajes",
-            icon: RiMailAddLine,
+            name: "Crear Push",
+            icon: RiPlayListAddFill,
             permission: "/push",
           },
           {
             path: "/dashboard/push/logs",
-            name: "Obtener Logs",
+            name: "Registros Push",
             icon: RiFileListLine,
             permission: "/push/logs",
+          },
+        ],
+      },
+      {
+        name: "In-Apps",
+        icon: RiGridLine,
+        children: [
+          {
+            path: "/dashboard/inapps/send",
+            icon: RiSendPlaneLine,
+            name: "Enviar In-App",
+            permission: "/dashboard/inapps/send",
+          },
+          {
+            path: "/dashboard/inapps",
+            name: "Crear In-App",
+            icon: RiApps2AddLine,
+            permission: "/dashboard/inapps",
+          },
+          {
+            path: "/dashboard/inapps/logs",
+            name: "Registros In-App",
+            icon: RiFileList2Line,
+            permission: "/dashboard/inapps/logs",
           },
         ],
       },
