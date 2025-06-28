@@ -77,17 +77,17 @@ function DashboardLayout({ children }) {
               className="mr-4 md:hidden"
             >
               <div className="flex items-center space-x-2">
-                <RiMenuLine className="text-xl" />
-                <span className="text-primary">Menú</span>
+                <RiMenuLine className="text-xl text-black" />
+                <span className=" text-black">Menú</span>
               </div>
             </button>
           </div>
         </header>
 
         {/* Contenido central */}
-        <main className="flex-1 p-4 bg-white overflow-y-auto">
-          <div className="h-full p-8 overflow-hidden bg-gray-100 rounded-xl shadow-lg border border-gray-200">
-            <div className="overflow-y-auto h-full">{children}</div>
+        <main className="flex-1 p-4 bg-white flex flex-col overflow-hidden">
+          <div className="flex-1 p-8 bg-gray-100 rounded-xl shadow-lg border border-gray-200 flex flex-col min-h-0">
+            <div className="flex-1 overflow-y-auto">{children}</div>
           </div>
         </main>
       </div>

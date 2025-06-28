@@ -218,7 +218,7 @@ export default function DashboardHome() {
 
           {/* ------------- TABLA ------------- */}
           <div className="card bg-white shadow-xl p-6 text-black">
-            <h2 className="text-lg font-bold mb-4 text-center">
+            <h2 className="text-lg text-black font-bold mb-4 text-center">
               Pushs por Usuario
             </h2>
 
@@ -228,7 +228,7 @@ export default function DashboardHome() {
                   placeholder="Filtrar por usuario..."
                   value={searchValue}
                   onChange={(e) => setSearchValue(e.currentTarget.value)}
-                  className="mb-4"
+                  className="mb-4 text-black"
                 />
 
                 <DataTable
@@ -246,6 +246,8 @@ export default function DashboardHome() {
                   highlightOnHover
                   verticalSpacing="sm"
                   noRecordsText="Sin registros"
+                  className="text-black"
+                  style={{ color: "black" }}
                 />
               </>
             ) : (

@@ -422,11 +422,7 @@ export default function LogPage() {
 
               <div className="mb-1 font-semibold">Enviado a:</div>
               <div className="lowercase mb-2">{log.email}</div>
-
-              <NotificationTD type={log.notification_type} td={false} />
-
-              <div className="mt-2 font-semibold">Título:</div>
-              <div>{log.title}</div>
+              <div className="uppercase mb-2">{log.name}</div>
 
               <div className="text-xs text-gray-500 mt-2">
                 {new Date(log.sent_at).toLocaleString()}

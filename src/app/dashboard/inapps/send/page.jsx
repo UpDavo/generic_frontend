@@ -10,6 +10,7 @@ import { Button, Notification, Loader, Select, Accordion } from "@mantine/core";
 import { useRouter } from "next/navigation";
 import { Unauthorized } from "@/core/components/Unauthorized";
 import EmailManager from "@/tada/components/EmailManager";
+import SendPush from "@/tada/components/SendPush";
 
 const PERMISSION_PATH = "/dashboard/inapps/send";
 
@@ -127,6 +128,17 @@ export default function PushPage() {
           {success}
         </Notification>
       )}
+
+      <Accordion variant="contained" className="mb-4">
+        <Accordion.Item value="push" className="border border-gray-700">
+          <Accordion.Control>
+            <span className="font-medium">Como usar la herramienta</span>
+          </Accordion.Control>
+          <Accordion.Panel className="bg-white rounded-b-lg">
+            <SendPush />
+          </Accordion.Panel>
+        </Accordion.Item>
+      </Accordion>
 
       <EmailManager
         emails={emails}

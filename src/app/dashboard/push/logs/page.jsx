@@ -322,7 +322,7 @@ export default function LogPage() {
       {showCharts && (
         <div className="grid md:grid-cols-2 grid-cols-1 gap-6 mb-4">
           <div className="card bg-base-100 shadow-xl p-4">
-            <h2 className="text-lg font-bold text-center mb-4">
+            <h2 className="text-lg text-black font-bold text-center mb-4">
               Push por Usuario
             </h2>
             <ResponsiveContainer width="100%" height={300}>
@@ -342,7 +342,7 @@ export default function LogPage() {
           </div>
 
           <div className="card bg-base-100 shadow-xl p-4">
-            <h2 className="text-lg font-bold text-center mb-4">
+            <h2 className="text-lg text-black font-bold text-center mb-4">
               Tipos de Push
             </h2>
             <ResponsiveContainer width="100%" height={300}>

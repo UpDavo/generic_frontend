@@ -10,6 +10,7 @@ import { Unauthorized } from "@/core/components/Unauthorized";
 import Instructions from "@/tada/components/Instructions";
 import EmailManager from "@/tada/components/EmailManager";
 import { send } from "process";
+import SendPush from "@/tada/components/SendPush";
 
 const PERMISSION_PATH = "/push/send";
 
@@ -132,10 +133,18 @@ export default function PushPage() {
       <Accordion variant="contained" className="mb-4">
         <Accordion.Item value="instructions" className="border border-gray-700">
           <Accordion.Control>
-            <span className="font-medium">Ver mensajes a enviar</span>
+            <span className="font-medium">Mensajes a enviar</span>
           </Accordion.Control>
           <Accordion.Panel className="bg-white rounded-b-lg">
             <Instructions />
+          </Accordion.Panel>
+        </Accordion.Item>
+        <Accordion.Item value="push" className="border border-gray-700">
+          <Accordion.Control>
+            <span className="font-medium">Como usar la herramienta</span>
+          </Accordion.Control>
+          <Accordion.Panel className="bg-white rounded-b-lg">
+            <SendPush />
           </Accordion.Panel>
         </Accordion.Item>
       </Accordion>

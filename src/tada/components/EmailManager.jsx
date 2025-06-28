@@ -137,38 +137,49 @@ export default function EmailManager({
   };
 
   return (
-    <div className="space-y-4">
+    <div >
       {/* Input para agregar email individual */}
       <div>
-        <div className="flex flex-row gap-2 content-baseline items-end">
-          <TextInput
-            label="Agregar Email"
-            placeholder="Ingrese un email"
-            value={emailInput}
-            onChange={(e) => setEmailInput(e.target.value.toLowerCase())}
-            error={
-              !isValidEmail(emailInput) && emailInput !== ""
-                ? "Email inválido"
-                : undefined
-            }
-            className="w-full"
-            onKeyPress={(e) => {
-              if (e.key === "Enter") {
-                addEmail();
+        <div className="flex flex-col sm:flex-row gap-2 sm:items-end mb-2">
+          <div className="flex-1">
+            <TextInput
+              label="Agregar Email"
+              placeholder="Ingrese un email"
+              value={emailInput}
+              onChange={(e) => setEmailInput(e.target.value.toLowerCase())}
+              error={
+                !isValidEmail(emailInput) && emailInput !== ""
+                  ? "Email inválido"
+                  : undefined
               }
-            }}
-          />
-          <Button onClick={addEmail} className="w-auto px-6">
-            +
+              className="w-full"
+              onKeyPress={(e) => {
+                if (e.key === "Enter") {
+                  addEmail();
+                }
+              }}
+            />
+          </div>
+          <Button
+            onClick={addEmail}
+            className="w-full sm:w-auto px-6 mt-2 sm:mt-0"
+            // size="md"
+          >
+            Agregar
           </Button>
         </div>
       </div>
 
       {/* Botones para cargar Excel y descargar plantilla */}
       <div>
-        <Group>
-          <Button component="label" variant="outline">
-            Cargar Excel
+        <div className="flex flex-col sm:flex-row gap-2">
+          <Button
+            component="label"
+            variant="outline"
+            className="w-full sm:w-auto"
+            size="sm"
+          >
+            📤 Cargar Excel
             <input
               type="file"
               accept=".xlsx,.xls"
@@ -176,48 +187,62 @@ export default function EmailManager({
               onChange={handleFileUpload}
             />
           </Button>
-          <Button variant="outline" onClick={downloadTemplate}>
-            Descargar Plantilla
+          <Button
+            variant="outline"
+            onClick={downloadTemplate}
+            className="w-full sm:w-auto"
+            size="sm"
+          >
+            📥 Descargar Plantilla
           </Button>
-        </Group>
+        </div>
       </div>
 
       {/* Lista de emails agregados */}
       {emails.length > 0 && (
-        <div>
-          <label className="block text-sm font-medium text-gray-700 mb-2">
-            Emails agregados ({emails.length}):
-          </label>
+        <div className="bg-white shadow-md rounded-lg p-4 mt-4 w-full">
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between mb-3">
+            <label className="text-sm font-medium text-gray-700 mb-2 sm:mb-0">
+              Emails agregados
+            </label>
+            <span className="text-xs bg-blue-100 text-blue-800 px-2 py-1 rounded-full">
+              {emails.length} email{emails.length !== 1 ? "s" : ""}
+            </span>
+          </div>
 
           {/* Lista individual de emails con botón de eliminar */}
-          <div className="max-h-60 overflow-y-auto border border-gray-200 bg-white rounded-md p-2 mb-2">
+          <div className="max-h-60 overflow-y-auto border border-gray-200 bg-white rounded-md p-2 mb-3 shadow-sm">
             {emails.map((email, index) => (
               <div
                 key={index}
-                className="flex justify-between items-center py-1 px-2 my-3 gap-2 bg-gray-100 hover:bg-gray-50 rounded"
+                className="flex justify-between items-center py-2 px-3 my-1 gap-2 bg-gray-50 hover:bg-gray-100 rounded-md transition-colors"
               >
-                <span className="text-sm text-black">{email}</span>
+                <span className="text-sm text-gray-800 break-all flex-1 pr-2">
+                  {email}
+                </span>
                 <ActionIcon
                   variant="light"
                   color="red"
                   size="sm"
                   onClick={() => removeEmail(email)}
                   title="Eliminar email"
+                  className="flex-shrink-0"
                 >
-                  <RiDeleteBin6Line size={12} />
+                  <RiDeleteBin6Line size={14} />
                 </ActionIcon>
               </div>
             ))}
           </div>
 
-          <Button
+          {/* <Button
             variant="outline"
             color="red"
             size="sm"
             onClick={() => setEmails([])}
+            className="w-full sm:w-auto"
           >
-            Limpiar todos los emails
-          </Button>
+            🗑️ Limpiar todos los emails
+          </Button> */}
         </div>
       )}
     </div>

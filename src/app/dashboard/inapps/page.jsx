@@ -274,68 +274,59 @@ export default function MessagePage() {
             )}
           </tbody>
         </table>
+      </div>
 
-        {/* Vista Móvil */}
-        <div className="md:hidden block space-y-4">
-          {loading ? (
-            <div className="flex flex-col items-center py-4">
-              <Loader size="sm" color="blue" />
-              <p className="mt-2 text-gray-500">Cargando...</p>
-            </div>
-          ) : data.length > 0 ? (
-            data.map((item) => (
-              <div
-                key={item.id}
-                className="border border-gray-200 rounded-lg p-4 bg-white shadow-md "
-              >
-                {/* <div className="mb-2">
+      {/* Vista Móvil */}
+      <div className="md:hidden block space-y-4 text-black">
+        {loading ? (
+          <div className="flex flex-col items-center py-4">
+            <Loader size="sm" color="blue" />
+            <p className="mt-2 text-gray-500">Cargando...</p>
+          </div>
+        ) : data.length > 0 ? (
+          data.map((item) => (
+            <div
+              key={item.id}
+              className="border border-gray-200 rounded-lg p-4 bg-white shadow-md "
+            >
+              {/* <div className="mb-2">
                       <span className="font-semibold">ID: </span>
                       {item.id}
                     </div> */}
-                <div className="mb-2 mt-2">
-                  <NotificationTD type={item.notification_type} td={false} />
-                </div>
-                <div className="mb-2">
-                  <span className="font-semibold">{item.name || "—"}</span>
-                </div>
-                <div className="mb-2">
-                  <span className="font-semibold">Título: </span>
-                  {item.title || "—"}
-                </div>
-
-                <div className="mb-2">
-                  <span className="font-semibold">Mensaje: </span>
-                  {item.message || "—"}
-                </div>
-                <div className="grid grid-cols-2 gap-2 mt-4">
-                  <Button
-                    onClick={() => {
-                      setFormState({
-                        notification_type: item.notification_type,
-                        name: item.name,
-                        title: item.title,
-                        message: item.message,
-                      });
-                      setEditingId(item.id);
-                      setModalOpen(true);
-                    }}
-                    className="btn btn-info btn-sm w-full"
-                  >
-                    <RiEdit2Line className="mr-1" /> Editar
-                  </Button>
-                  <Button
-                    onClick={() => openConfirmDelete(item.id, item.first_name)}
-                    className="btn btn-error btn-sm text-white w-full"
-                  >
-                    <RiDeleteBin6Line className="mr-1" /> Eliminar
-                  </Button>
-                </div>
+              <div className="mb-2 mt-2">
+                <span className="font-semibold">{item.name || "—"}</span>
               </div>
-            ))
-          ) : (
-            <div className="text-center py-4">No se encontraron datos.</div>
-          )}
-        </div>
+              <div className="mb-2">
+                <span className="font-semibold">{item.braze_id || "—"}</span>
+              </div>
+              <div className="grid grid-cols-2 gap-2 mt-4">
+                <Button
+                  onClick={() => {
+                    setFormState({
+                      notification_type: item.notification_type,
+                      name: item.name,
+                      title: item.title,
+                      message: item.message,
+                    });
+                    setEditingId(item.id);
+                    setModalOpen(true);
+                  }}
+                  className="btn btn-info btn-sm w-full"
+                >
+                  <RiEdit2Line className="mr-1" /> Editar
+                </Button>
+                <Button
+                  onClick={() => openConfirmDelete(item.id, item.first_name)}
+                  className="btn btn-error btn-sm text-white w-full"
+                >
+                  <RiDeleteBin6Line className="mr-1" /> Eliminar
+                </Button>
+              </div>
+            </div>
+          ))
+        ) : (
+          <div className="text-center py-4">No se encontraron datos.</div>
+        )}
       </div>
 
       <ConfirmDeleteModal
