@@ -78,7 +78,7 @@ const Instructions = () => {
           </div>
         </div>
 
-        <div className="bg-green-50 border-l-4 border-green-400 p-4 rounded-lg">
+        <div className="bg-green-50 border-l-4 border-green-400 p-4 mx-4 rounded-lg">
           <h2 className="text-lg sm:text-xl font-semibold text-green-800">
             📍 Proceso Completo de Notificaciones y Tiempos
           </h2>

@@ -182,3 +182,305 @@ textarea,
 select {
   font-size: 16px;
 }
+
+/* Estilos para forzar texto negro en DataTable independiente del tema */
+.datatable-force-black,
+.datatable-force-black * {
+  color: #000000 !important;
+  background-color: #ffffff !important;
+}
+
+.datatable-force-black table {
+  background-color: #ffffff !important;
+}
+
+.datatable-force-black thead,
+.datatable-force-black thead th {
+  color: #000000 !important;
+  background-color: #f8f9fa !important;
+}
+
+.datatable-force-black tbody,
+.datatable-force-black tbody tr,
+.datatable-force-black tbody td {
+  color: #000000 !important;
+  background-color: #ffffff !important;
+}
+
+.datatable-force-black tr:hover,
+.datatable-force-black tr:hover td {
+  color: #000000 !important;
+  background-color: #f5f5f5 !important;
+}
+
+.datatable-force-black .mantine-Table-root,
+.datatable-force-black .mantine-Table-root * {
+  color: #000000 !important;
+}
+
+/* Forzar color negro en elementos específicos de Mantine DataTable */
+[data-with-table-border] {
+  --mantine-color-text: #000000 !important;
+}
+
+.mantine-DataTable-root,
+.mantine-DataTable-root * {
+  color: #000000 !important;
+}
+
+.mantine-DataTable-root table {
+  background-color: #ffffff !important;
+}
+
+.mantine-DataTable-root thead th {
+  color: #000000 !important;
+  background-color: #f8f9fa !important;
+}
+
+.mantine-DataTable-root tbody td {
+  color: #000000 !important;
+  background-color: #ffffff !important;
+}
+
+.mantine-DataTable-root tbody tr:hover {
+  background-color: #f5f5f5 !important;
+}
+
+.mantine-DataTable-root tbody tr:hover td {
+  color: #000000 !important;
+}
+
+/* Estilos para forzar texto negro en todos los modales y componentes overlay de Mantine */
+
+/* Modales */
+.mantine-Modal-header {
+  background-color: #ffffff !important;
+  color: #000000 !important;
+}
+
+.mantine-Modal-body {
+  background-color: #ffffff !important;
+  color: #000000 !important;
+}
+
+.mantine-Modal-content {
+  background-color: #ffffff !important;
+  color: #000000 !important;
+}
+
+.mantine-Modal-title {
+  color: #000000 !important;
+}
+
+/* Notifications */
+.mantine-Notification-root {
+  background-color: #ffffff !important;
+  color: #000000 !important;
+  border: 1px solid #e5e7eb !important;
+}
+
+.mantine-Notification-root * {
+  color: #000000 !important;
+}
+
+.mantine-Notification-title {
+  color: #000000 !important;
+}
+
+.mantine-Notification-description {
+  color: #000000 !important;
+}
+
+/* Notifications específicas por color pero con texto negro */
+.mantine-Notification-root[data-color="red"] {
+  background-color: #fef2f2 !important;
+  border-color: #fecaca !important;
+}
+
+.mantine-Notification-root[data-color="green"] {
+  background-color: #f0fdf4 !important;
+  border-color: #bbf7d0 !important;
+}
+
+.mantine-Notification-root[data-color="blue"] {
+  background-color: #eff6ff !important;
+  border-color: #bfdbfe !important;
+}
+
+.mantine-Notification-root[data-color="yellow"] {
+  background-color: #fefce8 !important;
+  border-color: #fde047 !important;
+}
+
+/* Dropdowns */
+.mantine-Dropdown-dropdown {
+  background-color: #ffffff !important;
+  color: #000000 !important;
+  border: 1px solid #e5e7eb !important;
+}
+
+.mantine-Dropdown-dropdown * {
+  color: #000000 !important;
+}
+
+.mantine-Dropdown-item {
+  color: #000000 !important;
+  background-color: #ffffff !important;
+}
+
+.mantine-Dropdown-item:hover {
+  background-color: #f3f4f6 !important;
+  color: #000000 !important;
+}
+
+/* Popovers */
+.mantine-Popover-dropdown {
+  background-color: #ffffff !important;
+  color: #000000 !important;
+  border: 1px solid #e5e7eb !important;
+}
+
+.mantine-Popover-dropdown * {
+  color: #000000 !important;
+}
+
+/* Tooltips */
+.mantine-Tooltip-tooltip {
+  background-color: #1f2937 !important;
+  color: #ffffff !important;
+}
+
+/* Overlays */
+.mantine-Overlay-root {
+  background-color: rgba(0, 0, 0, 0.6) !important;
+}
+
+/* Spotlight/Search */
+.mantine-Spotlight-root,
+.mantine-Spotlight-root * {
+  color: #000000 !important;
+  background-color: #ffffff !important;
+}
+
+.mantine-Spotlight-search {
+  background-color: #ffffff !important;
+  color: #000000 !important;
+  border-color: #e5e7eb !important;
+}
+
+.mantine-Spotlight-action {
+  color: #000000 !important;
+  background-color: #ffffff !important;
+}
+
+.mantine-Spotlight-action:hover {
+  background-color: #f3f4f6 !important;
+  color: #000000 !important;
+}
+
+/* Drawers */
+.mantine-Drawer-root,
+.mantine-Drawer-root * {
+  color: #000000 !important;
+}
+
+.mantine-Drawer-content {
+  background-color: #ffffff !important;
+  color: #000000 !important;
+}
+
+.mantine-Drawer-header {
+  background-color: #ffffff !important;
+  color: #000000 !important;
+}
+
+.mantine-Drawer-body {
+  background-color: #ffffff !important;
+  color: #000000 !important;
+}
+
+.mantine-Drawer-title {
+  color: #000000 !important;
+}
+
+
+/* Select y otros componentes de formulario */
+.mantine-Modal-root .mantine-Select-dropdown,
+.mantine-Drawer-root .mantine-Select-dropdown {
+  background-color: #ffffff !important;
+  color: #000000 !important;
+  border-color: #e5e7eb !important;
+}
+
+.mantine-Modal-root .mantine-Select-item,
+.mantine-Drawer-root .mantine-Select-item {
+  color: #000000 !important;
+  background-color: #ffffff !important;
+}
+
+.mantine-Modal-root .mantine-Select-item:hover,
+.mantine-Drawer-root .mantine-Select-item:hover {
+  background-color: #f3f4f6 !important;
+  color: #000000 !important;
+}
+
+
+
+/* Cards dentro de modales */
+.mantine-Modal-root .mantine-Card-root,
+.mantine-Drawer-root .mantine-Card-root {
+  background-color: #ffffff !important;
+  color: #000000 !important;
+}
+
+/* Text components */
+.mantine-Modal-root .mantine-Text-root,
+.mantine-Drawer-root .mantine-Text-root,
+.mantine-Notification-root .mantine-Text-root {
+  color: #000000 !important;
+}
+
+/* Title components */
+.mantine-Modal-root .mantine-Title-root,
+.mantine-Drawer-root .mantine-Title-root {
+  color: #000000 !important;
+}
+
+/* Botones dentro de modales - texto blanco */
+.mantine-Modal-root .mantine-Button-root {
+  color: #ffffff !important;
+}
+
+.mantine-Modal-root .mantine-Button-root:hover {
+  color: #ffffff !important;
+}
+
+.mantine-Modal-root .mantine-Button-root:active {
+  color: #ffffff !important;
+}
+
+.mantine-Modal-root .mantine-Button-root:focus {
+  color: #ffffff !important;
+}
+
+/* Para botones específicos por variante */
+.mantine-Modal-root .mantine-Button-root[data-variant="filled"] {
+  color: #ffffff !important;
+}
+
+.mantine-Modal-root .mantine-Button-root[data-variant="outline"] {
+  color: #000000 !important; /* Mantener negro para outline */
+  border-color: #000000 !important;
+}
+
+.mantine-Modal-root .mantine-Button-root[data-variant="light"] {
+  color: #000000 !important; /* Mantener negro para light */
+}
+
+.mantine-Modal-root .mantine-Button-root[data-variant="subtle"] {
+  color: #000000 !important; /* Mantener negro para subtle */
+}
+
+.mantine-Modal-root .mantine-Button-root[data-variant="default"] {
+  color: #ffffff !important;
+}

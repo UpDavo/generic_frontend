@@ -1,0 +1,436 @@
+"use client";
+
+import { useEffect, useState, useCallback } from "react";
+import { listLogsStats } from "@/tada/services/pushApi";
+import { listCanvasLogsStats } from "@/tada/services/canvasApi";
+import { TextInput, Loader, Notification, Button } from "@mantine/core";
+import { RiRefreshLine, RiSearchLine } from "react-icons/ri";
+import { useAuth } from "@/auth/hooks/useAuth";
+import { DataTable } from "mantine-datatable";
+
+const PERMISSION_PATH = "/dashboard/payments";
+
+export default function PaymentsPage() {
+  const { accessToken, user } = useAuth();
+
+  const [loading, setLoading] = useState(false);
+  const [pushLoading, setPushLoading] = useState(false);
+  const [canvasLoading, setCanvasLoading] = useState(false);
+  const [error, setError] = useState(null);
+  const [pushError, setPushError] = useState(null);
+  const [canvasError, setCanvasError] = useState(null);
+  const [totalCalls, setTotalCalls] = useState(0);
+  const [cost, setCost] = useState(0);
+  const [userCalls, setUserCalls] = useState([]);
+  const [authorized, setAuthorized] = useState(null);
+
+  // Nuevos estados para las estadísticas separadas
+  const [pushStats, setPushStats] = useState(null);
+  const [canvasStats, setCanvasStats] = useState(null);
+
+  /* Filtro en la tabla */
+  const [searchValue, setSearchValue] = useState("");
+  const [sortStatus, setSortStatus] = useState({
+    columnAccessor: "count",
+    direction: "desc",
+  });
+
+  const getMonthStart = () =>
+    new Date(new Date().getFullYear(), new Date().getMonth(), 1)
+      .toISOString()
+      .slice(0, 10); // "YYYY‑MM‑01"
+
+  const getMonthEnd = () =>
+    new Date(new Date().getFullYear(), new Date().getMonth() + 1, 0)
+      .toISOString()
+      .slice(0, 10);
+
+  /* ---------- fechas por defecto = mes actual ---------- */
+  const [sentAtGte, setSentAtGte] = useState(getMonthStart());
+  const [sentAtLte, setSentAtLte] = useState(getMonthEnd());
+
+  /* ------------------------- AUTORIZACIÓN ------------------------- */
+  useEffect(() => {
+    const hasPermission =
+      user?.role?.is_admin ||
+      user?.role?.permissions?.some((p) => p.path === PERMISSION_PATH);
+    setAuthorized(!!hasPermission);
+  }, [user]);
+
+  /* ------------------------- FETCH FUNCTIONS ---------------------- */
+  // Función para obtener estadísticas de PUSH
+  const fetchPushStats = useCallback(async () => {
+    setPushLoading(true);
+    setPushError(null);
+
+    try {
+      const pushData = await listLogsStats(
+        accessToken,
+        1,
+        sentAtGte,
+        sentAtLte
+      );
+
+      //   console.log("Push stats:", pushData);
+      setPushStats(pushData);
+
+      return pushData;
+    } catch (err) {
+      console.error("Error fetching push stats:", err);
+      setPushError("Error al cargar estadísticas de Push");
+      return null;
+    } finally {
+      setPushLoading(false);
+    }
+  }, [accessToken, sentAtGte, sentAtLte]);
+
+  // Función para obtener estadísticas de CANVAS
+  const fetchCanvasStats = useCallback(async () => {
+    setCanvasLoading(true);
+    setCanvasError(null);
+
+    try {
+      const canvasData = await listCanvasLogsStats(
+        accessToken,
+        1,
+        sentAtGte,
+        sentAtLte
+      );
+
+      //   console.log("Canvas stats:", canvasData);
+      setCanvasStats(canvasData);
+
+      return canvasData;
+    } catch (err) {
+      console.error("Error fetching canvas stats:", err);
+      setCanvasError("Error al cargar estadísticas de Canvas");
+      return null;
+    } finally {
+      setCanvasLoading(false);
+    }
+  }, [accessToken, sentAtGte, sentAtLte]);
+
+  // Función para calcular y actualizar los totales
+  const updateTotals = useCallback(() => {
+    if (pushStats && canvasStats) {
+      const totalPushLogs = pushStats.summary?.total_logs || 0;
+      const totalCanvasLogs = canvasStats.summary?.total_logs || 0;
+      const totalPushCost = parseFloat(pushStats.summary?.total_cost || 0);
+      const totalCanvasCost = parseFloat(canvasStats.summary?.total_cost || 0);
+
+      setTotalCalls(totalPushLogs + totalCanvasLogs);
+      setCost(totalPushCost + totalCanvasCost);
+
+      // Combinar usuarios de ambos tipos para la tabla
+      const allUsers = [];
+
+      // Agregar usuarios de PUSH
+      if (pushStats.users_stats) {
+        pushStats.users_stats.forEach((user) => {
+          allUsers.push({
+            user: user.user_first_name,
+            count: user.total_logs,
+            cost: parseFloat(user.total_cost),
+            type: "PUSH",
+            email: user.user_email,
+          });
+        });
+      }
+
+      // Agregar usuarios de CANVAS
+      if (canvasStats.users_stats) {
+        canvasStats.users_stats.forEach((user) => {
+          allUsers.push({
+            user: user.user_first_name,
+            count: user.total_logs,
+            cost: parseFloat(user.total_cost),
+            type: "CANVAS",
+            email: user.user_email,
+          });
+        });
+      }
+
+      setUserCalls(allUsers);
+    }
+  }, [pushStats, canvasStats]);
+
+  // Actualizar totales cuando cambien las estadísticas
+  useEffect(() => {
+    updateTotals();
+  }, [updateTotals]);
+
+  // Función principal que ejecuta ambas peticiones en paralelo
+  const fetchDashboardData = useCallback(async () => {
+    setError(null);
+
+    try {
+      // Ejecutar ambas peticiones en paralelo sin bloquear la UI
+      await Promise.all([fetchPushStats(), fetchCanvasStats()]);
+    } catch (err) {
+      console.error("Error general:", err);
+      setError("Error al cargar los datos del dashboard.");
+    }
+  }, [fetchPushStats, fetchCanvasStats]);
+
+  // 2. Llamada inicial SOLO una vez al montar
+  useEffect(() => {
+    fetchDashboardData();
+  }, []); //  ← vacío: ya no depende de las fechas
+
+  /* ------------------------- RENDER ------------------------------- */
+  if (authorized === null) {
+    return (
+      <div className="flex justify-center items-center mt-64">
+        <Loader size="lg" />
+      </div>
+    );
+  }
+
+  if (!authorized) {
+    return (
+      <div className="p-8 bg-white rounded-md shadow-lg">
+        <p className="text-center text-red-500 font-bold">
+          No tienes autorización para ver esta sección.
+        </p>
+      </div>
+    );
+  }
+
+  /* Filtro de nombre + orden */
+  const filtered = userCalls.filter(
+    (r) =>
+      r.user.toLowerCase().includes(searchValue.toLowerCase()) ||
+      r.type.toLowerCase().includes(searchValue.toLowerCase())
+  );
+  const sorted = [...filtered].sort((a, b) => {
+    const dir = sortStatus.direction === "asc" ? 1 : -1;
+    if (sortStatus.columnAccessor === "user") {
+      return dir * a.user.localeCompare(b.user);
+    } else if (sortStatus.columnAccessor === "cost") {
+      return dir * (a.cost - b.cost);
+    }
+    return dir * (a.count - b.count);
+  });
+
+  return (
+    <div>
+      {/* ------------- FILTROS ------------- */}
+      <div className="grid md:grid-cols-4 grid-cols-1 gap-4 mb-6 text-black items-end">
+        <TextInput
+          type="date"
+          label="Desde"
+          value={sentAtGte || ""}
+          onChange={(e) => setSentAtGte(e.target.value || null)}
+        />
+        <TextInput
+          type="date"
+          label="Hasta"
+          value={sentAtLte || ""}
+          onChange={(e) => setSentAtLte(e.target.value || null)}
+        />
+
+        {/* BOTÓN BUSCAR: dispara la consulta */}
+        <Button
+          onClick={fetchDashboardData}
+          variant="filled"
+          leftSection={<RiSearchLine />}
+          disabled={pushLoading || canvasLoading}
+        >
+          Buscar
+        </Button>
+
+        {/* Opcional: refresco “rápido” ignorando filtros */}
+        <Button
+          onClick={() => {
+            setSentAtGte(getMonthStart());
+            setSentAtLte(getMonthEnd());
+            fetchDashboardData();
+          }}
+          variant="filled"
+          leftSection={<RiRefreshLine />}
+          disabled={pushLoading || canvasLoading}
+        >
+          Reset
+        </Button>
+      </div>
+
+      {/* ------------- ERRORES ------------- */}
+      {error && (
+        <Notification
+          color="red"
+          className="mb-4"
+          onClose={() => setError(null)}
+          withCloseButton
+        >
+          {error}
+        </Notification>
+      )}
+
+      {pushError && (
+        <Notification
+          color="red"
+          className="mb-4"
+          onClose={() => setPushError(null)}
+          withCloseButton
+        >
+          {pushError}
+        </Notification>
+      )}
+
+      {canvasError && (
+        <Notification
+          color="red"
+          className="mb-4"
+          onClose={() => setCanvasError(null)}
+          withCloseButton
+        >
+          {canvasError}
+        </Notification>
+      )}
+
+      {/* ------------- TARJETAS ------------- */}
+      <div className="mt-2">
+        <div className="grid md:grid-cols-4 grid-cols-1 gap-6 mb-6">
+          <div className="card bg-white shadow p-6 text-center">
+            <h2 className="text-lg font-bold mb-2 text-black">Costo Total</h2>
+            {pushLoading || canvasLoading ? (
+              <div className="flex justify-center">
+                <Loader size="md" />
+              </div>
+            ) : (
+              <p className="text-4xl font-extrabold text-success">
+                ${cost.toFixed(2)}
+              </p>
+            )}
+          </div>
+          <div className="card bg-white shadow p-6 text-center">
+            <h2 className="text-lg font-bold mb-2 text-black">
+              Total Notificaciones
+            </h2>
+            {pushLoading || canvasLoading ? (
+              <div className="flex justify-center">
+                <Loader size="md" />
+              </div>
+            ) : (
+              <p className="text-4xl font-extrabold text-info">{totalCalls}</p>
+            )}
+          </div>
+          <div className="card bg-white shadow p-6 text-center">
+            <h2 className="text-lg font-bold mb-2 text-black">
+              Push Notifications
+            </h2>
+            {pushLoading ? (
+              <div className="flex justify-center">
+                <Loader size="md" />
+              </div>
+            ) : pushError ? (
+              <p className="text-sm text-red-500">Error al cargar</p>
+            ) : (
+              <>
+                <p className="text-2xl font-bold text-blue-600">
+                  {pushStats?.summary?.total_logs || 0}
+                </p>
+                <p className="text-sm text-gray-600">
+                  ${parseFloat(pushStats?.summary?.total_cost || 0).toFixed(2)}
+                </p>
+              </>
+            )}
+          </div>
+          <div className="card bg-white shadow p-6 text-center">
+            <h2 className="text-lg font-bold mb-2 text-black">
+              Canvas Messages
+            </h2>
+            {canvasLoading ? (
+              <div className="flex justify-center">
+                <Loader size="md" />
+              </div>
+            ) : canvasError ? (
+              <p className="text-sm text-red-500">Error al cargar</p>
+            ) : (
+              <>
+                <p className="text-2xl font-bold text-purple-600">
+                  {canvasStats?.summary?.total_logs || 0}
+                </p>
+                <p className="text-sm text-gray-600">
+                  $
+                  {parseFloat(canvasStats?.summary?.total_cost || 0).toFixed(2)}
+                </p>
+              </>
+            )}
+          </div>
+        </div>
+      </div>
+
+      {/* ------------- TABLA ------------- */}
+      <div className="card bg-white shadow-xl p-6 text-black">
+        <h2 className="text-lg text-black font-bold mb-4 text-center">
+          Notificaciones por Usuario
+        </h2>
+
+        {pushLoading || canvasLoading ? (
+          <div className="flex justify-center items-center h-32">
+            <div className="text-center">
+              <Loader size="lg" />
+              <p className="mt-2 text-gray-600">
+                Cargando datos de usuarios...
+              </p>
+            </div>
+          </div>
+        ) : userCalls.length ? (
+          <>
+            <TextInput
+              placeholder="Filtrar por usuario o tipo..."
+              value={searchValue}
+              onChange={(e) => setSearchValue(e.currentTarget.value)}
+              className="mb-4 text-black"
+            />
+
+            <DataTable
+              records={sorted}
+              columns={[
+                { accessor: "user", title: "Usuario", sortable: true },
+                { accessor: "type", title: "Tipo", sortable: true },
+                {
+                  accessor: "count",
+                  title: "Cantidad",
+                  sortable: true,
+                },
+                {
+                  accessor: "cost",
+                  title: "Costo",
+                  sortable: true,
+                  render: (record) => `$${record.cost.toFixed(2)}`,
+                },
+              ]}
+              sortStatus={sortStatus}
+              onSortStatusChange={setSortStatus}
+              highlightOnHover
+              verticalSpacing="sm"
+              noRecordsText="Sin registros"
+              className="datatable-force-black"
+              styles={{
+                table: {
+                  color: "#000000 !important",
+                  backgroundColor: "#ffffff !important",
+                },
+                header: {
+                  color: "#000000 !important",
+                  backgroundColor: "#f8f9fa !important",
+                },
+                row: {
+                  color: "#000000 !important",
+                  backgroundColor: "#ffffff !important",
+                },
+                cell: {
+                  color: "#000000 !important",
+                },
+              }}
+            />
+          </>
+        ) : (
+          <p className="text-center">No hay datos disponibles.</p>
+        )}
+      </div>
+    </div>
+  );
+}

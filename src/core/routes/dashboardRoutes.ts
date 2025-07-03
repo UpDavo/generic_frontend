@@ -12,12 +12,19 @@ import {
   RiSendPlaneLine,
   RiFileList2Line,
   RiSmartphoneLine,
+  RiMoneyDollarCircleLine,
+  RiPriceTag3Line,
 } from "react-icons/ri";
 export const dashboardRoutes = [
   {
     section: "Menu",
     children: [
       { path: "/dashboard", name: "Inicio", icon: RiDashboardLine },
+      {
+        path: "/dashboard/payments",
+        name: "Pagos",
+        icon: RiMoneyDollarCircleLine,
+      },
       {
         name: "Push",
         icon: RiSmartphoneLine,
@@ -92,6 +99,12 @@ export const dashboardRoutes = [
             name: "Permisos",
             permission: "/dashboard/user/permission",
             icon: RiKey2Line,
+          },
+          {
+            path: "/dashboard/pricing",
+            name: "Precios",
+            permission: "/dashboard/pricing",
+            icon: RiPriceTag3Line,
           },
         ],
       },
