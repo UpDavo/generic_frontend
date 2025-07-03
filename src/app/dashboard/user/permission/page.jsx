@@ -4,6 +4,7 @@ import { useState, useEffect } from "react";
 import { useAuth } from "@/auth/hooks/useAuth";
 import {
   listPermissions,
+  listAllPermissions,
   createPermission,
   updatePermission,
   deletePermission,
@@ -28,6 +29,7 @@ import {
 import { dashboardRoutes } from "@/core/routes/dashboardRoutes";
 import { useRouter } from "next/navigation";
 import { Unauthorized } from "@/core/components/Unauthorized";
+import ConfirmDeleteModal from "@/core/components/ConfirmDeleteModal";
 
 const PERMISSION_PATH = "/dashboard/user/permission";
 
@@ -41,6 +43,19 @@ const methodOptions = [
 export default function PermissionPage() {
   const { accessToken, user } = useAuth();
   const [permissions, setPermissions] = useState([]);
+  
+  //delete
+  const [confirmDeleteOpen, setConfirmDeleteOpen] = useState(false);
+  const [deleteTargetId, setDeleteTargetId] = useState(0);
+  const [deleteTargetName, setDeleteTargetName] = useState("");
+  const [isDeleting, setIsDeleting] = useState(false);
+
+  const openConfirmDelete = (id, name) => {
+    setDeleteTargetId(id);
+    setDeleteTargetName(name);
+    setConfirmDeleteOpen(true);
+  };
+
   const [formState, setFormState] = useState({
     name: "",
     path: "",
@@ -89,30 +104,25 @@ export default function PermissionPage() {
 
   // Fetch permissions con paginación y búsqueda
   useEffect(() => {
-    if (accessToken) {
+    if (accessToken && authorized) {
       const delaySearch = setTimeout(() => {
         fetchData();
       }, 500);
       return () => clearTimeout(delaySearch);
     }
-  }, [accessToken, page, searchQuery]);
+  }, [accessToken, page, searchQuery, authorized]);
 
-  // Actualiza fetchData para soportar paginación y búsqueda en frontend
+  // Función para obtener permisos con paginación del backend
   const fetchData = async () => {
     setLoading(true);
     try {
-      const data = await listPermissions(accessToken);
-      // Filtrado y paginación en frontend
-      let filtered = data.results || data;
-      if (searchQuery) {
-        filtered = filtered.filter((perm) =>
-          perm.name.toLowerCase().includes(searchQuery.toLowerCase())
-        );
-      }
-      setTotalPages(Math.ceil(filtered.length / 10));
-      setPermissions(filtered.slice((page - 1) * 10, page * 10));
+      const response = await listPermissions(accessToken, page, searchQuery);
+      setPermissions(response.results || []);
+      const pages = Math.ceil(response.count / 10);
+      setTotalPages(pages);
       setError(null);
     } catch (err) {
+      console.error(err);
       setError("Error al cargar los permisos");
     } finally {
       setLoading(false);
@@ -255,7 +265,7 @@ export default function PermissionPage() {
                       <RiEdit2Line />
                     </Button>
                     <Button
-                      onClick={() => handleDelete(item.id)}
+                      onClick={() => openConfirmDelete(item.id, item.name)}
                       className="btn btn-sm text-white"
                     >
                       <RiDeleteBin6Line />
@@ -315,7 +325,7 @@ export default function PermissionPage() {
                   <RiEdit2Line className="mr-1" /> Editar
                 </Button>
                 <Button
-                  onClick={() => handleDelete(item.id)}
+                  onClick={() => openConfirmDelete(item.id, item.name)}
                   className="btn btn-error btn-sm text-white w-full"
                 >
                   <RiDeleteBin6Line className="mr-1" /> Eliminar
@@ -392,6 +402,28 @@ export default function PermissionPage() {
           </Button>
         </div>
       </Modal>
+      {/* Modal de Confirmación de Eliminación */}
+      <ConfirmDeleteModal
+        opened={confirmDeleteOpen}
+        onClose={() => setConfirmDeleteOpen(false)}
+        onConfirm={async () => {
+          setIsDeleting(true);
+          try {
+            await deletePermission(deleteTargetId, accessToken);
+            fetchData();
+          } catch (err) {
+            setError("Error al eliminar el permiso");
+          } finally {
+            setIsDeleting(false);
+            setConfirmDeleteOpen(false);
+          }
+        }}
+        title="Eliminar Permiso"
+        message={`¿Estás seguro de que deseas eliminar el permiso "${deleteTargetName}"?`}
+        confirmButtonText="Eliminar"
+        cancelButtonText="Cancelar"
+        isLoading={isDeleting}
+      />
     </div>
   );
 }

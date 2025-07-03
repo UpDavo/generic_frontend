@@ -7,7 +7,7 @@ import {
   createRole,
   updateRole,
   deleteRole,
-  listPermissions,
+  listAllPermissions,
 } from "@/auth/services/roleApi";
 import {
   Loader,
@@ -63,20 +63,30 @@ export default function RolePage() {
   }, [user, router]);
 
   useEffect(() => {
+    if (accessToken && authorized) {
+      const delaySearch = setTimeout(() => {
+        fetchData();
+      }, 500);
+      return () => clearTimeout(delaySearch);
+    }
+  }, [accessToken, page, searchQuery, authorized]);
+
+  useEffect(() => {
     if (accessToken) {
-      fetchData();
       fetchPermissions();
     }
-  }, [accessToken, page, searchQuery]);
+  }, [accessToken]);
 
   const fetchData = async () => {
     setLoading(true);
     try {
-      const data = await listRoles(accessToken);
-      setRoles(data.results || data); // soporta paginado o no
-      setTotalPages(Math.ceil((data.count || data.length) / 10));
+      const response = await listRoles(accessToken, page, searchQuery);
+      setRoles(response.results || []);
+      const pages = Math.ceil(response.count / 10);
+      setTotalPages(pages);
       setError(null);
     } catch (err) {
+      console.error(err);
       setError("Error al cargar los roles");
     } finally {
       setLoading(false);
@@ -85,7 +95,7 @@ export default function RolePage() {
 
   const fetchPermissions = async () => {
     try {
-      const data = await listPermissions(accessToken);
+      const data = await listAllPermissions(accessToken);
       setPermissions(data.results || data);
     } catch (err) {
       setPermissions([]);

@@ -6,15 +6,28 @@ import { Permission } from "@/core/interfaces/permission";
    ==== ROLES FUNCTIONS ====
    ========================= */
 
-// Listar roles
-export const listRoles = async (accessToken: string | null) => {
-  const response = await fetch(`${API_BASE_URL}/auth/roles/`, {
-    method: "GET",
-    headers: {
-      "Content-Type": "application/json",
-      Authorization: `Bearer ${accessToken}`,
-    },
-  });
+// Listar roles con paginación
+export const listRoles = async (
+  accessToken: string | null,
+  page: number = 1,
+  search: string = ""
+) => {
+  const searchParams = new URLSearchParams();
+  searchParams.append("page", page.toString());
+  if (search) {
+    searchParams.append("search", search);
+  }
+
+  const response = await fetch(
+    `${API_BASE_URL}/auth/roles/?${searchParams.toString()}`,
+    {
+      method: "GET",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${accessToken}`,
+      },
+    }
+  );
 
   if (!response.ok) {
     throw new Error("Error al obtener los roles");
@@ -118,8 +131,38 @@ export const deleteRole = async (id: number, accessToken: string | null) => {
    ================================ */
 
 // Listar permisos
-export const listPermissions = async (accessToken: string | null) => {
-  const response = await fetch(`${API_BASE_URL}/auth/permissions/`, {
+export const listPermissions = async (
+  accessToken: string | null,
+  page: number = 1,
+  search: string = ""
+) => {
+  const searchParams = new URLSearchParams();
+  searchParams.append("page", page.toString());
+  if (search) {
+    searchParams.append("search", search);
+  }
+
+  const response = await fetch(
+    `${API_BASE_URL}/auth/permissions/?${searchParams.toString()}`,
+    {
+      method: "GET",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${accessToken}`,
+      },
+    }
+  );
+
+  if (!response.ok) {
+    throw new Error("Error al obtener los permisos");
+  }
+
+  return await response.json();
+};
+
+// Listar todos los permisos sin paginación
+export const listAllPermissions = async (accessToken: string | null) => {
+  const response = await fetch(`${API_BASE_URL}/auth/permissions-all/`, {
     method: "GET",
     headers: {
       "Content-Type": "application/json",
