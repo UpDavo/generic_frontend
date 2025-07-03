@@ -379,10 +379,10 @@ select {
 }
 
 /* Drawers */
-.mantine-Drawer-root,
+/* .mantine-Drawer-root,
 .mantine-Drawer-root * {
   color: #000000 !important;
-}
+} */
 
 .mantine-Drawer-content {
   background-color: #ffffff !important;

@@ -6,7 +6,6 @@ import { listCanvasLogsStats } from "@/tada/services/canvasApi";
 import { TextInput, Loader, Notification, Button } from "@mantine/core";
 import { RiRefreshLine, RiSearchLine } from "react-icons/ri";
 import { useAuth } from "@/auth/hooks/useAuth";
-import { DataTable } from "mantine-datatable";
 
 const PERMISSION_PATH = "/dashboard/payments";
 
@@ -385,47 +384,162 @@ export default function PaymentsPage() {
               className="mb-4 text-black"
             />
 
-            <DataTable
-              records={sorted}
-              columns={[
-                { accessor: "user", title: "Usuario", sortable: true },
-                { accessor: "type", title: "Tipo", sortable: true },
-                {
-                  accessor: "count",
-                  title: "Cantidad",
-                  sortable: true,
-                },
-                {
-                  accessor: "cost",
-                  title: "Costo",
-                  sortable: true,
-                  render: (record) => `$${record.cost.toFixed(2)}`,
-                },
-              ]}
-              sortStatus={sortStatus}
-              onSortStatusChange={setSortStatus}
-              highlightOnHover
-              verticalSpacing="sm"
-              noRecordsText="Sin registros"
-              className="datatable-force-black"
-              styles={{
-                table: {
-                  color: "#000000 !important",
-                  backgroundColor: "#ffffff !important",
-                },
-                header: {
-                  color: "#000000 !important",
-                  backgroundColor: "#f8f9fa !important",
-                },
-                row: {
-                  color: "#000000 !important",
-                  backgroundColor: "#ffffff !important",
-                },
-                cell: {
-                  color: "#000000 !important",
-                },
-              }}
-            />
+            {/* Vista de escritorio - Tabla */}
+            <div className="hidden md:block overflow-x-auto rounded-md">
+              <table className="table w-full">
+                <thead className="bg-primary text-white text-md uppercase font-bold">
+                  <tr>
+                    <th
+                      className="cursor-pointer hover:bg-primary-focus"
+                      onClick={() =>
+                        setSortStatus({
+                          columnAccessor: "user",
+                          direction:
+                            sortStatus.columnAccessor === "user" &&
+                            sortStatus.direction === "asc"
+                              ? "desc"
+                              : "asc",
+                        })
+                      }
+                    >
+                      Usuario{" "}
+                      {sortStatus.columnAccessor === "user" &&
+                        (sortStatus.direction === "asc" ? "↑" : "↓")}
+                    </th>
+                    <th
+                      className="cursor-pointer hover:bg-primary-focus"
+                      onClick={() =>
+                        setSortStatus({
+                          columnAccessor: "type",
+                          direction:
+                            sortStatus.columnAccessor === "type" &&
+                            sortStatus.direction === "asc"
+                              ? "desc"
+                              : "asc",
+                        })
+                      }
+                    >
+                      Tipo{" "}
+                      {sortStatus.columnAccessor === "type" &&
+                        (sortStatus.direction === "asc" ? "↑" : "↓")}
+                    </th>
+                    <th
+                      className="cursor-pointer hover:bg-primary-focus"
+                      onClick={() =>
+                        setSortStatus({
+                          columnAccessor: "count",
+                          direction:
+                            sortStatus.columnAccessor === "count" &&
+                            sortStatus.direction === "asc"
+                              ? "desc"
+                              : "asc",
+                        })
+                      }
+                    >
+                      Cantidad{" "}
+                      {sortStatus.columnAccessor === "count" &&
+                        (sortStatus.direction === "asc" ? "↑" : "↓")}
+                    </th>
+                    <th
+                      className="cursor-pointer hover:bg-primary-focus"
+                      onClick={() =>
+                        setSortStatus({
+                          columnAccessor: "cost",
+                          direction:
+                            sortStatus.columnAccessor === "cost" &&
+                            sortStatus.direction === "asc"
+                              ? "desc"
+                              : "asc",
+                        })
+                      }
+                    >
+                      Costo{" "}
+                      {sortStatus.columnAccessor === "cost" &&
+                        (sortStatus.direction === "asc" ? "↑" : "↓")}
+                    </th>
+                  </tr>
+                </thead>
+                <tbody className="bg-white text-black">
+                  {sorted.map((record, index) => (
+                    <tr key={index} className="hover:bg-gray-100">
+                      <td className="uppercase font-bold">{record.user}</td>
+                      <td>
+                        <span
+                          className={`badge ${
+                            record.type === "PUSH"
+                              ? "badge-primary"
+                              : "badge-secondary"
+                          }`}
+                        >
+                          {record.type}
+                        </span>
+                      </td>
+                      <td className="font-semibold">{record.count}</td>
+                      <td className="font-bold text-green-600">
+                        ${record.cost.toFixed(2)}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+
+            {/* Vista móvil - Cards */}
+            <div className="md:hidden block space-y-4">
+              {sorted.map((record, index) => (
+                <div
+                  key={index}
+                  className="border border-gray-200 rounded-lg p-4 bg-white shadow-md"
+                >
+                  <div className="flex justify-between items-start mb-2">
+                    <div>
+                      <div className="mb-1 font-semibold text-gray-600">
+                        Usuario:
+                      </div>
+                      <div className="uppercase font-bold text-lg">
+                        {record.user}
+                      </div>
+                    </div>
+                    <span
+                      className={`badge ${
+                        record.type === "PUSH"
+                          ? "badge-primary"
+                          : "badge-secondary"
+                      }`}
+                    >
+                      {record.type}
+                    </span>
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-4 mt-3">
+                    <div>
+                      <div className="mb-1 font-semibold text-gray-600">
+                        Cantidad:
+                      </div>
+                      <div className="text-xl font-bold text-blue-600">
+                        {record.count}
+                      </div>
+                    </div>
+                    <div>
+                      <div className="mb-1 font-semibold text-gray-600">
+                        Costo:
+                      </div>
+                      <div className="text-xl font-bold text-green-600">
+                        ${record.cost.toFixed(2)}
+                      </div>
+                    </div>
+                  </div>
+
+                  {record.email && (
+                    <div className="mt-2 pt-2 border-t border-gray-100">
+                      <div className="text-xs text-gray-500">
+                        Email: {record.email}
+                      </div>
+                    </div>
+                  )}
+                </div>
+              ))}
+            </div>
           </>
         ) : (
           <p className="text-center">No hay datos disponibles.</p>

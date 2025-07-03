@@ -1,6 +1,6 @@
 const Instructions = () => {
   return (
-    <div className="text-black p-4 sm:p-6">
+    <div className="text-black md:p-4">
       <div className="space-y-6">
         <div className="bg-gray-100 p-4 rounded-lg">
           <h2 className="text-lg sm:text-xl font-semibold">
