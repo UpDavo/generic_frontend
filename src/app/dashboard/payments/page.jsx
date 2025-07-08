@@ -3,6 +3,7 @@
 import { useEffect, useState, useCallback } from "react";
 import { listLogsStats } from "@/tada/services/pushApi";
 import { listCanvasLogsStats } from "@/tada/services/canvasApi";
+import { listExecutionLogsStats } from "@/tada/services/executionApi";
 import { TextInput, Loader, Notification, Button } from "@mantine/core";
 import { RiRefreshLine, RiSearchLine } from "react-icons/ri";
 import { useAuth } from "@/auth/hooks/useAuth";
@@ -15,9 +16,11 @@ export default function PaymentsPage() {
   const [loading, setLoading] = useState(false);
   const [pushLoading, setPushLoading] = useState(false);
   const [canvasLoading, setCanvasLoading] = useState(false);
+  const [executionLoading, setExecutionLoading] = useState(false);
   const [error, setError] = useState(null);
   const [pushError, setPushError] = useState(null);
   const [canvasError, setCanvasError] = useState(null);
+  const [executionError, setExecutionError] = useState(null);
   const [totalCalls, setTotalCalls] = useState(0);
   const [cost, setCost] = useState(0);
   const [userCalls, setUserCalls] = useState([]);
@@ -26,6 +29,7 @@ export default function PaymentsPage() {
   // Nuevos estados para las estadísticas separadas
   const [pushStats, setPushStats] = useState(null);
   const [canvasStats, setCanvasStats] = useState(null);
+  const [executionStats, setExecutionStats] = useState(null);
 
   /* Filtro en la tabla */
   const [searchValue, setSearchValue] = useState("");
@@ -109,18 +113,48 @@ export default function PaymentsPage() {
     }
   }, [accessToken, sentAtGte, sentAtLte]);
 
+  // Función para obtener estadísticas de EXECUTION
+  const fetchExecutionStats = useCallback(async () => {
+    setExecutionLoading(true);
+    setExecutionError(null);
+
+    try {
+      const executionData = await listExecutionLogsStats(
+        accessToken,
+        1,
+        sentAtGte,
+        sentAtLte
+      );
+
+      //   console.log("Execution stats:", executionData);
+      setExecutionStats(executionData);
+
+      return executionData;
+    } catch (err) {
+      console.error("Error fetching execution stats:", err);
+      setExecutionError("Error al cargar estadísticas de Execution");
+      return null;
+    } finally {
+      setExecutionLoading(false);
+    }
+  }, [accessToken, sentAtGte, sentAtLte]);
+
   // Función para calcular y actualizar los totales
   const updateTotals = useCallback(() => {
-    if (pushStats && canvasStats) {
+    if (pushStats && canvasStats && executionStats) {
       const totalPushLogs = pushStats.summary?.total_logs || 0;
       const totalCanvasLogs = canvasStats.summary?.total_logs || 0;
+      const totalExecutionLogs = executionStats.summary?.total_logs || 0;
       const totalPushCost = parseFloat(pushStats.summary?.total_cost || 0);
       const totalCanvasCost = parseFloat(canvasStats.summary?.total_cost || 0);
+      const totalExecutionCost = parseFloat(
+        executionStats.summary?.total_cost || 0
+      );
 
-      setTotalCalls(totalPushLogs + totalCanvasLogs);
-      setCost(totalPushCost + totalCanvasCost);
+      setTotalCalls(totalPushLogs + totalCanvasLogs + totalExecutionLogs);
+      setCost(totalPushCost + totalCanvasCost + totalExecutionCost);
 
-      // Combinar usuarios de ambos tipos para la tabla
+      // Combinar usuarios de todos los tipos para la tabla
       const allUsers = [];
 
       // Agregar usuarios de PUSH
@@ -149,9 +183,20 @@ export default function PaymentsPage() {
         });
       }
 
+      // Agregar estadísticas de EXECUTION (no tiene users_stats, solo total)
+      if (executionStats.summary && executionStats.summary.total_logs > 0) {
+        allUsers.push({
+          user: "Ejecución de Reporte",
+          count: executionStats.summary.total_logs,
+          cost: parseFloat(executionStats.summary.total_cost),
+          type: "EXECUTION",
+          email: "system@execution.com",
+        });
+      }
+
       setUserCalls(allUsers);
     }
-  }, [pushStats, canvasStats]);
+  }, [pushStats, canvasStats, executionStats]);
 
   // Actualizar totales cuando cambien las estadísticas
   useEffect(() => {
@@ -163,13 +208,17 @@ export default function PaymentsPage() {
     setError(null);
 
     try {
-      // Ejecutar ambas peticiones en paralelo sin bloquear la UI
-      await Promise.all([fetchPushStats(), fetchCanvasStats()]);
+      // Ejecutar todas las peticiones en paralelo sin bloquear la UI
+      await Promise.all([
+        fetchPushStats(),
+        fetchCanvasStats(),
+        fetchExecutionStats(),
+      ]);
     } catch (err) {
       console.error("Error general:", err);
       setError("Error al cargar los datos del dashboard.");
     }
-  }, [fetchPushStats, fetchCanvasStats]);
+  }, [fetchPushStats, fetchCanvasStats, fetchExecutionStats]);
 
   // 2. Llamada inicial SOLO una vez al montar
   useEffect(() => {
@@ -233,7 +282,7 @@ export default function PaymentsPage() {
           onClick={fetchDashboardData}
           variant="filled"
           leftSection={<RiSearchLine />}
-          disabled={pushLoading || canvasLoading}
+          disabled={pushLoading || canvasLoading || executionLoading}
         >
           Buscar
         </Button>
@@ -247,9 +296,9 @@ export default function PaymentsPage() {
           }}
           variant="filled"
           leftSection={<RiRefreshLine />}
-          disabled={pushLoading || canvasLoading}
+          disabled={pushLoading || canvasLoading || executionLoading}
         >
-          Reset
+          Reiniciar
         </Button>
       </div>
 
@@ -287,12 +336,23 @@ export default function PaymentsPage() {
         </Notification>
       )}
 
+      {executionError && (
+        <Notification
+          color="red"
+          className="mb-4"
+          onClose={() => setExecutionError(null)}
+          withCloseButton
+        >
+          {executionError}
+        </Notification>
+      )}
+
       {/* ------------- TARJETAS ------------- */}
       <div className="mt-2">
-        <div className="grid md:grid-cols-4 grid-cols-1 gap-6 mb-6">
+        <div className="grid md:grid-cols-5 grid-cols-1 gap-6 mb-6">
           <div className="card bg-white shadow p-6 text-center">
-            <h2 className="text-lg font-bold mb-2 text-black">Costo Total</h2>
-            {pushLoading || canvasLoading ? (
+            <h2 className="text-lg font-bold mb-2 text-black">Total</h2>
+            {pushLoading || canvasLoading || executionLoading ? (
               <div className="flex justify-center">
                 <Loader size="md" />
               </div>
@@ -303,10 +363,8 @@ export default function PaymentsPage() {
             )}
           </div>
           <div className="card bg-white shadow p-6 text-center">
-            <h2 className="text-lg font-bold mb-2 text-black">
-              Total Notificaciones
-            </h2>
-            {pushLoading || canvasLoading ? (
+            <h2 className="text-lg font-bold mb-2 text-black">Registros</h2>
+            {pushLoading || canvasLoading || executionLoading ? (
               <div className="flex justify-center">
                 <Loader size="md" />
               </div>
@@ -316,7 +374,7 @@ export default function PaymentsPage() {
           </div>
           <div className="card bg-white shadow p-6 text-center">
             <h2 className="text-lg font-bold mb-2 text-black">
-              Push Notifications
+              Push Enviados
             </h2>
             {pushLoading ? (
               <div className="flex justify-center">
@@ -337,7 +395,7 @@ export default function PaymentsPage() {
           </div>
           <div className="card bg-white shadow p-6 text-center">
             <h2 className="text-lg font-bold mb-2 text-black">
-              Canvas Messages
+              In-Apps Enviados
             </h2>
             {canvasLoading ? (
               <div className="flex justify-center">
@@ -357,6 +415,28 @@ export default function PaymentsPage() {
               </>
             )}
           </div>
+          <div className="card bg-white shadow p-6 text-center">
+            <h2 className="text-lg font-bold mb-2 text-black">Reportes Enviados</h2>
+            {executionLoading ? (
+              <div className="flex justify-center">
+                <Loader size="md" />
+              </div>
+            ) : executionError ? (
+              <p className="text-sm text-red-500">Error al cargar</p>
+            ) : (
+              <>
+                <p className="text-2xl font-bold text-green-600">
+                  {executionStats?.summary?.total_logs || 0}
+                </p>
+                <p className="text-sm text-gray-600">
+                  $
+                  {parseFloat(executionStats?.summary?.total_cost || 0).toFixed(
+                    2
+                  )}
+                </p>
+              </>
+            )}
+          </div>
         </div>
       </div>
 
@@ -366,7 +446,7 @@ export default function PaymentsPage() {
           Notificaciones por Usuario
         </h2>
 
-        {pushLoading || canvasLoading ? (
+        {pushLoading || canvasLoading || executionLoading ? (
           <div className="flex justify-center items-center h-32">
             <div className="text-center">
               <Loader size="lg" />
@@ -468,7 +548,9 @@ export default function PaymentsPage() {
                           className={`badge ${
                             record.type === "PUSH"
                               ? "badge-primary"
-                              : "badge-secondary"
+                              : record.type === "CANVAS"
+                              ? "badge-secondary"
+                              : "badge-success"
                           }`}
                         >
                           {record.type}
@@ -504,7 +586,9 @@ export default function PaymentsPage() {
                       className={`badge ${
                         record.type === "PUSH"
                           ? "badge-primary"
-                          : "badge-secondary"
+                          : record.type === "CANVAS"
+                          ? "badge-secondary"
+                          : "badge-success"
                       }`}
                     >
                       {record.type}

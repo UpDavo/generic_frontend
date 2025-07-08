@@ -14,6 +14,10 @@ import {
   RiSmartphoneLine,
   RiMoneyDollarCircleLine,
   RiPriceTag3Line,
+  RiNotification3Line,
+  RiDatabase2Line,
+  RiBarChart2Line,
+  RiMedalLine,
 } from "react-icons/ri";
 export const dashboardRoutes = [
   {
@@ -73,6 +77,24 @@ export const dashboardRoutes = [
           },
         ],
       },
+      {
+        name: "Reporte de Tráfico",
+        icon: RiDatabase2Line,
+        children: [
+          {
+            path: "/dashboard/reports/traffic",
+            icon: RiBarChart2Line,
+            name: "Ver reporte",
+            permission: "/dashboard/reports/traffic",
+          },
+          {
+            path: "/dashboard/reports/goal",
+            icon: RiMedalLine,
+            name: "Meta diaria",
+            permission: "/dashboard/reports/goal",
+          },
+        ],
+      },
     ],
   },
   {
@@ -87,6 +109,12 @@ export const dashboardRoutes = [
             name: "Usuarios",
             permission: "/users",
             icon: RiUser3Line,
+          },
+          {
+            path: "/dashboard/notifications",
+            name: "Notificaciones",
+            permission: "/dashboard/notifications",
+            icon: RiNotification3Line,
           },
           {
             path: "/dashboard/user/roles",
