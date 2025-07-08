@@ -5,6 +5,7 @@ import {
   getDateTimeVariation,
   sendReportEmail,
 } from "@/tada/services/reportsApi";
+import { createDailyMeta, updateDailyMeta } from "@/tada/services/dailyMetaApi";
 import {
   TextInput,
   Loader,
@@ -12,8 +13,15 @@ import {
   Button,
   Select,
   NumberInput,
+  Modal,
 } from "@mantine/core";
-import { RiRefreshLine, RiSearchLine, RiMailSendLine } from "react-icons/ri";
+import {
+  RiRefreshLine,
+  RiSearchLine,
+  RiMailSendLine,
+  RiAddLine,
+  RiEditLine,
+} from "react-icons/ri";
 import { useAuth } from "@/auth/hooks/useAuth";
 
 const PERMISSION_PATH = "/dashboard/reports/traffic";
@@ -27,6 +35,15 @@ export default function TrafficReportPage() {
   const [authorized, setAuthorized] = useState(null);
   const [emailLoading, setEmailLoading] = useState(false);
   const [emailSuccess, setEmailSuccess] = useState(null);
+
+  // Estados para el modal de crear meta
+  const [createMetaModalOpen, setCreateMetaModalOpen] = useState(false);
+  const [editMetaModalOpen, setEditMetaModalOpen] = useState(false);
+  const [metaFormData, setMetaFormData] = useState({
+    target_count: "",
+  });
+  const [createMetaLoading, setCreateMetaLoading] = useState(false);
+  const [editMetaLoading, setEditMetaLoading] = useState(false);
 
   // Función para obtener el día por defecto basado en la hora actual
   const getDefaultDay = () => {
@@ -87,6 +104,8 @@ export default function TrafficReportPage() {
         endHour
       );
 
+      console.log("Fetched report data:", data);
+
       setReportData(data);
     } catch (err) {
       console.error("Error fetching report data:", err);
@@ -120,6 +139,93 @@ export default function TrafficReportPage() {
       setEmailLoading(false);
     }
   }, [accessToken, dia, startWeek, endWeek, year, startHour, endHour]);
+
+  // Función para crear meta diaria
+  const createMeta = useCallback(async () => {
+    setCreateMetaLoading(true);
+    setError(null);
+    setEmailSuccess(null);
+
+    try {
+      // Obtener la fecha del día seleccionado para la semana actual
+      const currentDate = new Date();
+      const currentWeekStart = new Date(
+        currentDate.setDate(currentDate.getDate() - currentDate.getDay() + 1)
+      );
+
+      // Ajustar al día seleccionado (1=Lunes, 7=Domingo)
+      const targetDate = new Date(currentWeekStart);
+      const dayOffset = dia === 7 ? 6 : dia - 1; // Domingo = 6, Lunes = 0
+      targetDate.setDate(currentWeekStart.getDate() + dayOffset);
+
+      const dateString = targetDate.toISOString().split("T")[0];
+
+      const metaData = {
+        date: dateString,
+        target_count: parseInt(metaFormData.target_count),
+      };
+
+      await createDailyMeta(accessToken, metaData);
+      setEmailSuccess("Meta creada exitosamente");
+      setCreateMetaModalOpen(false);
+      setMetaFormData({ target_count: "" });
+
+      // Recargar los datos del reporte
+      fetchReportData();
+    } catch (err) {
+      console.error("Error creating meta:", err);
+      setError("Error al crear la meta diaria");
+    } finally {
+      setCreateMetaLoading(false);
+    }
+  }, [accessToken, dia, metaFormData.target_count, fetchReportData]);
+
+  // Función para editar meta diaria
+  const editMeta = useCallback(async () => {
+    setEditMetaLoading(true);
+    setError(null);
+    setEmailSuccess(null);
+
+    try {
+      const metaData = {
+        target_count: parseInt(metaFormData.target_count),
+      };
+
+      // Obtener el meta_id desde reportData directamente
+      const metaId = reportData?.data?.daily_meta_vs_real?.meta_id;
+
+      if (!metaId) {
+        throw new Error("No se encontró el ID de la meta");
+      }
+
+      await updateDailyMeta(accessToken, metaId, metaData);
+      setEmailSuccess("Meta actualizada exitosamente");
+      setEditMetaModalOpen(false);
+      setMetaFormData({ target_count: "" });
+
+      // Recargar los datos del reporte
+      fetchReportData();
+    } catch (err) {
+      console.error("Error updating meta:", err);
+      setError("Error al actualizar la meta diaria");
+    } finally {
+      setEditMetaLoading(false);
+    }
+  }, [
+    accessToken,
+    reportData?.data?.daily_meta_vs_real?.meta_id,
+    metaFormData.target_count,
+    fetchReportData,
+  ]);
+
+  // Función para abrir el modal de edición
+  const openEditMetaModal = useCallback(() => {
+    const currentMetaCount = reportData?.data?.daily_meta_vs_real?.meta_count;
+    setMetaFormData({
+      target_count: currentMetaCount?.toString() || "",
+    });
+    setEditMetaModalOpen(true);
+  }, [reportData?.data?.daily_meta_vs_real?.meta_count]);
 
   // Cargar datos iniciales cuando el usuario esté autorizado
   useEffect(() => {
@@ -294,49 +400,81 @@ export default function TrafficReportPage() {
               <h3 className="text-xl font-bold mb-4 text-center">
                 Meta Diaria vs Real
               </h3>
-              <div className="space-y-4">
-                <div className="flex justify-between">
-                  <span className="font-semibold">Real:</span>
-                  <span className="text-blue-600 font-bold">
-                    {dailyMeta?.real_count || 0}
-                  </span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="font-semibold">Meta:</span>
-                  <span className="text-green-600 font-bold">
-                    {dailyMeta?.meta_count || 0}
-                  </span>
-                </div>
-                <div className="space-y-2">
+              {dailyMeta?.meta_count ? (
+                <div className="space-y-4">
                   <div className="flex justify-between">
-                    <span className="font-semibold">Logro:</span>
-                    <span
-                      className={`font-bold text-2xl ${
-                        (dailyMeta?.achievement_percentage || 0) >= 0
-                          ? "text-green-600"
-                          : "text-red-600"
-                      }`}
-                    >
-                      {dailyMeta?.achievement_percentage?.toFixed(1) || 0}%
+                    <span className="font-semibold">Real:</span>
+                    <span className="text-blue-600 font-bold">
+                      {dailyMeta?.real_count || 0}
                     </span>
                   </div>
-                  <div className="w-full bg-gray-200 rounded-full h-2">
-                    <div
-                      className={`h-2 rounded-full ${
-                        (dailyMeta?.achievement_percentage || 0) >= 0
-                          ? "bg-green-600"
-                          : "bg-red-600"
-                      }`}
-                      style={{
-                        width: `${Math.min(
-                          Math.abs(dailyMeta?.achievement_percentage || 0),
-                          100
-                        )}%`,
-                      }}
-                    ></div>
+                  <div className="flex justify-between">
+                    <span className="font-semibold">Meta:</span>
+                    <span className="text-green-600 font-bold">
+                      {dailyMeta?.meta_count || 0}
+                    </span>
                   </div>
+                  <div className="space-y-2">
+                    <div className="flex justify-between">
+                      <span className="font-semibold">Logro:</span>
+                      <span
+                        className={`font-bold text-2xl ${
+                          (dailyMeta?.achievement_percentage || 0) >= 0
+                            ? "text-green-600"
+                            : "text-red-600"
+                        }`}
+                      >
+                        {dailyMeta?.achievement_percentage?.toFixed(1) || 0}%
+                      </span>
+                    </div>
+                    <div className="w-full bg-gray-200 rounded-full h-2">
+                      <div
+                        className={`h-2 rounded-full ${
+                          (dailyMeta?.achievement_percentage || 0) >= 0
+                            ? "bg-green-600"
+                            : "bg-red-600"
+                        }`}
+                        style={{
+                          width: `${Math.min(
+                            Math.abs(dailyMeta?.achievement_percentage || 0),
+                            100
+                          )}%`,
+                        }}
+                      ></div>
+                    </div>
+                  </div>
+                  <Button
+                    onClick={openEditMetaModal}
+                    leftSection={<RiEditLine />}
+                    variant="filled"
+                    className="btn-secondary"
+                    fullWidth
+                  >
+                    Editar Meta
+                  </Button>
                 </div>
-              </div>
+              ) : (
+                <div className="text-center space-y-4">
+                  <div className="flex justify-between">
+                    <span className="font-semibold">Real:</span>
+                    <span className="text-blue-600 font-bold">
+                      {dailyMeta?.real_count || 0}
+                    </span>
+                  </div>
+                  <div className="text-gray-500 mb-4">
+                    No hay meta configurada para este día
+                  </div>
+                  <Button
+                    onClick={() => setCreateMetaModalOpen(true)}
+                    leftSection={<RiAddLine />}
+                    variant="filled"
+                    className="btn-primary"
+                    fullWidth
+                  >
+                    Agregar Meta
+                  </Button>
+                </div>
+              )}
             </div>
 
             {/* Variación Diaria */}
@@ -504,6 +642,92 @@ export default function TrafficReportPage() {
               ))}
             </div>
           </div>
+
+          {/* ------------- MODAL PARA CREAR META DIARIA ------------- */}
+          <Modal
+            opened={createMetaModalOpen}
+            onClose={() => setCreateMetaModalOpen(false)}
+            title="Crear Meta Diaria"
+            classNames={{ modal: "rounded-lg" }}
+          >
+            <div className="space-y-4">
+              <TextInput
+                label="Cantidad objetivo"
+                placeholder="Ej: 100"
+                value={metaFormData.target_count}
+                onChange={(e) =>
+                  setMetaFormData({
+                    ...metaFormData,
+                    target_count: e.target.value,
+                  })
+                }
+                type="number"
+                min={1}
+                required
+              />
+
+              <div className="flex justify-end gap-4">
+                <Button
+                  onClick={() => setCreateMetaModalOpen(false)}
+                  variant="outline"
+                  className="btn-secondary"
+                >
+                  Cancelar
+                </Button>
+                <Button
+                  onClick={createMeta}
+                  variant="filled"
+                  loading={createMetaLoading}
+                  className="btn-primary"
+                >
+                  Crear Meta
+                </Button>
+              </div>
+            </div>
+          </Modal>
+
+          {/* ------------- MODAL PARA EDITAR META DIARIA ------------- */}
+          <Modal
+            opened={editMetaModalOpen}
+            onClose={() => setEditMetaModalOpen(false)}
+            title="Editar Meta Diaria"
+            classNames={{ modal: "rounded-lg" }}
+          >
+            <div className="space-y-4">
+              <TextInput
+                label="Cantidad objetivo"
+                placeholder="Ej: 100"
+                value={metaFormData.target_count}
+                onChange={(e) =>
+                  setMetaFormData({
+                    ...metaFormData,
+                    target_count: e.target.value,
+                  })
+                }
+                type="number"
+                min={1}
+                required
+              />
+
+              <div className="flex justify-end gap-4">
+                <Button
+                  onClick={() => setEditMetaModalOpen(false)}
+                  variant="outline"
+                  className="btn-secondary"
+                >
+                  Cancelar
+                </Button>
+                <Button
+                  onClick={editMeta}
+                  variant="filled"
+                  loading={editMetaLoading}
+                  className="btn-primary"
+                >
+                  Actualizar Meta
+                </Button>
+              </div>
+            </div>
+          </Modal>
         </>
       ) : (
         <div className="text-center py-8">

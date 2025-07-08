@@ -84,13 +84,20 @@ export default function PricingPage() {
   }, [authorized, accessToken]);
 
   /* ------------------------- FORM HANDLERS ------------------------- */
+  const getFirstDayOfCurrentMonth = () => {
+    const now = new Date();
+    const year = now.getFullYear();
+    const month = String(now.getMonth() + 1).padStart(2, "0");
+    return `${year}-${month}-01`;
+  };
+
   const resetForm = () => {
     setFormData({
       app: "",
       name: "",
       description: "",
       price_data: {
-        month: "",
+        month: getFirstDayOfCurrentMonth(),
         value: "",
       },
     });
@@ -104,12 +111,16 @@ export default function PricingPage() {
   };
 
   const openEditModal = (price) => {
+    // Si el precio tiene un mes, usarlo, sino usar el primer día del mes actual
+    const monthValue =
+      price.price_details?.month || getFirstDayOfCurrentMonth();
+
     setFormData({
       app: price.app,
       name: price.name,
       description: price.description,
       price_data: {
-        month: price.price_details?.month || "",
+        month: monthValue,
         value: price.price_details?.value?.toString() || "",
       },
     });
@@ -358,7 +369,7 @@ export default function PricingPage() {
 
           <TextInput
             label="Mes"
-            type="month"
+            type="date"
             value={formData.price_data.month}
             onChange={(e) =>
               setFormData({

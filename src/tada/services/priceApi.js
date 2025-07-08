@@ -49,6 +49,7 @@ export const createAppPriceWithPrice = async (accessToken, data) => {
 
 // Editar un precio de app existente
 export const updateAppPriceWithPrice = async (accessToken, id, data) => {
+  console.log(data);
   const response = await fetch(
     `${API_BASE_URL}/tada/app-prices-with-price/${id}/`,
     {
