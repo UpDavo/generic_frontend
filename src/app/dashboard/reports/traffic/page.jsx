@@ -189,6 +189,7 @@ export default function TrafficReportPage() {
     try {
       const metaData = {
         target_count: parseInt(metaFormData.target_count),
+        date: reportData?.data?.daily_meta_vs_real?.date || null,
       };
 
       // Obtener el meta_id desde reportData directamente
@@ -214,6 +215,7 @@ export default function TrafficReportPage() {
   }, [
     accessToken,
     reportData?.data?.daily_meta_vs_real?.meta_id,
+    reportData?.data?.daily_meta_vs_real?.date,
     metaFormData.target_count,
     fetchReportData,
   ]);
@@ -227,14 +229,14 @@ export default function TrafficReportPage() {
     setEditMetaModalOpen(true);
   }, [reportData?.data?.daily_meta_vs_real?.meta_count]);
 
-  // Cargar datos iniciales cuando el usuario esté autorizado
+  // Cargar datos iniciales una sola vez cuando el usuario esté autorizado
   useEffect(() => {
     if (authorized && accessToken) {
       fetchReportData();
     }
-  }, [authorized, accessToken, fetchReportData]);
+  }, [authorized, accessToken]); // Removido fetchReportData de las dependencias
 
-  // No cargar datos iniciales, solo cuando se presione buscar
+  // Los datos solo se cargarán al inicio y cuando se presione buscar
 
   /* ------------------------- RENDER ------------------------------- */
   if (authorized === null) {
@@ -271,18 +273,18 @@ export default function TrafficReportPage() {
   return (
     <div className="text-black">
       {/* Título */}
-      <div className="mb-6">
-        <h1 className="text-3xl font-bold text-center mb-4">
-          Reporte de Tráfico por Hora
+      <div className="mb-6 mt-4">
+        <h1 className="text-3xl font-bold text-center mb-6">
+          Reporte de Tráfico
         </h1>
 
         {metadata && (
-          <div className="text-center text-lg">
+          <div className="grid grid-cols-2 px-40 my-5 text-center text-lg">
             <p>
-              <strong>Día:</strong> {metadata.dia_nombre}
+              <strong>Hora:</strong> {dailyMeta?.last_hour_with_data || "N/A"}
             </p>
             <p>
-              <strong># Órdenes:</strong> {dailyMeta?.real_count || 0}
+              <strong>#Órdenes:</strong> {dailyMeta?.real_count || 0}
             </p>
           </div>
         )}
@@ -394,31 +396,55 @@ export default function TrafficReportPage() {
       ) : reportData ? (
         <>
           {/* ------------- TARJETAS DE RESUMEN ------------- */}
-          <div className="grid md:grid-cols-2 grid-cols-1 gap-6 mb-6">
+          <div className="grid grid-cols-1 gap-6 mb-6">
             {/* Meta diaria vs Real */}
             <div className="card bg-white shadow-lg p-6">
-              <h3 className="text-xl font-bold mb-4 text-center">
-                Meta Diaria vs Real
-              </h3>
               {dailyMeta?.meta_count ? (
-                <div className="space-y-4">
-                  <div className="flex justify-between">
-                    <span className="font-semibold">Real:</span>
-                    <span className="text-blue-600 font-bold">
+                <div className="flex items-center justify-between flex-wrap gap-4">
+                  {/* Título con botón */}
+                  <div className="flex flex-col items-left">
+                    <h3 className="text-md font-bold">
+                      Meta
+                      <br />
+                      Diaria
+                    </h3>
+                    <Button
+                      onClick={openEditMetaModal}
+                      variant="filled"
+                      leftSection={<RiEditLine />}
+                      className="btn btn-sm mt-2"
+                      size="compact-xs"
+                    >
+                      Editar
+                    </Button>
+                  </div>
+
+                  {/* #Órdenes */}
+                  <div className="text-center">
+                    <span className="text-sm text-gray-600 block">
+                      #Órdenes
+                    </span>
+                    <span className="text-blue-600 font-bold text-lg">
                       {dailyMeta?.real_count || 0}
                     </span>
                   </div>
-                  <div className="flex justify-between">
-                    <span className="font-semibold">Meta:</span>
-                    <span className="text-green-600 font-bold">
+
+                  {/* Meta */}
+                  <div className="text-center">
+                    <span className="text-sm text-gray-600 block">Meta</span>
+                    <span className="text-green-600 font-bold text-lg">
                       {dailyMeta?.meta_count || 0}
                     </span>
                   </div>
-                  <div className="space-y-2">
-                    <div className="flex justify-between">
-                      <span className="font-semibold">Logro:</span>
+
+                  {/* Cumplimiento con barra */}
+                  <div className="flex-1 min-w-[200px] max-w-[300px]">
+                    <div className="flex justify-between items-center mb-1">
+                      <span className="text-sm text-gray-600">
+                        Cumplimiento
+                      </span>
                       <span
-                        className={`font-bold text-2xl ${
+                        className={`font-bold text-lg ${
                           (dailyMeta?.achievement_percentage || 0) >= 0
                             ? "text-green-600"
                             : "text-red-600"
@@ -443,63 +469,83 @@ export default function TrafficReportPage() {
                       ></div>
                     </div>
                   </div>
-                  <Button
-                    onClick={openEditMetaModal}
-                    leftSection={<RiEditLine />}
-                    variant="filled"
-                    className="btn-secondary"
-                    fullWidth
-                  >
-                    Editar Meta
-                  </Button>
                 </div>
               ) : (
-                <div className="text-center space-y-4">
-                  <div className="flex justify-between">
-                    <span className="font-semibold">Real:</span>
-                    <span className="text-blue-600 font-bold">
+                <div className="flex items-center justify-between flex-wrap gap-4">
+                  {/* Título con botón */}
+                  <div className="flex flex-col items-center">
+                    <h3 className="text-md font-bold">Meta Diaria</h3>
+                    <Button
+                      onClick={() => setCreateMetaModalOpen(true)}
+                      leftSection={<RiAddLine />}
+                      variant="filled"
+                      className="btn btn-sm mt-2"
+                      size="sm"
+                    >
+                      Agregar Meta
+                    </Button>
+                  </div>
+
+                  {/* #Órdenes */}
+                  <div className="text-center">
+                    <span className="text-sm text-gray-600 block">
+                      #Órdenes
+                    </span>
+                    <span className="text-blue-600 font-bold text-lg">
                       {dailyMeta?.real_count || 0}
                     </span>
                   </div>
-                  <div className="text-gray-500 mb-4">
-                    No hay meta configurada para este día
+
+                  {/* Meta no configurada */}
+                  <div className="text-center">
+                    <span className="text-sm text-gray-600 block">Meta</span>
+                    <span className="text-gray-500 font-bold text-lg">
+                      No configurada
+                    </span>
                   </div>
-                  <Button
-                    onClick={() => setCreateMetaModalOpen(true)}
-                    leftSection={<RiAddLine />}
-                    variant="filled"
-                    className="btn-primary"
-                    fullWidth
-                  >
-                    Agregar Meta
-                  </Button>
+
+                  {/* Espacio para cumplimiento */}
+                  <div className="flex-1 min-w-[200px] max-w-[300px]">
+                    <div className="text-center text-gray-500">
+                      Configure una meta para ver el cumplimiento
+                    </div>
+                  </div>
                 </div>
               )}
             </div>
 
             {/* Variación Diaria */}
             <div className="card bg-white shadow-lg p-6">
-              <h3 className="text-xl font-bold mb-4 text-center">
-                Variación Diaria
-              </h3>
-              <div className="space-y-4">
-                <div className="flex justify-between">
-                  <span className="font-semibold">Semana Actual:</span>
-                  <span className="text-blue-600 font-bold">
+              <div className="flex items-center justify-between flex-wrap gap-4">
+                {/* Título */}
+                <h3 className="text-md font-bold">
+                  Variación
+                  <br />
+                  Semanal
+                </h3>
+
+                {/* Semana Actual */}
+                <div className="text-center">
+                  <span className="text-sm text-gray-600 block">Actual</span>
+                  <span className="text-blue-600 font-bold text-lg">
                     {dailyVariation?.current_week_total || 0}
                   </span>
                 </div>
-                <div className="flex justify-between">
-                  <span className="font-semibold">Semana Anterior:</span>
-                  <span className="text-gray-600 font-bold">
+
+                {/* Semana Anterior */}
+                <div className="text-center">
+                  <span className="text-sm text-gray-600 block">Anterior</span>
+                  <span className="text-gray-600 font-bold text-lg">
                     {dailyVariation?.previous_week_total || 0}
                   </span>
                 </div>
-                <div className="space-y-2">
-                  <div className="flex justify-between">
-                    <span className="font-semibold">Variación:</span>
+
+                {/* Variación con barra */}
+                <div className="flex-1 min-w-[200px] max-w-[300px]">
+                  <div className="flex justify-between items-center mb-1">
+                    <span className="text-sm text-gray-600">Cumplimiento</span>
                     <span
-                      className={`font-bold text-2xl ${
+                      className={`font-bold text-lg ${
                         (dailyVariation?.variation_percentage || 0) >= 0
                           ? "text-green-600"
                           : "text-red-600"
@@ -529,36 +575,49 @@ export default function TrafficReportPage() {
           </div>
 
           {/* ------------- TABLA DE DATOS POR HORA ------------- */}
-          <div className="card bg-white shadow-xl p-6">
-            <h3 className="text-xl font-bold mb-4 text-center">
-              Datos por Hora - {metadata?.dia_nombre}
-            </h3>
-
+          <div className="mb-8">
             {/* Vista de escritorio - Tabla */}
-            <div className="hidden md:block overflow-x-auto rounded-md">
-              <table className="table w-full">
-                <thead className="bg-primary text-white text-md uppercase font-bold">
+            <div className="hidden md:block overflow-x-auto rounded-xl shadow-lg">
+              <table
+                className="w-full text-xs bg-white"
+                style={{ fontSize: "clamp(0.6rem, 1.5vw, 0.875rem)" }}
+              >
+                <thead className="bg-primary text-white uppercase font-bold">
                   <tr>
-                    <th>Hora</th>
+                    <th className="px-2 py-1 text-center min-w-[50px]">Hora</th>
                     {weekNumbers.map((week) => (
-                      <th key={week}>Semana {week}</th>
+                      <th
+                        key={week}
+                        className="px-1 py-1 text-center min-w-[40px]"
+                      >
+                        S.{week}
+                      </th>
                     ))}
-                    <th>Variación %</th>
+                    <th className="px-2 py-1 text-center min-w-[70px]">
+                      Var.%
+                    </th>
                   </tr>
                 </thead>
                 <tbody className="bg-white text-black">
                   {hourlyData.map((hour, index) => (
-                    <tr key={index} className="hover:bg-gray-100">
-                      <td className="font-bold">{hour.hora}</td>
+                    <tr
+                      key={index}
+                      className={`hover:bg-gray-50 border-b border-gray-200 border-opacity-50 ${
+                        index % 2 === 0 ? "bg-gray-25" : "bg-white"
+                      }`}
+                    >
+                      <td className="font-bold px-2 py-1 text-center">
+                        {hour.hora}
+                      </td>
                       {weekNumbers.map((week) => (
-                        <td key={week} className="text-center">
+                        <td key={week} className="text-center px-1 py-1">
                           {hour.semanas[week] || 0}
                         </td>
                       ))}
-                      <td className="text-center">
-                        <div className="space-y-1">
+                      <td className="text-center px-2 py-1">
+                        <div className="space-y-0.5">
                           <div
-                            className={`font-bold ${
+                            className={`font-bold text-xs ${
                               hour.variacion >= 0
                                 ? "text-green-600"
                                 : "text-red-600"
@@ -566,20 +625,22 @@ export default function TrafficReportPage() {
                           >
                             {hour.variacion}%
                           </div>
-                          <div className="w-full bg-gray-200 rounded-full h-1">
-                            <div
-                              className={`h-1 rounded-full ${
-                                hour.variacion >= 0
-                                  ? "bg-green-600"
-                                  : "bg-red-600"
-                              }`}
-                              style={{
-                                width: `${Math.min(
-                                  Math.abs(hour.variacion || 0),
-                                  100
-                                )}%`,
-                              }}
-                            ></div>
+                          <div className="w-full px-8 mb-1">
+                            <div className="w-full bg-gray-200 rounded-full h-1">
+                              <div
+                                className={`h-1 rounded-full ${
+                                  hour.variacion >= 0
+                                    ? "bg-green-600"
+                                    : "bg-red-600"
+                                }`}
+                                style={{
+                                  width: `${Math.min(
+                                    Math.abs(hour.variacion || 0),
+                                    100
+                                  )}%`,
+                                }}
+                              ></div>
+                            </div>
                           </div>
                         </div>
                       </td>

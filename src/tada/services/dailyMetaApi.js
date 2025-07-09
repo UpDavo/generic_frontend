@@ -37,6 +37,7 @@ export const createDailyMeta = async (accessToken, dailyMetaData) => {
 
 // Actualizar una daily meta existente
 export const updateDailyMeta = async (accessToken, id, dailyMetaData) => {
+
   const response = await fetch(`${API_BASE_URL}/tada/daily-meta/${id}/`, {
     method: "PUT",
     headers: {
