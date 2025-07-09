@@ -131,7 +131,7 @@ export default function PushPage() {
       )}
 
       <Accordion variant="contained" className="mb-4">
-        <Accordion.Item value="instructions" className="border border-gray-700">
+        <Accordion.Item value="instructions" className="bg-white">
           <Accordion.Control>
             <span className="font-medium">Mensajes a enviar</span>
           </Accordion.Control>
@@ -139,7 +139,7 @@ export default function PushPage() {
             <Instructions />
           </Accordion.Panel>
         </Accordion.Item>
-        <Accordion.Item value="push" className="border border-gray-700">
+        <Accordion.Item value="push" className="bg-white">
           <Accordion.Control>
             <span className="font-medium">Como usar la herramienta</span>
           </Accordion.Control>

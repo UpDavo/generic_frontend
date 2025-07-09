@@ -137,7 +137,7 @@ export default function EmailManager({
   };
 
   return (
-    <div >
+    <div>
       {/* Input para agregar email individual */}
       <div>
         <div className="flex flex-col sm:flex-row gap-2 sm:items-end mb-2">
@@ -175,11 +175,11 @@ export default function EmailManager({
         <div className="flex flex-col sm:flex-row gap-2">
           <Button
             component="label"
-            variant="outline"
+            variant="filled"
             className="w-full sm:w-auto"
             size="sm"
           >
-            📤 Cargar Excel
+            Cargar Excel
             <input
               type="file"
               accept=".xlsx,.xls"
@@ -188,12 +188,12 @@ export default function EmailManager({
             />
           </Button>
           <Button
-            variant="outline"
+            variant="filled"
             onClick={downloadTemplate}
             className="w-full sm:w-auto"
             size="sm"
           >
-            📥 Descargar Plantilla
+            Descargar Plantilla
           </Button>
         </div>
       </div>

@@ -37,7 +37,6 @@ export const createDailyMeta = async (accessToken, dailyMetaData) => {
 
 // Actualizar una daily meta existente
 export const updateDailyMeta = async (accessToken, id, dailyMetaData) => {
-
   const response = await fetch(`${API_BASE_URL}/tada/daily-meta/${id}/`, {
     method: "PUT",
     headers: {
@@ -69,4 +68,28 @@ export const deleteDailyMeta = async (accessToken, id) => {
   }
 
   return "OK";
+};
+
+// Carga masiva de daily metas desde Excel
+export const uploadExcelMetas = async (accessToken, file) => {
+  const formData = new FormData();
+  formData.append("file", file);
+
+  const response = await fetch(
+    `${API_BASE_URL}/tada/daily-meta/bulk-create-excel/`,
+    {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${accessToken}`,
+      },
+      body: formData,
+    }
+  );
+
+  if (!response.ok) {
+    const errorData = await response.json();
+    throw new Error(errorData.error || "Error al cargar el archivo Excel");
+  }
+
+  return await response.json();
 };

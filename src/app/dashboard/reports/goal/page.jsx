@@ -7,6 +7,7 @@ import {
   createDailyMeta,
   updateDailyMeta,
   deleteDailyMeta,
+  uploadExcelMetas,
 } from "@/tada/services/dailyMetaApi";
 import {
   TextInput,
@@ -15,14 +16,19 @@ import {
   Loader,
   Notification,
   NumberInput,
+  FileInput,
 } from "@mantine/core";
 import {
   RiAddLine,
   RiEditLine,
   RiSearchLine,
   RiDeleteBin6Line,
+  RiFileExcelLine,
+  RiDownloadLine,
 } from "react-icons/ri";
 import ConfirmDeleteModal from "@/core/components/ConfirmDeleteModal";
+import * as XLSX from "xlsx";
+import { saveAs } from "file-saver";
 
 const PERMISSION_PATH = "/dashboard/reports/goal";
 
@@ -43,6 +49,11 @@ export default function GoalReportsPage() {
   // Delete modal
   const [deleteModalOpen, setDeleteModalOpen] = useState(false);
   const [deletingDailyMeta, setDeletingDailyMeta] = useState(null);
+
+  // Bulk upload modal
+  const [bulkModalOpen, setBulkModalOpen] = useState(false);
+  const [selectedFile, setSelectedFile] = useState(null);
+  const [bulkUploadResult, setBulkUploadResult] = useState(null);
 
   // Form states
   const [formData, setFormData] = useState({
@@ -170,6 +181,81 @@ export default function GoalReportsPage() {
     }
   };
 
+  /* ------------------------- BULK UPLOAD HANDLERS ------------------------- */
+  const openBulkModal = () => {
+    setSelectedFile(null);
+    setBulkUploadResult(null);
+    setError(null);
+    setSuccess(null);
+    setBulkModalOpen(true);
+  };
+
+  const handleBulkUpload = async () => {
+    if (!selectedFile) {
+      setError("Por favor seleccione un archivo Excel.");
+      return;
+    }
+
+    setLoading(true);
+    setError(null);
+    setSuccess(null);
+    setBulkUploadResult(null);
+
+    try {
+      const result = await uploadExcelMetas(accessToken, selectedFile);
+      setBulkUploadResult(result);
+
+      if (result.created > 0 || result.updated > 0) {
+        const messages = [];
+        if (result.created > 0) {
+          messages.push(`${result.created} metas creadas`);
+        }
+        if (result.updated > 0) {
+          messages.push(`${result.updated} metas actualizadas`);
+        }
+        setSuccess(
+          `${messages.join(", ")} exitosamente de ${
+            result.total_rows
+          } filas procesadas.`
+        );
+        fetchDailyMetas();
+      }
+
+      if (result.errors_count > 0) {
+        setError(
+          `Se encontraron ${result.errors_count} errores durante la carga.`
+        );
+      }
+    } catch (err) {
+      console.error(err);
+      setError("Error al cargar el archivo Excel.");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const downloadTemplate = () => {
+    const templateData = [
+      ["date", "goal"],
+      ["2025-07-15", 500],
+      ["2025-07-16", 750],
+      ["2025-07-17", 1000],
+    ];
+
+    const worksheet = XLSX.utils.aoa_to_sheet(templateData);
+    const workbook = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(workbook, worksheet, "Daily Metas");
+
+    const excelBuffer = XLSX.write(workbook, {
+      bookType: "xlsx",
+      type: "array",
+    });
+    const blob = new Blob([excelBuffer], {
+      type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+    });
+    saveAs(blob, "plantilla_daily_metas.xlsx");
+  };
+
   /* ------------------------- RENDER ------------------------------- */
   if (authorized === null) {
     return (
@@ -212,7 +298,7 @@ export default function GoalReportsPage() {
 
   return (
     <div className="text-black">
-      {/* Barra de búsqueda y botón de agregar */}
+      {/* Barra de búsqueda y botones */}
       <div className="md:flex grid grid-cols-1 justify-between items-center mb-4 md:gap-2">
         <TextInput
           leftSection={<RiSearchLine />}
@@ -221,13 +307,22 @@ export default function GoalReportsPage() {
           onChange={(e) => setSearchValue(e.currentTarget.value)}
           className="w-full"
         />
-        <Button
-          onClick={openCreateModal}
-          leftSection={<RiAddLine />}
-          className="btn btn-info btn-sm btn-block mt-2"
-        >
-          Nueva Meta
-        </Button>
+        <div className="flex gap-2 mt-2 md:mt-0">
+          <Button
+            onClick={openBulkModal}
+            leftSection={<RiFileExcelLine />}
+            className="btn btn-success btn-sm"
+          >
+            Carga Masiva
+          </Button>
+          <Button
+            onClick={openCreateModal}
+            leftSection={<RiAddLine />}
+            className="btn btn-info btn-sm"
+          >
+            Nueva Meta
+          </Button>
+        </div>
       </div>
 
       {/* Notificación de error */}
@@ -394,6 +489,110 @@ export default function GoalReportsPage() {
         message={`¿Estás seguro de que quieres eliminar la daily meta del ${deletingDailyMeta?.date}?`}
         loading={loading}
       />
+
+      {/* Modal para Carga Masiva */}
+      <Modal
+        opened={bulkModalOpen}
+        onClose={() => setBulkModalOpen(false)}
+        title="Carga Masiva de Metas"
+        centered
+        className="text-black"
+        size="lg"
+      >
+        <div className="space-y-4 text-black">
+          <div className="mb-4">
+            <p className="text-sm text-gray-600 mb-3">
+              Seleccione un archivo Excel (.xlsx) con las columnas:{" "}
+              <strong>date</strong> y <strong>goal</strong>
+            </p>
+
+            {/* Botón para descargar plantilla */}
+            <div className="mb-3">
+              <Button
+                variant="filled"
+                onClick={downloadTemplate}
+                leftSection={<RiDownloadLine />}
+                className="btn btn-sm"
+                size="sm"
+              >
+                Descargar Plantilla
+              </Button>
+            </div>
+
+            <FileInput
+              label="Archivo Excel"
+              placeholder="Seleccionar archivo..."
+              accept=".xlsx,.xls"
+              value={selectedFile}
+              onChange={setSelectedFile}
+              required
+            />
+          </div>
+
+          {/* Resultado de la carga */}
+          {bulkUploadResult && (
+            <div className="bg-gray-50 p-4 rounded-md">
+              <h4 className="font-semibold mb-2">Resultado de la carga:</h4>
+              <div className="grid grid-cols-2 gap-4 text-sm">
+                <div>
+                  <span className="font-medium">Total procesadas:</span>{" "}
+                  {bulkUploadResult.total_processed}
+                </div>
+                <div>
+                  <span className="font-medium">Metas creadas:</span>{" "}
+                  {bulkUploadResult.created}
+                </div>
+                <div>
+                  <span className="font-medium">Metas actualizadas:</span>{" "}
+                  {bulkUploadResult.updated}
+                </div>
+                <div>
+                  <span className="font-medium">Total filas:</span>{" "}
+                  {bulkUploadResult.total_rows}
+                </div>
+                <div>
+                  <span className="font-medium">Errores:</span>{" "}
+                  {bulkUploadResult.errors_count}
+                </div>
+              </div>
+
+              {bulkUploadResult.errors &&
+                bulkUploadResult.errors.length > 0 && (
+                  <div className="mt-3">
+                    <span className="font-medium text-red-600">
+                      Errores encontrados:
+                    </span>
+                    <ul className="list-disc list-inside text-sm text-red-600 mt-1">
+                      {bulkUploadResult.errors.map((error, index) => (
+                        <li key={index}>{error}</li>
+                      ))}
+                    </ul>
+                  </div>
+                )}
+            </div>
+          )}
+
+          <div className="flex gap-2">
+            <Button
+              variant="outline"
+              className="btn btn-outline btn-sm"
+              onClick={() => setBulkModalOpen(false)}
+              flex={1}
+            >
+              Cancelar
+            </Button>
+            <Button
+              className="btn btn-success btn-sm"
+              onClick={handleBulkUpload}
+              loading={loading}
+              disabled={!selectedFile}
+              flex={1}
+            >
+              Cargar Archivo
+            </Button>
+          </div>
+        </div>
+      </Modal>
     </div>
   );
 }

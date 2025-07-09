@@ -130,7 +130,7 @@ export default function PushPage() {
       )}
 
       <Accordion variant="contained" className="mb-4">
-        <Accordion.Item value="push" className="border border-gray-700">
+        <Accordion.Item value="push" className="border bg-white">
           <Accordion.Control>
             <span className="font-medium">Como usar la herramienta</span>
           </Accordion.Control>
