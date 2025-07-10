@@ -322,11 +322,12 @@ export default function TrafficReportPage() {
             .text-green-600 { color: #16a34a !important; }
             .bg-red-600 { background-color: #dc2626 !important; }
             .text-red-600 { color: #dc2626 !important; }
+            .bg-gray-500 { background-color: #6b7280 !important; }
+            .text-gray-500 { color: #6b7280 !important; }
             .bg-blue-600 { background-color: #2563eb !important; }
             .text-blue-600 { color: #2563eb !important; }
             .bg-gray-200 { background-color: #e5e7eb !important; }
             .text-gray-600 { color: #4b5563 !important; }
-            .text-gray-500 { color: #6b7280 !important; }
             .bg-white { background-color: #ffffff !important; }
             .text-black { color: #000000 !important; }
             .border-gray-200 { border-color: #e5e7eb !important; }
@@ -907,7 +908,9 @@ export default function TrafficReportPage() {
                           <div className="space-y-1">
                             <div
                               className={`font-bold text-xs ${
-                                hour.variacion >= 0
+                                hour.variacion === -100
+                                  ? "text-gray-500"
+                                  : hour.variacion >= 0
                                   ? "text-green-600"
                                   : "text-red-600"
                               }`}
@@ -918,7 +921,9 @@ export default function TrafficReportPage() {
                               <div className="w-full bg-gray-200 rounded-full h-1.5">
                                 <div
                                   className={`h-1.5 rounded-full ${
-                                    hour.variacion >= 0
+                                    hour.variacion === -100
+                                      ? "bg-gray-500"
+                                      : hour.variacion >= 0
                                       ? "bg-green-600"
                                       : "bg-red-600"
                                   }`}
@@ -953,7 +958,9 @@ export default function TrafficReportPage() {
                       <div className="space-y-1">
                         <div
                           className={`text-center font-bold ${
-                            hour.variacion >= 0
+                            hour.variacion === -100
+                              ? "text-gray-500"
+                              : hour.variacion >= 0
                               ? "text-green-600"
                               : "text-red-600"
                           }`}
@@ -963,7 +970,9 @@ export default function TrafficReportPage() {
                         <div className="w-full bg-gray-200 rounded-full h-1.5">
                           <div
                             className={`h-1.5 rounded-full ${
-                              hour.variacion >= 0
+                              hour.variacion === -100
+                                ? "bg-gray-500"
+                                : hour.variacion >= 0
                                 ? "bg-green-600"
                                 : "bg-red-600"
                             }`}
