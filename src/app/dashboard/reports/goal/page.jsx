@@ -17,6 +17,7 @@ import {
   Notification,
   NumberInput,
   FileInput,
+  Pagination,
 } from "@mantine/core";
 import {
   RiAddLine,
@@ -68,6 +69,10 @@ export default function GoalReportsPage() {
     direction: "desc",
   });
 
+  // Estados para paginación
+  const [page, setPage] = useState(1);
+  const itemsPerPage = 10;
+
   /* ------------------------- AUTORIZACIÓN ------------------------- */
   useEffect(() => {
     const hasPermission =
@@ -97,6 +102,11 @@ export default function GoalReportsPage() {
       fetchDailyMetas();
     }
   }, [authorized, accessToken]);
+
+  // Resetear página cuando cambie el filtro de búsqueda
+  useEffect(() => {
+    setPage(1);
+  }, [searchValue]);
 
   /* ------------------------- FORM HANDLERS ------------------------- */
   const resetForm = () => {
@@ -288,13 +298,19 @@ export default function GoalReportsPage() {
       return dir * (a.target_count - b.target_count);
     }
     if (sortStatus.columnAccessor === "date") {
-      return dir * new Date(a.date).getTime() - new Date(b.date).getTime();
+      return dir * (new Date(a.date).getTime() - new Date(b.date).getTime());
     }
     return (
       dir *
       a[sortStatus.columnAccessor].localeCompare(b[sortStatus.columnAccessor])
     );
   });
+
+  // Cálculo de paginación
+  const totalPages = Math.ceil(sorted.length / itemsPerPage);
+  const startIndex = (page - 1) * itemsPerPage;
+  const endIndex = startIndex + itemsPerPage;
+  const paginatedData = sorted.slice(startIndex, endIndex);
 
   return (
     <div className="text-black">
@@ -356,8 +372,8 @@ export default function GoalReportsPage() {
                   <p className="mt-2 text-gray-500">Cargando...</p>
                 </td>
               </tr>
-            ) : sorted.length > 0 ? (
-              sorted.map((dailyMeta) => (
+            ) : paginatedData.length > 0 ? (
+              paginatedData.map((dailyMeta) => (
                 <tr key={dailyMeta.id}>
                   <td className="">{dailyMeta.date}</td>
                   <td className="">{dailyMeta.target_count}</td>
@@ -395,8 +411,8 @@ export default function GoalReportsPage() {
             <Loader size="sm" color="black" />
             <p className="mt-2 text-gray-500">Cargando...</p>
           </div>
-        ) : sorted.length > 0 ? (
-          sorted.map((dailyMeta) => (
+        ) : paginatedData.length > 0 ? (
+          paginatedData.map((dailyMeta) => (
             <div
               key={dailyMeta.id}
               className="border border-gray-200 rounded-lg p-4 bg-white shadow-md"
@@ -435,6 +451,16 @@ export default function GoalReportsPage() {
           <div className="text-center py-4">No se encontraron datos.</div>
         )}
       </div>
+
+      {/* Paginación */}
+      {totalPages > 1 && (
+        <Pagination
+          value={page}
+          onChange={setPage}
+          total={totalPages}
+          className="mt-6 flex justify-start"
+        />
+      )}
 
       {/* Modal para Crear/Editar */}
       <Modal

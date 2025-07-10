@@ -520,13 +520,19 @@ export default function TrafficReportPage() {
         </h1>
 
         {metadata && (
-          <div className="grid grid-cols-2 px-40 my-5 text-center text-lg">
-            <p>
-              <strong>Hora:</strong> {dailyMeta?.last_hour_with_data || "N/A"}
-            </p>
-            <p>
-              <strong>#Órdenes:</strong> {dailyMeta?.real_count || 0}
-            </p>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 px-4 md:px-40 my-5 text-center text-base md:text-lg">
+            <div className="">
+              <p className="text-gray-600 text-sm mb-1">Última Hora</p>
+              <p className="font-bold text-lg text-gray-800">
+                {dailyMeta?.last_hour_with_data || "N/A"}
+              </p>
+            </div>
+            <div className="">
+              <p className="text-gray-600 text-sm mb-1">Total Órdenes</p>
+              <p className="font-bold text-lg text-blue-600">
+                {dailyMeta?.real_count || 0}
+              </p>
+            </div>
           </div>
         )}
       </div>
