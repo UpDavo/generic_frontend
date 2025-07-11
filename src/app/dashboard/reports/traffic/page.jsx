@@ -4,6 +4,7 @@ import { useEffect, useState, useCallback, useRef } from "react";
 import {
   getDateTimeVariation,
   sendReportEmail,
+  manualFetchData,
 } from "@/tada/services/reportsApi";
 import { createDailyMeta, updateDailyMeta } from "@/tada/services/dailyMetaApi";
 import {
@@ -20,6 +21,7 @@ import {
   RiRefreshLine,
   RiSearchLine,
   RiMailSendLine,
+  RiBarChart2Line,
   RiAddLine,
   RiEditLine,
   RiDownloadLine,
@@ -51,6 +53,12 @@ export default function TrafficReportPage() {
   });
   const [createMetaLoading, setCreateMetaLoading] = useState(false);
   const [editMetaLoading, setEditMetaLoading] = useState(false);
+
+  // Agregar estado para la funcionalidad de volver a tomar datos
+  const [fetchingData, setFetchingData] = useState(false);
+  const [fetchDataSuccess, setFetchDataSuccess] = useState(null);
+  const [confirmRefetchModalOpen, setConfirmRefetchModalOpen] = useState(false);
+  const [confirmEmailModalOpen, setConfirmEmailModalOpen] = useState(false);
 
   // Función para obtener el día por defecto basado en la hora actual
   const getDefaultDay = () => {
@@ -243,25 +251,43 @@ export default function TrafficReportPage() {
     setDownloadingImage(true);
     setError(null);
 
+    const reportEl = reportSectionRef.current;
+
     try {
       // Configuración mejorada para capturar tablas correctamente
-      const canvas = await html2canvas(reportSectionRef.current, {
+      const canvas = await html2canvas(reportEl, {
         backgroundColor: "#ffffff",
-        scale: 2, // Escala aumentada para mejor calidad
         useCORS: true,
         allowTaint: false,
         logging: false,
         removeContainer: false,
         foreignObjectRendering: false,
         imageTimeout: 20000,
+        width: 1200,
+        windowWidth: 1200,
+        windowHeight: reportEl.scrollHeight + 100,
         scrollX: 0,
         scrollY: 0,
-        windowWidth: window.innerWidth,
-        windowHeight: window.innerHeight,
         onclone: (clonedDoc, element) => {
-          // Aplicar estilos específicos para mejorar la captura
           const style = clonedDoc.createElement("style");
           style.textContent = `
+             body {
+                width: 100% !important;
+                margin: 0 !important;
+                display: flex !important;
+                justify-content: center !important;
+                align-items: flex-start !important;
+                background-color: #ffffff !important;
+              }
+
+              #reportSection {
+                width: 100%;
+                margin: 0 auto !important;
+                padding: 40px !important;
+                background-color: #ffffff !important;
+                box-sizing: border-box !important;
+              }
+
             * {
               -webkit-print-color-adjust: exact !important;
               color-adjust: exact !important;
@@ -310,10 +336,6 @@ export default function TrafficReportPage() {
               transition: none !important;
             }
             
-            /* Ocultar elementos responsivos problemáticos */
-            .md\\:hidden { display: none !important; }
-            .hidden { display: none !important; }
-            .md\\:block { display: block !important; }
             
             /* Colores específicos */
             .bg-primary { background-color: #18181b !important; }
@@ -341,12 +363,27 @@ export default function TrafficReportPage() {
               padding: 24px !important;
               margin-bottom: 24px !important;
             }
-            
-            /* Remover efectos hover y transiciones */
-            * { transition: none !important; }
-            .hover\\:bg-gray-50:hover { background-color: #ffffff !important; }
           `;
+
           clonedDoc.head.appendChild(style);
+
+          const html = clonedDoc.querySelector("html");
+          const body = clonedDoc.querySelector("body");
+          const section = clonedDoc.querySelector("#reportSection");
+
+          if (html) html.style.width = "1200px";
+          if (body) {
+            body.style.width = "1200px";
+            body.style.margin = "0 auto";
+            body.style.overflow = "visible";
+          }
+          if (section) {
+            section.style.maxWidth = "1200px";
+            section.style.width = "1200px";
+            section.style.margin = "0 auto";
+            section.style.padding = "40px";
+            section.style.backgroundColor = "#ffffff";
+          }
 
           // Ocultar elementos con data-html2canvas-ignore
           const elementsToHide = clonedDoc.querySelectorAll(
@@ -429,6 +466,30 @@ export default function TrafficReportPage() {
       setDownloadingImage(false);
     }
   }, [dia, dayOptions, startWeek, endWeek, year]);
+
+  // Definir la función refetchData correctamente
+  const refetchData = useCallback(async () => {
+    setFetchingData(true);
+    setError(null);
+    setFetchDataSuccess(null);
+
+    try {
+      const response = await manualFetchData(accessToken);
+
+      if (response.success) {
+        setFetchDataSuccess(response.message);
+        // Recargar los datos del reporte
+        fetchReportData();
+      } else {
+        throw new Error("Error al tomar los datos");
+      }
+    } catch (err) {
+      console.error("Error refetching data:", err);
+      setError("Error al volver a tomar los datos");
+    } finally {
+      setFetchingData(false);
+    }
+  }, [accessToken, fetchReportData]);
 
   // Cargar datos iniciales una sola vez cuando el usuario esté autorizado
   useEffect(() => {
@@ -597,50 +658,6 @@ export default function TrafficReportPage() {
               >
                 Buscar
               </Button>
-
-              <Button
-                onClick={() => {
-                  setDia(getDefaultDay());
-                  setStartWeek("");
-                  setEndWeek("");
-                  setYear(new Date().getFullYear());
-                  setStartHour(7);
-                  setEndHour(3);
-                  // Refrescar los datos después de reiniciar los filtros
-                  setTimeout(() => {
-                    fetchReportData();
-                  }, 100);
-                }}
-                variant="outline"
-                leftSection={<RiRefreshLine />}
-                disabled={loading}
-                className="border-gray-400 text-gray-700 hover:bg-gray-50"
-                size="compact-md"
-              >
-                Reiniciar
-              </Button>
-
-              <Button
-                onClick={sendEmail}
-                variant="filled"
-                leftSection={<RiMailSendLine />}
-                disabled={emailLoading || !accessToken}
-                className="bg-green-600 hover:bg-green-700 text-white"
-                size="compact-md"
-              >
-                {emailLoading ? "Enviando..." : "Enviar Email"}
-              </Button>
-
-              <Button
-                onClick={downloadReportImage}
-                variant="filled"
-                leftSection={<RiDownloadLine />}
-                disabled={downloadingImage || !reportData}
-                className="bg-purple-600 hover:bg-purple-700 text-white"
-                size="compact-md"
-              >
-                {downloadingImage ? "Descargando..." : "Descargar Imagen"}
-              </Button>
             </div>
           </Accordion.Panel>
         </Accordion.Item>
@@ -669,6 +686,61 @@ export default function TrafficReportPage() {
         </Notification>
       )}
 
+      <div className="mb-8 grid md:grid-cols-4 gap-4">
+        <Button
+          onClick={() => setConfirmRefetchModalOpen(true)}
+          variant="filled"
+          leftSection={<RiBarChart2Line />}
+          disabled={fetchingData || !accessToken}
+          className="bg-green-600 hover:bg-green-700 text-white"
+          size="compact-md"
+        >
+          {fetchingData ? "Tomando datos..." : "Volver a tomar datos"}
+        </Button>
+
+        <Button
+          onClick={() => setConfirmEmailModalOpen(true)}
+          variant="filled"
+          leftSection={<RiMailSendLine />}
+          disabled={emailLoading || !accessToken}
+          className="bg-green-600 hover:bg-green-700 text-white"
+          size="compact-md"
+        >
+          {emailLoading ? "Enviando..." : "Enviar Email"}
+        </Button>
+
+        <Button
+          onClick={downloadReportImage}
+          variant="filled"
+          leftSection={<RiDownloadLine />}
+          disabled={downloadingImage || !reportData}
+          className="bg-purple-600 hover:bg-purple-700 text-white"
+          size="compact-md"
+        >
+          {downloadingImage ? "Descargando..." : "Descargar Imagen"}
+        </Button>
+        <Button
+          onClick={() => {
+            setDia(getDefaultDay());
+            setStartWeek("");
+            setEndWeek("");
+            setYear(new Date().getFullYear());
+            setStartHour(7);
+            setEndHour(3);
+            // Refrescar los datos después de reiniciar los filtros
+            setTimeout(() => {
+              fetchReportData();
+            }, 100);
+          }}
+          variant="outline"
+          leftSection={<RiRefreshLine />}
+          disabled={loading}
+          className="border-gray-400 text-gray-700 hover:bg-gray-50"
+          size="compact-md"
+        >
+          Refrescar
+        </Button>
+      </div>
       {loading ? (
         <div className="flex justify-center items-center h-64">
           <div className="text-center">
@@ -679,7 +751,7 @@ export default function TrafficReportPage() {
       ) : reportData ? (
         <>
           {/* ------------- SECCIÓN CAPTURABLE DEL REPORTE ------------- */}
-          <div ref={reportSectionRef}>
+          <div ref={reportSectionRef} id="reportSection">
             {/* ------------- TARJETAS DE RESUMEN ------------- */}
             <div className="grid grid-cols-1 gap-6 mb-6">
               {/* Meta diaria vs Real */}
@@ -1017,6 +1089,7 @@ export default function TrafficReportPage() {
               onClose={() => setCreateMetaModalOpen(false)}
               title="Crear Meta Diaria"
               classNames={{ modal: "rounded-lg" }}
+              centered
             >
               <div className="space-y-4">
                 <TextInput
@@ -1060,6 +1133,7 @@ export default function TrafficReportPage() {
               onClose={() => setEditMetaModalOpen(false)}
               title="Editar Meta Diaria"
               classNames={{ modal: "rounded-lg" }}
+              centered
             >
               <div className="space-y-4">
                 <TextInput
@@ -1092,6 +1166,154 @@ export default function TrafficReportPage() {
                     className="btn-primary"
                   >
                     Actualizar Meta
+                  </Button>
+                </div>
+              </div>
+            </Modal>
+
+            {/* ------------- MODAL DE CONFIRMACIÓN PARA VOLVER A TOMAR DATOS ------------- */}
+            <Modal
+              opened={confirmRefetchModalOpen}
+              onClose={() => setConfirmRefetchModalOpen(false)}
+              title="Confirmar actualización de datos"
+              classNames={{ modal: "rounded-lg" }}
+              size="md"
+              centered
+            >
+              <div className="space-y-4">
+                <div className="bg-amber-50 border border-amber-200 rounded-lg p-4">
+                  <h4 className="font-semibold text-amber-800 mb-2">
+                    ⚠️ Importante
+                  </h4>
+                  <p className="text-amber-700 text-sm leading-relaxed">
+                    Esta acción tomará los datos actuales (de esta hora y minuto
+                    exacto) y los asignará a la hora actual del sistema.
+                  </p>
+                </div>
+
+                <div className="space-y-2">
+                  <p className="text-gray-700 text-sm">
+                    <span className="font-semibold">Hora actual:</span>{" "}
+                    {new Date().toLocaleTimeString("es-ES", {
+                      hour: "2-digit",
+                      minute: "2-digit",
+                      second: "2-digit",
+                    })}
+                  </p>
+                  <p className="text-gray-700 text-sm">
+                    <span className="font-semibold">Fecha:</span>{" "}
+                    {new Date().toLocaleDateString("es-ES", {
+                      weekday: "long",
+                      year: "numeric",
+                      month: "long",
+                      day: "numeric",
+                    })}
+                  </p>
+                </div>
+
+                <p className="text-gray-600 text-sm">
+                  ¿Estás seguro de que deseas actualizar los datos con la
+                  información actual?
+                </p>
+
+                <div className="flex justify-end gap-4 pt-4">
+                  <Button
+                    onClick={() => setConfirmRefetchModalOpen(false)}
+                    variant="outline"
+                    className="btn-secondary"
+                  >
+                    Cancelar
+                  </Button>
+                  <Button
+                    onClick={() => {
+                      setConfirmRefetchModalOpen(false);
+                      refetchData();
+                    }}
+                    variant="filled"
+                    loading={fetchingData}
+                    className="bg-green-600 hover:bg-green-700 text-white"
+                  >
+                    Sí, actualizar datos
+                  </Button>
+                </div>
+              </div>
+            </Modal>
+
+            {/* ------------- MODAL DE CONFIRMACIÓN PARA ENVIAR EMAIL ------------- */}
+            <Modal
+              opened={confirmEmailModalOpen}
+              onClose={() => setConfirmEmailModalOpen(false)}
+              title="Confirmar envío de reporte por email"
+              classNames={{ modal: "rounded-lg" }}
+              size="md"
+              centered
+            >
+              <div className="space-y-4">
+                <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+                  <h4 className="font-semibold text-blue-800 mb-2">
+                    📧 Envío de Reporte
+                  </h4>
+                  <p className="text-blue-700 text-sm leading-relaxed">
+                    El reporte de tráfico será enviado a toda la lista de
+                    correos configurada para recibir este tipo de reportes.
+                  </p>
+                </div>
+
+                <div className="space-y-2">
+                  <p className="text-gray-700 text-sm">
+                    <span className="font-semibold">Reporte:</span> Tráfico
+                  </p>
+                  <p className="text-gray-700 text-sm">
+                    <span className="font-semibold">Filtros aplicados:</span>
+                  </p>
+                  <div className="pl-4 space-y-1 text-sm text-gray-600">
+                    <p>
+                      • Día:{" "}
+                      {dayOptions.find((d) => d.value === dia.toString())
+                        ?.label || "N/A"}
+                    </p>
+                    {startWeek && endWeek && (
+                      <p>
+                        • Semanas: {startWeek} - {endWeek}
+                      </p>
+                    )}
+                    <p>• Año: {year}</p>
+                  </div>
+                  <p className="text-gray-700 text-sm">
+                    <span className="font-semibold">Fecha de envío:</span>{" "}
+                    {new Date().toLocaleDateString("es-ES", {
+                      weekday: "long",
+                      year: "numeric",
+                      month: "long",
+                      day: "numeric",
+                      hour: "2-digit",
+                      minute: "2-digit",
+                    })}
+                  </p>
+                </div>
+
+                <p className="text-gray-600 text-sm">
+                  ¿Estás seguro de que deseas enviar el reporte por email?
+                </p>
+
+                <div className="flex justify-end gap-4 pt-4">
+                  <Button
+                    onClick={() => setConfirmEmailModalOpen(false)}
+                    variant="outline"
+                    className="btn-secondary"
+                  >
+                    Cancelar
+                  </Button>
+                  <Button
+                    onClick={() => {
+                      setConfirmEmailModalOpen(false);
+                      sendEmail();
+                    }}
+                    variant="filled"
+                    loading={emailLoading}
+                    className="bg-green-600 hover:bg-green-700 text-white"
+                  >
+                    Sí, enviar reporte
                   </Button>
                 </div>
               </div>

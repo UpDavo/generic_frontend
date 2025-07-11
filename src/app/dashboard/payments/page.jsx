@@ -126,7 +126,7 @@ export default function PaymentsPage() {
         sentAtLte
       );
 
-      //   console.log("Execution stats:", executionData);
+      console.log("Execution stats:", executionData);
       setExecutionStats(executionData);
 
       return executionData;
@@ -186,11 +186,18 @@ export default function PaymentsPage() {
       // Agregar estadísticas de EXECUTION (no tiene users_stats, solo total)
       if (executionStats.summary && executionStats.summary.total_logs > 0) {
         allUsers.push({
-          user: "Ejecución de Reporte",
-          count: executionStats.summary.total_logs,
-          cost: parseFloat(executionStats.summary.total_cost),
+          user: "Toma de datos de reporte",
+          count: executionStats.summary.automatic_logs,
+          cost: parseFloat(executionStats.summary.automatic_cost),
           type: "EXECUTION",
-          email: "system@execution.com",
+          email: "system",
+        });
+        allUsers.push({
+          user: "Consulta de datos de reporte",
+          count: executionStats.summary.manual_logs,
+          cost: parseFloat(executionStats.summary.manual_cost),
+          type: "EXECUTION",
+          email: "system",
         });
       }
 
@@ -373,9 +380,7 @@ export default function PaymentsPage() {
             )}
           </div>
           <div className="card bg-white shadow p-6 text-center">
-            <h2 className="text-lg font-bold mb-2 text-black">
-              Push Enviados
-            </h2>
+            <h2 className="text-lg font-bold mb-2 text-black">Push Enviados</h2>
             {pushLoading ? (
               <div className="flex justify-center">
                 <Loader size="md" />
@@ -416,7 +421,9 @@ export default function PaymentsPage() {
             )}
           </div>
           <div className="card bg-white shadow p-6 text-center">
-            <h2 className="text-lg font-bold mb-2 text-black">Reportes Enviados</h2>
+            <h2 className="text-lg font-bold mb-2 text-black">
+              Reportes Enviados
+            </h2>
             {executionLoading ? (
               <div className="flex justify-center">
                 <Loader size="md" />
@@ -550,7 +557,7 @@ export default function PaymentsPage() {
                               ? "badge-primary"
                               : record.type === "CANVAS"
                               ? "badge-secondary"
-                              : "badge-success"
+                              : "badge-secondary"
                           }`}
                         >
                           {record.type}

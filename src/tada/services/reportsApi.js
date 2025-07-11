@@ -67,3 +67,19 @@ export const sendReportEmail = async (
 
   return await response.json();
 };
+
+export const manualFetchData = async (accessToken) => {
+  const response = await fetch(`${API_BASE_URL}/tada/reports/fetch-data/`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${accessToken}`,
+    },
+  });
+
+  if (!response.ok) {
+    throw new Error("Error al obtener datos del reporte");
+  }
+
+  return await response.json();
+};
