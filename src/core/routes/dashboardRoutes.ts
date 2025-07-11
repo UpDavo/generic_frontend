@@ -1,3 +1,4 @@
+import { permission } from "process";
 import {
   RiDashboardLine,
   RiUser3Line,
@@ -28,6 +29,7 @@ export const dashboardRoutes = [
         path: "/dashboard/payments",
         name: "Pagos",
         icon: RiMoneyDollarCircleLine,
+        permission: "/dashboard/payments",
       },
       {
         name: "Push",
