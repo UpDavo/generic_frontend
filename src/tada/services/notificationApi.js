@@ -19,6 +19,8 @@ export const getNotifications = async (accessToken) => {
 
 // Crear una nueva notificación
 export const createNotification = async (accessToken, notificationData) => {
+  console.log("Response de crear notificación:", notificationData);
+
   const response = await fetch(`${API_BASE_URL}/core/notifications/`, {
     method: "POST",
     headers: {
@@ -29,6 +31,7 @@ export const createNotification = async (accessToken, notificationData) => {
   });
 
   if (!response.ok) {
+    console.log("Error al crear notificación:", response);
     throw new Error("Error al crear notificación");
   }
 

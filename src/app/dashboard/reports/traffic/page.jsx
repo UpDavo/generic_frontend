@@ -41,8 +41,8 @@ export default function TrafficReportPage() {
   const [error, setError] = useState(null);
   const [reportData, setReportData] = useState(null);
   const [authorized, setAuthorized] = useState(null);
-  const [emailLoading, setEmailLoading] = useState(false);
-  const [emailSuccess, setEmailSuccess] = useState(null);
+  const [notificationLoading, setNotificationLoading] = useState(false);
+  const [notificationSuccess, setNotificationSuccess] = useState(null);
   const [downloadingImage, setDownloadingImage] = useState(false);
 
   // Estados para el modal de crear meta
@@ -58,7 +58,7 @@ export default function TrafficReportPage() {
   const [fetchingData, setFetchingData] = useState(false);
   const [fetchDataSuccess, setFetchDataSuccess] = useState(null);
   const [confirmRefetchModalOpen, setConfirmRefetchModalOpen] = useState(false);
-  const [confirmEmailModalOpen, setConfirmEmailModalOpen] = useState(false);
+  const [confirmNotificationModalOpen, setConfirmNotificationModalOpen] = useState(false);
 
   // Función para obtener el día por defecto basado en la hora actual de Ecuador
   const getDefaultDay = () => {
@@ -187,10 +187,10 @@ export default function TrafficReportPage() {
     }
   }, [accessToken, dia, startWeek, endWeek, year, startHour, endHour]);
 
-  const sendEmail = useCallback(async () => {
-    setEmailLoading(true);
+  const sendNotification = useCallback(async () => {
+    setNotificationLoading(true);
     setError(null);
-    setEmailSuccess(null);
+    setNotificationSuccess(null);
 
     try {
       const response = await sendReportEmail(
@@ -203,12 +203,12 @@ export default function TrafficReportPage() {
         endHour
       );
 
-      setEmailSuccess(response.message);
+      setNotificationSuccess(response.message);
     } catch (err) {
-      console.error("Error sending email:", err);
-      setError("Error al enviar el reporte por email");
+      console.error("Error sending notification:", err);
+      setError("Error al enviar la notificación");
     } finally {
-      setEmailLoading(false);
+      setNotificationLoading(false);
     }
   }, [accessToken, dia, startWeek, endWeek, year, startHour, endHour]);
 
@@ -238,7 +238,7 @@ export default function TrafficReportPage() {
       };
 
       await createDailyMeta(accessToken, metaData);
-      setEmailSuccess("Meta creada exitosamente");
+      setNotificationSuccess("Meta creada exitosamente");
       setCreateMetaModalOpen(false);
       setMetaFormData({ target_count: "" });
 
@@ -272,7 +272,7 @@ export default function TrafficReportPage() {
       }
 
       await updateDailyMeta(accessToken, metaId, metaData);
-      setEmailSuccess("Meta actualizada exitosamente");
+      setNotificationSuccess("Meta actualizada exitosamente");
       setEditMetaModalOpen(false);
       setMetaFormData({ target_count: "" });
 
@@ -511,7 +511,7 @@ export default function TrafficReportPage() {
           document.body.removeChild(link);
           URL.revokeObjectURL(url);
 
-          setEmailSuccess("Imagen del reporte descargada exitosamente");
+          setNotificationSuccess("Imagen del reporte descargada exitosamente");
         },
         "image/jpeg",
         0.95
@@ -732,14 +732,14 @@ export default function TrafficReportPage() {
         </Notification>
       )}
 
-      {emailSuccess && (
+      {notificationSuccess && (
         <Notification
           color="green"
           className="mb-4"
-          onClose={() => setEmailSuccess(null)}
+          onClose={() => setNotificationSuccess(null)}
           withCloseButton
         >
-          {emailSuccess}
+          {notificationSuccess}
         </Notification>
       )}
 
@@ -756,14 +756,14 @@ export default function TrafficReportPage() {
         </Button>
 
         <Button
-          onClick={() => setConfirmEmailModalOpen(true)}
+          onClick={() => setConfirmNotificationModalOpen(true)}
           variant="filled"
           leftSection={<RiMailSendLine />}
-          disabled={emailLoading || !accessToken}
+          disabled={notificationLoading || !accessToken}
           className="bg-green-600 hover:bg-green-700 text-white"
           size="compact-md"
         >
-          {emailLoading ? "Enviando..." : "Enviar Email"}
+          {notificationLoading ? "Enviando..." : "Enviar Notificación"}
         </Button>
 
         <Button
@@ -1321,11 +1321,11 @@ export default function TrafficReportPage() {
               </div>
             </Modal>
 
-            {/* ------------- MODAL DE CONFIRMACIÓN PARA ENVIAR EMAIL ------------- */}
+            {/* ------------- MODAL DE CONFIRMACIÓN PARA ENVIAR NOTIFICACIÓN ------------- */}
             <Modal
-              opened={confirmEmailModalOpen}
-              onClose={() => setConfirmEmailModalOpen(false)}
-              title="Confirmar envío de reporte por email"
+              opened={confirmNotificationModalOpen}
+              onClose={() => setConfirmNotificationModalOpen(false)}
+              title="Confirmar envío de notificación"
               classNames={{ modal: "rounded-lg" }}
               size="md"
               centered
@@ -1333,11 +1333,10 @@ export default function TrafficReportPage() {
               <div className="space-y-4">
                 <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
                   <h4 className="font-semibold text-blue-800 mb-2">
-                    📧 Envío de Reporte
+                    📧 📱 Envío de Notificación
                   </h4>
                   <p className="text-blue-700 text-sm leading-relaxed">
-                    El reporte de tráfico será enviado a toda la lista de
-                    correos configurada para recibir este tipo de reportes.
+                    El reporte de tráfico será enviado tanto por email como por WhatsApp a todas las personas configuradas para recibir este tipo de notificaciones.
                   </p>
                 </div>
 
@@ -1385,12 +1384,12 @@ export default function TrafficReportPage() {
                 </div>
 
                 <p className="text-gray-600 text-sm">
-                  ¿Estás seguro de que deseas enviar el reporte por email?
+                  ¿Estás seguro de que deseas enviar la notificación?
                 </p>
 
                 <div className="flex justify-end gap-4 pt-4">
                   <Button
-                    onClick={() => setConfirmEmailModalOpen(false)}
+                    onClick={() => setConfirmNotificationModalOpen(false)}
                     variant="outline"
                     className="btn-secondary"
                   >
@@ -1398,14 +1397,14 @@ export default function TrafficReportPage() {
                   </Button>
                   <Button
                     onClick={() => {
-                      setConfirmEmailModalOpen(false);
-                      sendEmail();
+                      setConfirmNotificationModalOpen(false);
+                      sendNotification();
                     }}
                     variant="filled"
-                    loading={emailLoading}
+                    loading={notificationLoading}
                     className="bg-green-600 hover:bg-green-700 text-white"
                   >
-                    Sí, enviar reporte
+                    Sí, enviar notificación
                   </Button>
                 </div>
               </div>
