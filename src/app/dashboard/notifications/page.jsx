@@ -50,6 +50,7 @@ export default function NotificationsPage() {
   const [formData, setFormData] = useState({
     email: "",
     notification_type: [],
+    number: "",
   });
 
   // Filtro en la tabla
@@ -106,6 +107,7 @@ export default function NotificationsPage() {
     setFormData({
       email: "",
       notification_type: [],
+      number: "",
     });
   };
 
@@ -120,6 +122,7 @@ export default function NotificationsPage() {
     setFormData({
       email: notification.email,
       notification_type: notification.notification_type || [],
+      number: notification.number || "",
     });
     setModalMode("edit");
     setEditingNotification(notification);
@@ -132,6 +135,22 @@ export default function NotificationsPage() {
   };
 
   const handleSubmit = async () => {
+    // Validación: email y número no pueden estar ambos vacíos, ni ambos llenos
+    const hasEmail = formData.email.trim() !== "";
+    const hasNumber = formData.number.trim() !== "";
+
+    if (!hasEmail && !hasNumber) {
+      setError(
+        "Debe ingresar email o número, no puede dejar ambos campos vacíos."
+      );
+      return;
+    }
+
+    if (hasEmail && hasNumber) {
+      setError("Debe ingresar solo email o solo número, no ambos campos.");
+      return;
+    }
+
     setLoading(true);
     setError(null);
     setSuccess(null);
@@ -204,7 +223,9 @@ export default function NotificationsPage() {
       notification.email.toLowerCase().includes(searchValue.toLowerCase()) ||
       notification.notification_type_list
         .toLowerCase()
-        .includes(searchValue.toLowerCase())
+        .includes(searchValue.toLowerCase()) ||
+      (notification.number &&
+        notification.number.toLowerCase().includes(searchValue.toLowerCase()))
   );
 
   const sorted = [...filtered].sort((a, b) => {
@@ -230,7 +251,7 @@ export default function NotificationsPage() {
       <div className="md:flex grid grid-cols-1 justify-between items-center mb-4 md:gap-2">
         <TextInput
           leftSection={<RiSearchLine />}
-          placeholder="Buscar por email o tipo de notificación..."
+          placeholder="Buscar por email, número o tipo de notificación..."
           value={searchValue}
           onChange={(e) => setSearchValue(e.currentTarget.value)}
           className="w-full"
@@ -263,6 +284,7 @@ export default function NotificationsPage() {
           <thead className="text-md uppercase font-bold bg-primary">
             <tr className="text-white">
               <th>Email</th>
+              <th>Número</th>
               <th>Tipos de Notificación</th>
               <th>Estado</th>
               <th>Fecha de Creación</th>
@@ -272,7 +294,7 @@ export default function NotificationsPage() {
           <tbody className="bg-white text-primary">
             {loading ? (
               <tr>
-                <td colSpan={5} className="text-center py-4">
+                <td colSpan={6} className="text-center py-4">
                   <Loader size="sm" color="black" />
                   <p className="mt-2 text-gray-500">Cargando...</p>
                 </td>
@@ -281,6 +303,7 @@ export default function NotificationsPage() {
               sorted.map((notification) => (
                 <tr key={notification.id}>
                   <td className="">{notification.email}</td>
+                  <td className="">{notification.number || "—"}</td>
                   <td className="">{notification.notification_type_list}</td>
                   <td className="">
                     <span
@@ -314,7 +337,7 @@ export default function NotificationsPage() {
               ))
             ) : (
               <tr>
-                <td colSpan={5} className="text-center py-4">
+                <td colSpan={6} className="text-center py-4">
                   No se encontraron datos.
                 </td>
               </tr>
@@ -339,6 +362,10 @@ export default function NotificationsPage() {
               <div className="mb-2">
                 <span className="font-semibold">Email: </span>
                 {notification.email}
+              </div>
+              <div className="mb-2">
+                <span className="font-semibold">Número: </span>
+                {notification.number || "—"}
               </div>
               <div className="mb-2">
                 <span className="font-semibold">Tipos de Notificación: </span>
@@ -394,6 +421,13 @@ export default function NotificationsPage() {
         className="text-black"
       >
         <div className="space-y-4 text-black">
+          <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 mb-4">
+            <p className="text-blue-800 text-sm">
+              <strong>Nota:</strong> Debe ingresar email O número, pero no ambos
+              campos. Al menos uno de los dos debe estar lleno.
+            </p>
+          </div>
+
           <TextInput
             label="Email"
             placeholder="ejemplo@correo.com"
@@ -401,7 +435,25 @@ export default function NotificationsPage() {
             onChange={(e) =>
               setFormData({ ...formData, email: e.currentTarget.value })
             }
-            required
+            error={
+              formData.email.trim() !== "" && formData.number.trim() !== ""
+                ? "No puede ingresar email y número al mismo tiempo"
+                : null
+            }
+          />
+
+          <TextInput
+            label="Número"
+            placeholder="Ingresa el número"
+            value={formData.number}
+            onChange={(e) =>
+              setFormData({ ...formData, number: e.currentTarget.value })
+            }
+            error={
+              formData.email.trim() !== "" && formData.number.trim() !== ""
+                ? "No puede ingresar email y número al mismo tiempo"
+                : null
+            }
           />
 
           <MultiSelect
@@ -423,6 +475,12 @@ export default function NotificationsPage() {
             fullWidth
             onClick={handleSubmit}
             loading={loading}
+            disabled={
+              loading ||
+              formData.notification_type.length === 0 ||
+              (formData.email.trim() === "" && formData.number.trim() === "") ||
+              (formData.email.trim() !== "" && formData.number.trim() !== "")
+            }
           >
             {modalMode === "create" ? "Crear" : "Actualizar"}
           </Button>

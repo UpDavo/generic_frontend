@@ -64,6 +64,7 @@ export const deleteNotification = async (accessToken, id) => {
   });
 
   if (!response.ok) {
+    console.log("Error al eliminar notificación:", response);
     throw new Error("Error al eliminar notificación");
   }
 

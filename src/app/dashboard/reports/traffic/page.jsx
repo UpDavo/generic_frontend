@@ -60,27 +60,84 @@ export default function TrafficReportPage() {
   const [confirmRefetchModalOpen, setConfirmRefetchModalOpen] = useState(false);
   const [confirmEmailModalOpen, setConfirmEmailModalOpen] = useState(false);
 
-  // Función para obtener el día por defecto basado en la hora actual
+  // Función para obtener el día por defecto basado en la hora actual de Ecuador
   const getDefaultDay = () => {
+    // Obtener la hora actual en Ecuador (UTC-5)
     const now = new Date();
-    const currentHour = now.getHours();
+    const ecuadorTime = new Date(
+      now.getTime() + now.getTimezoneOffset() * 60000 - 5 * 3600000
+    );
+    const currentHour = ecuadorTime.getHours();
 
     // Si son las 5 AM o más tarde, usar el día actual
     if (currentHour >= 5) {
-      return now.getDay() || 7; // 1=Lunes, 7=Domingo
+      return ecuadorTime.getDay() || 7; // 1=Lunes, 7=Domingo
     } else {
       // Si son antes de las 5 AM, usar el día anterior
-      const yesterday = new Date(now);
-      yesterday.setDate(now.getDate() - 1);
+      const yesterday = new Date(ecuadorTime);
+      yesterday.setDate(ecuadorTime.getDate() - 1);
       return yesterday.getDay() || 7;
     }
   };
 
+  // Función para obtener el número de semana del año, considerando que el domingo pertenece a la semana actual hasta las 11:59 PM (hora de Ecuador)
+  const getWeekNumber = (date) => {
+    // Convertir a hora de Ecuador (UTC-5)
+    const inputDate = new Date(date);
+    const ecuadorTime = new Date(
+      inputDate.getTime() + inputDate.getTimezoneOffset() * 60000 - 5 * 3600000
+    );
+
+    // Si es domingo y no han pasado las 11:59 PM en Ecuador, mantener en la semana actual
+    if (ecuadorTime.getDay() === 0 && ecuadorTime.getHours() < 24) {
+      // Para el domingo, usar el día anterior para calcular la semana
+      ecuadorTime.setDate(ecuadorTime.getDate() - 1);
+    }
+
+    // Cálculo más preciso de semana ISO usando hora de Ecuador
+    const d = new Date(
+      Date.UTC(
+        ecuadorTime.getFullYear(),
+        ecuadorTime.getMonth(),
+        ecuadorTime.getDate()
+      )
+    );
+    const dayNum = d.getUTCDay() || 7;
+    d.setUTCDate(d.getUTCDate() + 4 - dayNum);
+    const yearStart = new Date(Date.UTC(d.getUTCFullYear(), 0, 1));
+    return Math.ceil(((d - yearStart) / 86400000 + 1) / 7);
+  };
+
+  // Función para obtener las semanas por defecto (semana actual y 3 semanas atrás) basado en la hora de Ecuador
+  const getDefaultWeeks = () => {
+    // Obtener la fecha actual en Ecuador (UTC-5)
+    const now = new Date();
+    const ecuadorTime = new Date(
+      now.getTime() + now.getTimezoneOffset() * 60000 - 5 * 3600000
+    );
+
+    const currentWeek = getWeekNumber(ecuadorTime);
+    const startWeek = Math.max(1, currentWeek - 3); // No menos de la semana 1
+    const endWeek = currentWeek;
+
+    return {
+      startWeek: startWeek.toString(),
+      endWeek: endWeek.toString(),
+    };
+  };
+
   // Parámetros de filtro
+  const defaultWeeks = getDefaultWeeks();
+  // Obtener el año actual en Ecuador
+  const now = new Date();
+  const ecuadorTime = new Date(
+    now.getTime() + now.getTimezoneOffset() * 60000 - 5 * 3600000
+  );
+
   const [dia, setDia] = useState(getDefaultDay());
-  const [startWeek, setStartWeek] = useState("");
-  const [endWeek, setEndWeek] = useState("");
-  const [year, setYear] = useState(new Date().getFullYear());
+  const [startWeek, setStartWeek] = useState(defaultWeeks.startWeek);
+  const [endWeek, setEndWeek] = useState(defaultWeeks.endWeek);
+  const [year, setYear] = useState(ecuadorTime.getFullYear());
   const [startHour, setStartHour] = useState(7);
   const [endHour, setEndHour] = useState(3);
 
@@ -721,10 +778,17 @@ export default function TrafficReportPage() {
         </Button>
         <Button
           onClick={() => {
+            const newDefaultWeeks = getDefaultWeeks();
+            // Obtener el año actual en Ecuador
+            const now = new Date();
+            const ecuadorTime = new Date(
+              now.getTime() + now.getTimezoneOffset() * 60000 - 5 * 3600000
+            );
+
             setDia(getDefaultDay());
-            setStartWeek("");
-            setEndWeek("");
-            setYear(new Date().getFullYear());
+            setStartWeek(newDefaultWeeks.startWeek);
+            setEndWeek(newDefaultWeeks.endWeek);
+            setYear(ecuadorTime.getFullYear());
             setStartHour(7);
             setEndHour(3);
             // Refrescar los datos después de reiniciar los filtros
@@ -1193,21 +1257,39 @@ export default function TrafficReportPage() {
 
                 <div className="space-y-2">
                   <p className="text-gray-700 text-sm">
-                    <span className="font-semibold">Hora actual:</span>{" "}
-                    {new Date().toLocaleTimeString("es-ES", {
-                      hour: "2-digit",
-                      minute: "2-digit",
-                      second: "2-digit",
-                    })}
+                    <span className="font-semibold">
+                      Hora actual (Ecuador):
+                    </span>{" "}
+                    {(() => {
+                      const now = new Date();
+                      const ecuadorTime = new Date(
+                        now.getTime() +
+                          now.getTimezoneOffset() * 60000 -
+                          5 * 3600000
+                      );
+                      return ecuadorTime.toLocaleTimeString("es-ES", {
+                        hour: "2-digit",
+                        minute: "2-digit",
+                        second: "2-digit",
+                      });
+                    })()}
                   </p>
                   <p className="text-gray-700 text-sm">
-                    <span className="font-semibold">Fecha:</span>{" "}
-                    {new Date().toLocaleDateString("es-ES", {
-                      weekday: "long",
-                      year: "numeric",
-                      month: "long",
-                      day: "numeric",
-                    })}
+                    <span className="font-semibold">Fecha (Ecuador):</span>{" "}
+                    {(() => {
+                      const now = new Date();
+                      const ecuadorTime = new Date(
+                        now.getTime() +
+                          now.getTimezoneOffset() * 60000 -
+                          5 * 3600000
+                      );
+                      return ecuadorTime.toLocaleDateString("es-ES", {
+                        weekday: "long",
+                        year: "numeric",
+                        month: "long",
+                        day: "numeric",
+                      });
+                    })()}
                   </p>
                 </div>
 
@@ -1280,15 +1362,25 @@ export default function TrafficReportPage() {
                     <p>• Año: {year}</p>
                   </div>
                   <p className="text-gray-700 text-sm">
-                    <span className="font-semibold">Fecha de envío:</span>{" "}
-                    {new Date().toLocaleDateString("es-ES", {
-                      weekday: "long",
-                      year: "numeric",
-                      month: "long",
-                      day: "numeric",
-                      hour: "2-digit",
-                      minute: "2-digit",
-                    })}
+                    <span className="font-semibold">
+                      Fecha de envío (Ecuador):
+                    </span>{" "}
+                    {(() => {
+                      const now = new Date();
+                      const ecuadorTime = new Date(
+                        now.getTime() +
+                          now.getTimezoneOffset() * 60000 -
+                          5 * 3600000
+                      );
+                      return ecuadorTime.toLocaleDateString("es-ES", {
+                        weekday: "long",
+                        year: "numeric",
+                        month: "long",
+                        day: "numeric",
+                        hour: "2-digit",
+                        minute: "2-digit",
+                      });
+                    })()}
                   </p>
                 </div>
 
