@@ -5,7 +5,7 @@ import Providers from "./Provider";
 export const metadata = {
   title: "HINT - Heimdal Integrations",
   description:
-    "HINT by heimdal, Cámaras de seguridad y monitoreo en tiempo real",
+    "HINT by heimdal",
   robots: {
     index: false,
     follow: false,
