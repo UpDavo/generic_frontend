@@ -19,6 +19,7 @@ import {
   RiDatabase2Line,
   RiBarChart2Line,
   RiMedalLine,
+  RiWebhookLine,
 } from "react-icons/ri";
 export const dashboardRoutes = [
   {
@@ -96,6 +97,12 @@ export const dashboardRoutes = [
             permission: "/dashboard/reports/goal",
           },
         ],
+      },
+      {
+        path: "/dashboard/webhooks",
+        name: "Webhooks",
+        icon: RiWebhookLine,
+        permission: "/dashboard/webhooks",
       },
     ],
   },

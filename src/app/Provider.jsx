@@ -4,7 +4,8 @@ import { Provider as ReduxProvider } from "react-redux";
 import { store } from "@/core/store";
 import { useAppDispatch } from "@/core/hooks/useAppDispatch";
 import { refreshAccessToken } from "@/auth/hooks/useAuth";
-import { Loader, Text, Container } from "@mantine/core";
+import { Loader, Text, Container, MantineProvider } from "@mantine/core";
+import { getThemeFromCSS } from "@/core/utils/getThemeFromCss";
 
 export const AuthLoadingContext = createContext(true);
 
@@ -36,9 +37,18 @@ function AuthLoader({ children }) {
 }
 
 export default function Providers({ children }) {
+  const [theme, setTheme] = useState(null);
+
+  useEffect(() => {
+    document.documentElement.setAttribute("data-theme", "light");
+    setTheme(getThemeFromCSS());
+  }, []);
+
   return (
-    <ReduxProvider store={store}>
-      <AuthLoader>{children}</AuthLoader>
-    </ReduxProvider>
+    <MantineProvider theme={theme || { colorScheme: "light" }}>
+      <ReduxProvider store={store}>
+        <AuthLoader>{children}</AuthLoader>
+      </ReduxProvider>
+    </MantineProvider>
   );
 }

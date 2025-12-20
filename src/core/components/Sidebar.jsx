@@ -18,7 +18,9 @@ export default function Sidebar2({ className = "", user, handleLogout }) {
 
   const userPermissions =
     user?.role?.permissions?.map((perm) => perm.path) || [];
+  // console.log("User Permissions:", userPermissions);
   const isAdmin = user?.role?.is_admin;
+  // console.log("Is Admin:", isAdmin);
 
   const filterRoutes = (routeList) => {
     return routeList

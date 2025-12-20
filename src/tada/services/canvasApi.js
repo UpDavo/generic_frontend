@@ -233,3 +233,36 @@ export const sendCanvasMessage = async (sendObject, accessToken) => {
   // console.log(returned);
   return returned;
 };
+
+export const listWebhookLogsStats = async (
+  accessToken,
+  page,
+  start_date,
+  end_date
+) => {
+  const params = new URLSearchParams({ page: page.toString() });
+
+  if (start_date) {
+    params.append("start_date", start_date);
+  }
+  if (end_date) {
+    params.append("end_date", end_date);
+  }
+
+  const response = await fetch(
+    `${API_BASE_URL}/tada/webhook-logs/stats/?${params.toString()}`,
+    {
+      method: "GET",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${accessToken}`,
+      },
+    }
+  );
+
+  if (!response.ok) {
+    throw new Error("Error al obtener las estadísticas de webhooks");
+  }
+
+  return await response.json();
+};

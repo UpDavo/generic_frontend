@@ -2,7 +2,7 @@
 
 import { useEffect, useState, useCallback } from "react";
 import { listLogsStats } from "@/tada/services/pushApi";
-import { listCanvasLogsStats } from "@/tada/services/canvasApi";
+import { listCanvasLogsStats, listWebhookLogsStats } from "@/tada/services/canvasApi";
 import { listExecutionLogsStats } from "@/tada/services/executionApi";
 import { TextInput, Loader, Notification, Button } from "@mantine/core";
 import { RiRefreshLine, RiSearchLine } from "react-icons/ri";
@@ -17,10 +17,12 @@ export default function PaymentsPage() {
   const [pushLoading, setPushLoading] = useState(false);
   const [canvasLoading, setCanvasLoading] = useState(false);
   const [executionLoading, setExecutionLoading] = useState(false);
+  const [webhookLoading, setWebhookLoading] = useState(false);
   const [error, setError] = useState(null);
   const [pushError, setPushError] = useState(null);
   const [canvasError, setCanvasError] = useState(null);
   const [executionError, setExecutionError] = useState(null);
+  const [webhookError, setWebhookError] = useState(null);
   const [totalCalls, setTotalCalls] = useState(0);
   const [cost, setCost] = useState(0);
   const [userCalls, setUserCalls] = useState([]);
@@ -30,6 +32,7 @@ export default function PaymentsPage() {
   const [pushStats, setPushStats] = useState(null);
   const [canvasStats, setCanvasStats] = useState(null);
   const [executionStats, setExecutionStats] = useState(null);
+  const [webhookStats, setWebhookStats] = useState(null);
 
   /* Filtro en la tabla */
   const [searchValue, setSearchValue] = useState("");
@@ -139,20 +142,48 @@ export default function PaymentsPage() {
     }
   }, [accessToken, sentAtGte, sentAtLte]);
 
+  // Función para obtener estadísticas de WEBHOOKS
+  const fetchWebhookStats = useCallback(async () => {
+    setWebhookLoading(true);
+    setWebhookError(null);
+
+    try {
+      const webhookData = await listWebhookLogsStats(
+        accessToken,
+        1,
+        sentAtGte,
+        sentAtLte
+      );
+
+      console.log("Webhook stats:", webhookData);
+      setWebhookStats(webhookData);
+
+      return webhookData;
+    } catch (err) {
+      console.error("Error fetching webhook stats:", err);
+      setWebhookError("Error al cargar estadísticas de Webhooks");
+      return null;
+    } finally {
+      setWebhookLoading(false);
+    }
+  }, [accessToken, sentAtGte, sentAtLte]);
+
   // Función para calcular y actualizar los totales
   const updateTotals = useCallback(() => {
-    if (pushStats && canvasStats && executionStats) {
+    if (pushStats && canvasStats && executionStats && webhookStats) {
       const totalPushLogs = pushStats.summary?.total_logs || 0;
       const totalCanvasLogs = canvasStats.summary?.total_logs || 0;
       const totalExecutionLogs = executionStats.summary?.total_logs || 0;
+      const totalWebhookLogs = webhookStats.summary?.total_logs || 0;
       const totalPushCost = parseFloat(pushStats.summary?.total_cost || 0);
       const totalCanvasCost = parseFloat(canvasStats.summary?.total_cost || 0);
       const totalExecutionCost = parseFloat(
         executionStats.summary?.total_cost || 0
       );
+      const totalWebhookCost = parseFloat(webhookStats.summary?.total_cost || 0);
 
-      setTotalCalls(totalPushLogs + totalCanvasLogs + totalExecutionLogs);
-      setCost(totalPushCost + totalCanvasCost + totalExecutionCost);
+      setTotalCalls(totalPushLogs + totalCanvasLogs + totalExecutionLogs + totalWebhookLogs);
+      setCost(totalPushCost + totalCanvasCost + totalExecutionCost + totalWebhookCost);
 
       // Combinar usuarios de todos los tipos para la tabla
       const allUsers = [];
@@ -201,9 +232,20 @@ export default function PaymentsPage() {
         });
       }
 
+      // Agregar estadísticas de WEBHOOKS
+      if (webhookStats.summary && webhookStats.summary.total_logs > 0) {
+        allUsers.push({
+          user: "Webhooks",
+          count: webhookStats.summary.total_logs,
+          cost: parseFloat(webhookStats.summary.total_cost),
+          type: "WEBHOOK",
+          email: "system",
+        });
+      }
+
       setUserCalls(allUsers);
     }
-  }, [pushStats, canvasStats, executionStats]);
+  }, [pushStats, canvasStats, executionStats, webhookStats]);
 
   // Actualizar totales cuando cambien las estadísticas
   useEffect(() => {
@@ -220,12 +262,13 @@ export default function PaymentsPage() {
         fetchPushStats(),
         fetchCanvasStats(),
         fetchExecutionStats(),
+        fetchWebhookStats(),
       ]);
     } catch (err) {
       console.error("Error general:", err);
       setError("Error al cargar los datos del dashboard.");
     }
-  }, [fetchPushStats, fetchCanvasStats, fetchExecutionStats]);
+  }, [fetchPushStats, fetchCanvasStats, fetchExecutionStats, fetchWebhookStats]);
 
   // 2. Llamada inicial SOLO una vez al montar
   useEffect(() => {
@@ -354,12 +397,23 @@ export default function PaymentsPage() {
         </Notification>
       )}
 
+      {webhookError && (
+        <Notification
+          color="red"
+          className="mb-4"
+          onClose={() => setWebhookError(null)}
+          withCloseButton
+        >
+          {webhookError}
+        </Notification>
+      )}
+
       {/* ------------- TARJETAS ------------- */}
       <div className="mt-2">
-        <div className="grid md:grid-cols-5 grid-cols-1 gap-6 mb-6">
+        <div className="grid md:grid-cols-6 grid-cols-1 gap-6 mb-6">
           <div className="card bg-white shadow p-6 text-center">
             <h2 className="text-lg font-bold mb-2 text-black">Total</h2>
-            {pushLoading || canvasLoading || executionLoading ? (
+            {pushLoading || canvasLoading || executionLoading || webhookLoading ? (
               <div className="flex justify-center">
                 <Loader size="md" />
               </div>
@@ -371,7 +425,7 @@ export default function PaymentsPage() {
           </div>
           <div className="card bg-white shadow p-6 text-center">
             <h2 className="text-lg font-bold mb-2 text-black">Registros</h2>
-            {pushLoading || canvasLoading || executionLoading ? (
+            {pushLoading || canvasLoading || executionLoading || webhookLoading ? (
               <div className="flex justify-center">
                 <Loader size="md" />
               </div>
@@ -444,6 +498,30 @@ export default function PaymentsPage() {
               </>
             )}
           </div>
+          <div className="card bg-white shadow p-6 text-center">
+            <h2 className="text-lg font-bold mb-2 text-black">
+              Webhooks
+            </h2>
+            {webhookLoading ? (
+              <div className="flex justify-center">
+                <Loader size="md" />
+              </div>
+            ) : webhookError ? (
+              <p className="text-sm text-red-500">Error al cargar</p>
+            ) : (
+              <>
+                <p className="text-2xl font-bold text-orange-600">
+                  {webhookStats?.summary?.total_logs || 0}
+                </p>
+                <p className="text-sm text-gray-600">
+                  $
+                  {parseFloat(webhookStats?.summary?.total_cost || 0).toFixed(
+                    2
+                  )}
+                </p>
+              </>
+            )}
+          </div>
         </div>
       </div>
 
@@ -453,7 +531,7 @@ export default function PaymentsPage() {
           Notificaciones por Usuario
         </h2>
 
-        {pushLoading || canvasLoading || executionLoading ? (
+        {pushLoading || canvasLoading || executionLoading || webhookLoading ? (
           <div className="flex justify-center items-center h-32">
             <div className="text-center">
               <Loader size="lg" />
@@ -557,7 +635,9 @@ export default function PaymentsPage() {
                               ? "badge-primary"
                               : record.type === "CANVAS"
                               ? "badge-secondary"
-                              : "badge-secondary"
+                              : record.type === "WEBHOOK"
+                              ? "badge-warning"
+                              : "badge-success"
                           }`}
                         >
                           {record.type}
@@ -595,6 +675,8 @@ export default function PaymentsPage() {
                           ? "badge-primary"
                           : record.type === "CANVAS"
                           ? "badge-secondary"
+                          : record.type === "WEBHOOK"
+                          ? "badge-warning"
                           : "badge-success"
                       }`}
                     >
