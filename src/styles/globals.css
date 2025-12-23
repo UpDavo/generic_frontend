@@ -141,6 +141,33 @@ body,
   font-family: "SF Pro Display" !important;
 }
 
+/* Scrollbar visible para el menú del Sidebar (sin plugins) */
+.sidebar-menu-scroll {
+  scrollbar-gutter: stable;
+  overscroll-behavior: contain;
+  scrollbar-width: thin; /* Firefox */
+  scrollbar-color: var(--color-gray-300) var(--color-base-200); /* Firefox */
+}
+
+.sidebar-menu-scroll::-webkit-scrollbar {
+  width: 10px;
+}
+
+.sidebar-menu-scroll::-webkit-scrollbar-track {
+  background: var(--color-base-200);
+  border-radius: 9999px;
+}
+
+.sidebar-menu-scroll::-webkit-scrollbar-thumb {
+  background: var(--color-gray-300);
+  border-radius: 9999px;
+  border: 2px solid var(--color-base-200);
+}
+
+.sidebar-menu-scroll:hover::-webkit-scrollbar-thumb {
+  background: var(--color-gray-400);
+}
+
 .mantine-Drawer-title {
   font-size: 3rem;
   color: #18181b;

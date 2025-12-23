@@ -26,6 +26,7 @@ import {
   RiRefreshLine,
   RiDownloadCloudLine,
   RiEditLine,
+  RiEyeLine,
 } from "react-icons/ri";
 import {
   BarChart,
@@ -97,11 +98,11 @@ export default function WebhooksPage() {
   const getDefaultDates = () => {
     const now = new Date();
     const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
-    const endOfNextMonth = new Date(now.getFullYear(), now.getMonth() + 2, 0);
-    
+    const endOfMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0);
+
     return {
       start: startOfMonth.toISOString().split('T')[0],
-      end: endOfNextMonth.toISOString().split('T')[0]
+      end: endOfMonth.toISOString().split('T')[0]
     };
   };
 
@@ -154,6 +155,10 @@ export default function WebhooksPage() {
   const [storeUsers, setStoreUsers] = useState([]);
   const [loadingStores, setLoadingStores] = useState(false);
 
+  /* ------------------- MODAL DE PREVIEW ------------------- */
+  const [previewModalOpen, setPreviewModalOpen] = useState(false);
+  const [previewingLog, setPreviewingLog] = useState(null);
+
   /* =========================================================
      1. Traer LOGS cada vez que cambian page o appliedFilters
   ========================================================= */
@@ -171,16 +176,16 @@ export default function WebhooksPage() {
       );
       const results = data.results || [];
       setLogs(results);
-      
+
       // Calcular páginas totales basándose en el count del backend
       const itemsPerPage = 10;
       const count = data.count || 0;
       setTotalRecords(count);
       setTotalPages(Math.ceil(count / itemsPerPage));
-      
+
       // Mostrar métricas si hay registros
       setShowMetrics(count > 0);
-      
+
       setError(null);
     } catch (err) {
       console.error(err);
@@ -261,6 +266,11 @@ export default function WebhooksPage() {
     } finally {
       setFiltering(false);
     }
+  };
+
+  const openPreviewModal = (log) => {
+    setPreviewingLog(log);
+    setPreviewModalOpen(true);
   };
 
   const openEditModal = (log) => {
@@ -436,8 +446,8 @@ export default function WebhooksPage() {
               <th>POC</th>
               <th>Comentario</th>
               <th>Recompra</th>
-              <th>Fecha</th>
-              <th>Hora</th>
+              <th>Gestionado</th>
+              <th>Creado</th>
               <th>Acciones</th>
             </tr>
           </thead>
@@ -473,22 +483,32 @@ export default function WebhooksPage() {
                       <span className="badge badge-ghost badge-sm">No</span>
                     )}
                   </td>
-                  <td>{log.date}</td>
-                  <td>{log.time}</td>
+                  <td>{log.edited_by || "-"}</td>
+                  <td>{new Date(log.created_at).toLocaleString()}</td>
                   <td>
-                    <Button
-                      size="xs"
-                      onClick={() => openEditModal(log)}
-                      disabled={log.is_edited}
-                      leftSection={<RiEditLine />}
-                      title={
-                        log.is_edited
-                          ? "Este registro ya fue editado"
-                          : "Editar registro"
-                      }
-                    >
-                      Editar
-                    </Button>
+                    <Button.Group>
+                      <Button
+                        size="xs"
+                        onClick={() => openEditModal(log)}
+                        disabled={log.is_edited}
+                        leftSection={<RiEditLine />}
+                        title={
+                          log.is_edited
+                            ? "Este registro ya fue editado"
+                            : "Editar registro"
+                        }
+                      >
+                        Editar
+                      </Button>
+                      <Button
+                        size="xs"
+                        onClick={() => openPreviewModal(log)}
+                        leftSection={<RiEyeLine />}
+                        title="Ver detalles"
+                      >
+                        Ver
+                      </Button>
+                    </Button.Group>
                   </td>
                 </tr>
               ))
@@ -557,18 +577,35 @@ export default function WebhooksPage() {
               </div>
 
               <div className="text-xs text-gray-500 mt-2">
-                {log.date} - {log.time}
+                {new Date(log.created_at).toLocaleString()}
               </div>
 
-              <Button
-                size="xs"
-                onClick={() => openEditModal(log)}
-                disabled={log.is_edited}
-                leftSection={<RiEditLine />}
-                className="mt-3 w-full"
-              >
-                {log.is_edited ? "Ya editado" : "Editar"}
-              </Button>
+              {log.edited_by && (
+                <>
+                  <div className="mb-1 font-semibold">Gestionado:</div>
+                  <div className="mb-2">{log.edited_by}</div>
+                </>
+              )}
+
+              <div className="flex gap-2 mt-3">
+                <Button
+                  size="xs"
+                  onClick={() => openEditModal(log)}
+                  disabled={log.is_edited}
+                  leftSection={<RiEditLine />}
+                  className="w-full"
+                >
+                  {log.is_edited ? "Ya editado" : "Editar"}
+                </Button>
+                <Button
+                  size="xs"
+                  onClick={() => openPreviewModal(log)}
+                  leftSection={<RiEyeLine />}
+                  className="w-full"
+                >
+                  Ver
+                </Button>
+              </div>
             </div>
           ))
         ) : (
@@ -634,7 +671,7 @@ export default function WebhooksPage() {
               setFormData({ ...formData, comment: e.currentTarget.value })
             }
             minRows={3}
-            maxLength={250}
+            maxLength={150}
           />
 
           <Switch
@@ -654,6 +691,73 @@ export default function WebhooksPage() {
             Actualizar Webhook
           </Button>
         </div>
+      </Modal>
+
+      {/* ---------------- MODAL DE PREVIEW ---------------- */}
+      <Modal
+        opened={previewModalOpen}
+        onClose={() => {
+          setPreviewModalOpen(false);
+          setPreviewingLog(null);
+        }}
+        title="Detalles del Webhook"
+        centered
+        className="text-black"
+      >
+        {previewingLog && (
+          <div className="space-y-3 text-black">
+            <div>
+              <strong>Nombre:</strong> {previewingLog.name || "N/A"}
+            </div>
+            <div>
+              <strong>Email:</strong> {previewingLog.email}
+            </div>
+            <div>
+              <strong>Tipo de Evento:</strong>{" "}
+              <span
+                className="badge badge-sm"
+                style={{
+                  backgroundColor: getEventTypeColor(previewingLog.event_type),
+                  color: "white",
+                }}
+              >
+                {getEventTypeLabel(previewingLog.event_type)}
+              </span>
+            </div>
+            <div>
+              <strong>POC:</strong> {previewingLog.poc || "-"}
+            </div>
+            <div>
+              <strong>Comentario:</strong>
+              <p className="text-sm text-gray-700 bg-gray-100 p-2 rounded-md mt-1">
+                {previewingLog.comment || "-"}
+              </p>
+            </div>
+            <div>
+              <strong>Recompra:</strong>{" "}
+              {previewingLog.repurchased ? (
+                <span className="badge badge-success badge-sm">Sí</span>
+              ) : (
+                <span className="badge badge-ghost badge-sm">No</span>
+              )}
+            </div>
+            <div>
+              <strong>Creado:</strong>{" "}
+              {new Date(previewingLog.created_at).toLocaleString()}
+            </div>
+            {previewingLog.is_edited && (
+              <>
+                <div>
+                  <strong>Gestionado:</strong> {previewingLog.edited_by}
+                </div>
+                <div>
+                  <strong>Fecha de gestión:</strong>{" "}
+                  {new Date(previewingLog.edited_at).toLocaleString()}
+                </div>
+              </>
+            )}
+          </div>
+        )}
       </Modal>
     </div>
   );
