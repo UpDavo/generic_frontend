@@ -38,7 +38,10 @@ export const listWebhookLogs = async (
     throw new Error("Error al obtener los logs de webhooks");
   }
 
-  return await response.json();
+  const response_json = await response.json();
+  // console.log("Response from listWebhookLogs:", response_json);
+
+  return response_json;
 };
 
 export const listWebhookLogsReport = async (
@@ -119,4 +122,25 @@ export const downloadWebhookLogsExcel = async (
   document.body.appendChild(a);
   a.click();
   a.remove();
+};
+
+export const updateWebhookLog = async (accessToken, webhookId, updateData) => {
+  const response = await fetch(
+    `${API_BASE_URL}/tada/webhook/cancelled/${webhookId}/update/`,
+    {
+      method: "PATCH",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${accessToken}`,
+      },
+      body: JSON.stringify(updateData),
+    }
+  );
+
+  if (!response.ok) {
+    const errorData = await response.json();
+    throw new Error(errorData.error || "Error al actualizar el webhook");
+  }
+
+  return await response.json();
 };

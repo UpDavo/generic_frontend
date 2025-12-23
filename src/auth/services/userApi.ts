@@ -172,3 +172,23 @@ export const deleteUser = async (id: number, accessToken: string | null) => {
 
   return "OK";
 };
+
+// Obtener usuarios por rol
+export const getUsersByRole = async (
+  role: string,
+  accessToken: string | null
+) => {
+  const response = await fetch(`${API_BASE_URL}/auth/users/role/${role}/`, {
+    method: "GET",
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${accessToken}`,
+    },
+  });
+
+  if (!response.ok) {
+    throw new Error("Error al obtener los usuarios del rol");
+  }
+
+  return await response.json();
+};

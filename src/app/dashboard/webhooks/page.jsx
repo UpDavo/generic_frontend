@@ -5,8 +5,10 @@ import {
   listWebhookLogs,
   listWebhookLogsReport,
   downloadWebhookLogsExcel,
+  updateWebhookLog,
 } from "@/tada/services/webhookApi";
 import { useAuth } from "@/auth/hooks/useAuth";
+import { getUsersByRole } from "@/auth/services/userApi";
 import {
   Notification,
   Pagination,
@@ -14,12 +16,16 @@ import {
   TextInput,
   Button,
   Select,
+  Modal,
+  Textarea,
+  Switch,
 } from "@mantine/core";
 import {
   RiSearchLine,
   RiCloseCircleLine,
   RiRefreshLine,
   RiDownloadCloudLine,
+  RiEditLine,
 } from "react-icons/ri";
 import {
   BarChart,
@@ -87,6 +93,20 @@ export default function WebhooksPage() {
   const { accessToken, user } = useAuth();
   const router = useRouter();
 
+  // Función para obtener fechas por defecto
+  const getDefaultDates = () => {
+    const now = new Date();
+    const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
+    const endOfNextMonth = new Date(now.getFullYear(), now.getMonth() + 2, 0);
+    
+    return {
+      start: startOfMonth.toISOString().split('T')[0],
+      end: endOfNextMonth.toISOString().split('T')[0]
+    };
+  };
+
+  const defaultDates = getDefaultDates();
+
   /* ------------------- AUTORIZACIÓN ------------------- */
   const [authorized, setAuthorized] = useState(null);
   useEffect(() => {
@@ -98,8 +118,8 @@ export default function WebhooksPage() {
 
   /* ------------------- FILTROS (inputs) ------------------- */
   const [email, setEmail] = useState("");
-  const [startDate, setStartDate] = useState(null);
-  const [endDate, setEndDate] = useState(null);
+  const [startDate, setStartDate] = useState(defaultDates.start);
+  const [endDate, setEndDate] = useState(defaultDates.end);
   const [source, setSource] = useState(null);
   const [downloadingExcel, setDownloadingExcel] = useState(false);
   const [filtering, setFiltering] = useState(false);
@@ -107,8 +127,8 @@ export default function WebhooksPage() {
   /* ------------------- FILTROS APLICADOS ------------------- */
   const [appliedFilters, setAppliedFilters] = useState({
     email: "",
-    startDate: null,
-    endDate: null,
+    startDate: defaultDates.start,
+    endDate: defaultDates.end,
     source: null,
   });
 
@@ -118,11 +138,21 @@ export default function WebhooksPage() {
   const [error, setError] = useState(null);
   const [page, setPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
+  const [totalRecords, setTotalRecords] = useState(0);
 
-  /* ------------------- GRÁFICOS ------------------- */
-  const [sourceChartData, setSourceChartData] = useState([]);
-  const [eventTypeChartData, setEventTypeChartData] = useState([]);
-  const [showCharts, setShowCharts] = useState(false);
+  /* ------------------- MÉTRICAS ------------------- */
+  const [showMetrics, setShowMetrics] = useState(false);
+
+  /* ------------------- MODAL DE EDICIÓN ------------------- */
+  const [modalOpen, setModalOpen] = useState(false);
+  const [editingLog, setEditingLog] = useState(null);
+  const [formData, setFormData] = useState({
+    poc: "",
+    comment: "",
+    repurchased: false,
+  });
+  const [storeUsers, setStoreUsers] = useState([]);
+  const [loadingStores, setLoadingStores] = useState(false);
 
   /* =========================================================
      1. Traer LOGS cada vez que cambian page o appliedFilters
@@ -139,8 +169,18 @@ export default function WebhooksPage() {
         appliedFilters.endDate,
         appliedFilters.source
       );
-      setLogs(data.results || []);
-      setTotalPages(Math.ceil((data.count || 0) / 10));
+      const results = data.results || [];
+      setLogs(results);
+      
+      // Calcular páginas totales basándose en el count del backend
+      const itemsPerPage = 10;
+      const count = data.count || 0;
+      setTotalRecords(count);
+      setTotalPages(Math.ceil(count / itemsPerPage));
+      
+      // Mostrar métricas si hay registros
+      setShowMetrics(count > 0);
+      
       setError(null);
     } catch (err) {
       console.error(err);
@@ -155,75 +195,35 @@ export default function WebhooksPage() {
   }, [fetchLogs]);
 
   /* =========================================================
-     2. Traer datos para GRÁFICOS cuando cambian appliedFilters
+     Cargar usuarios del rol Store
   ========================================================= */
-  const fetchLogsReport = useCallback(async () => {
-    if (!accessToken) return;
-    try {
-      const data = await listWebhookLogsReport(
-        accessToken,
-        appliedFilters.email,
-        appliedFilters.startDate,
-        appliedFilters.endDate,
-        appliedFilters.source
-      );
-
-      /* -- Por source -- */
-      const sourceCounts = data.reduce((acc, log) => {
-        const src = log.source || "unknown";
-        acc[src] = (acc[src] || 0) + 1;
-        return acc;
-      }, {});
-      setSourceChartData(
-        Object.entries(sourceCounts)
-          .map(([source, count]) => ({
-            source,
-            count,
-            fill: getSourceColor(source),
-          }))
-          .sort((a, b) => b.count - a.count)
-      );
-
-      /* -- Por event_type -- */
-      const eventCounts = data.reduce((acc, log) => {
-        const evt = log.event_type || "unknown";
-        acc[evt] = (acc[evt] || 0) + 1;
-        return acc;
-      }, {});
-      setEventTypeChartData(
-        Object.entries(eventCounts)
-          .map(([type, count]) => ({
-            type,
-            count,
-            fill: getEventTypeColor(type),
-          }))
-          .sort((a, b) => b.count - a.count)
-      );
-
-      setShowCharts(true);
-    } catch (err) {
-      console.error(err);
-      setSourceChartData([]);
-      setEventTypeChartData([]);
-      setShowCharts(false);
-    }
-  }, [accessToken, appliedFilters]);
-
   useEffect(() => {
-    /* Solo si hay algún filtro aplicado */
-    if (
-      appliedFilters.email ||
-      appliedFilters.startDate ||
-      appliedFilters.endDate ||
-      appliedFilters.source
-    ) {
-      fetchLogsReport();
-    } else {
-      setShowCharts(false);
-      setSourceChartData([]);
-      setEventTypeChartData([]);
+    const fetchStoreUsers = async () => {
+      if (!accessToken) return;
+      setLoadingStores(true);
+      try {
+        const data = await getUsersByRole("Store", accessToken);
+        console.log("Usuarios Store obtenidos:", data);
+        // Transformar a formato para Select de Mantine
+        const usersOptions = data.users.map((user) => ({
+          value: user.name,
+          label: user.name,
+        }));
+        setStoreUsers(usersOptions);
+      } catch (err) {
+        console.error("Error al cargar usuarios Store:", err);
+        setStoreUsers([]);
+      } finally {
+        setLoadingStores(false);
+      }
+    };
+
+    if (authorized && accessToken) {
+      fetchStoreUsers();
     }
-  }, [fetchLogsReport, appliedFilters]);
+  }, [authorized, accessToken]);
+
+
 
   /* =========================================================
      3. Handlers
@@ -246,19 +246,49 @@ export default function WebhooksPage() {
   const clearFilters = async () => {
     setFiltering(true);
     try {
+      const defaultDates = getDefaultDates();
       setEmail("");
-      setStartDate(null);
-      setEndDate(null);
+      setStartDate(defaultDates.start);
+      setEndDate(defaultDates.end);
       setSource(null);
       setAppliedFilters({
         email: "",
-        startDate: null,
-        endDate: null,
+        startDate: defaultDates.start,
+        endDate: defaultDates.end,
         source: null,
       });
       setPage(1);
     } finally {
       setFiltering(false);
+    }
+  };
+
+  const openEditModal = (log) => {
+    setEditingLog(log);
+    setFormData({
+      poc: log.poc || "",
+      comment: log.comment || "",
+      repurchased: log.repurchased || false,
+    });
+    setModalOpen(true);
+  };
+
+  const handleUpdateWebhook = async () => {
+    if (!editingLog) return;
+
+    setLoading(true);
+    try {
+      await updateWebhookLog(accessToken, editingLog.id, formData);
+      setModalOpen(false);
+      setEditingLog(null);
+      setFormData({ poc: "", comment: "", repurchased: false });
+      await fetchLogs();
+      setError(null);
+    } catch (err) {
+      console.error(err);
+      setError(err.message || "Error al actualizar el webhook");
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -276,6 +306,14 @@ export default function WebhooksPage() {
 
   return (
     <div className="text-black">
+      {/* ---------------- TOTAL DE REGISTROS ---------------- */}
+      {/* <div className="flex justify-between items-center mb-4">
+        <h2 className="text-xl font-bold">Webhooks</h2>
+        <div className="badge badge-lg badge-primary">
+          Total: {totalRecords} registros
+        </div>
+      </div> */}
+
       {error && (
         <Notification color="red" className="mb-4">
           {error}
@@ -373,55 +411,16 @@ export default function WebhooksPage() {
         </Button>
       </div>
 
-      {/* ---------------- GRÁFICOS ---------------- */}
-      {showCharts && (
-        <div className="grid md:grid-cols-2 grid-cols-1 gap-6 mb-4">
-          <div className="card bg-base-100 shadow-xl p-4">
-            <h2 className="text-lg text-black font-bold text-center mb-4">
-              Webhooks por Origen
-            </h2>
-            <ResponsiveContainer width="100%" height={300}>
-              <BarChart data={sourceChartData}>
-                <XAxis dataKey="source" />
-                <YAxis />
-                <Tooltip
-                  contentStyle={{
-                    backgroundColor: "white",
-                    color: "black",
-                    border: "1px solid #ddd",
-                  }}
-                />
-                <Bar dataKey="count">
-                  {sourceChartData.map((entry, idx) => (
-                    <Cell key={idx} fill={entry.fill} />
-                  ))}
-                </Bar>
-              </BarChart>
-            </ResponsiveContainer>
-          </div>
-
-          <div className="card bg-base-100 shadow-xl p-4">
-            <h2 className="text-lg text-black font-bold text-center mb-4">
-              Webhooks por Tipo de Evento
-            </h2>
-            <ResponsiveContainer width="100%" height={300}>
-              <BarChart data={eventTypeChartData}>
-                <XAxis dataKey="type" />
-                <YAxis />
-                <Tooltip
-                  contentStyle={{
-                    backgroundColor: "white",
-                    color: "black",
-                    border: "1px solid #ddd",
-                  }}
-                />
-                <Bar dataKey="count">
-                  {eventTypeChartData.map((entry, idx) => (
-                    <Cell key={idx} fill={entry.fill} />
-                  ))}
-                </Bar>
-              </BarChart>
-            </ResponsiveContainer>
+      {/* ---------------- MÉTRICAS ---------------- */}
+      {showMetrics && (
+        <div className="mb-4">
+          <div className="card bg-white shadow-md p-6 border-l-4 border-blue-500">
+            <div className="text-sm text-gray-500 uppercase mb-2">
+              Total de Registros
+            </div>
+            <div className="text-4xl font-bold text-black">
+              {totalRecords}
+            </div>
           </div>
         </div>
       )}
@@ -433,16 +432,19 @@ export default function WebhooksPage() {
             <tr>
               <th>Nombre</th>
               <th>Email</th>
-              <th>Origen</th>
               <th>Tipo de Evento</th>
+              <th>POC</th>
+              <th>Comentario</th>
+              <th>Recompra</th>
               <th>Fecha</th>
               <th>Hora</th>
+              <th>Acciones</th>
             </tr>
           </thead>
           <tbody className="bg-white text-black">
             {loading ? (
               <tr>
-                <td colSpan={6} className="text-center py-4">
+                <td colSpan={9} className="text-center py-4">
                   <Loader size="sm" color="blue" />
                 </td>
               </tr>
@@ -455,17 +457,6 @@ export default function WebhooksPage() {
                     <span
                       className="badge badge-sm"
                       style={{
-                        backgroundColor: getSourceColor(log.source),
-                        color: "white",
-                      }}
-                    >
-                      {getSourceLabel(log.source)}
-                    </span>
-                  </td>
-                  <td>
-                    <span
-                      className="badge badge-sm"
-                      style={{
                         backgroundColor: getEventTypeColor(log.event_type),
                         color: "white",
                       }}
@@ -473,13 +464,37 @@ export default function WebhooksPage() {
                       {getEventTypeLabel(log.event_type)}
                     </span>
                   </td>
+                  <td>{log.poc || "-"}</td>
+                  <td className="max-w-xs truncate">{log.comment || "-"}</td>
+                  <td>
+                    {log.repurchased ? (
+                      <span className="badge badge-success badge-sm">Sí</span>
+                    ) : (
+                      <span className="badge badge-ghost badge-sm">No</span>
+                    )}
+                  </td>
                   <td>{log.date}</td>
                   <td>{log.time}</td>
+                  <td>
+                    <Button
+                      size="xs"
+                      onClick={() => openEditModal(log)}
+                      disabled={log.is_edited}
+                      leftSection={<RiEditLine />}
+                      title={
+                        log.is_edited
+                          ? "Este registro ya fue editado"
+                          : "Editar registro"
+                      }
+                    >
+                      Editar
+                    </Button>
+                  </td>
                 </tr>
               ))
             ) : (
               <tr>
-                <td colSpan={6} className="text-center py-4">
+                <td colSpan={9} className="text-center py-4">
                   No se encontraron logs.
                 </td>
               </tr>
@@ -510,15 +525,6 @@ export default function WebhooksPage() {
                 <span
                   className="badge badge-sm"
                   style={{
-                    backgroundColor: getSourceColor(log.source),
-                    color: "white",
-                  }}
-                >
-                  {getSourceLabel(log.source)}
-                </span>
-                <span
-                  className="badge badge-sm"
-                  style={{
                     backgroundColor: getEventTypeColor(log.event_type),
                     color: "white",
                   }}
@@ -527,9 +533,42 @@ export default function WebhooksPage() {
                 </span>
               </div>
 
+              {log.poc && (
+                <>
+                  <div className="mb-1 font-semibold">POC:</div>
+                  <div className="mb-2">{log.poc}</div>
+                </>
+              )}
+
+              {log.comment && (
+                <>
+                  <div className="mb-1 font-semibold">Comentario:</div>
+                  <div className="mb-2">{log.comment}</div>
+                </>
+              )}
+
+              <div className="mb-1 font-semibold">Recompra:</div>
+              <div className="mb-2">
+                {log.repurchased ? (
+                  <span className="badge badge-success badge-sm">Sí</span>
+                ) : (
+                  <span className="badge badge-ghost badge-sm">No</span>
+                )}
+              </div>
+
               <div className="text-xs text-gray-500 mt-2">
                 {log.date} - {log.time}
               </div>
+
+              <Button
+                size="xs"
+                onClick={() => openEditModal(log)}
+                disabled={log.is_edited}
+                leftSection={<RiEditLine />}
+                className="mt-3 w-full"
+              >
+                {log.is_edited ? "Ya editado" : "Editar"}
+              </Button>
             </div>
           ))
         ) : (
@@ -541,8 +580,81 @@ export default function WebhooksPage() {
         value={page}
         onChange={setPage}
         total={totalPages}
+        siblings={1}
+        boundaries={1}
         className="mt-6"
       />
+
+      {/* ---------------- MODAL DE EDICIÓN ---------------- */}
+      <Modal
+        opened={modalOpen}
+        onClose={() => {
+          setModalOpen(false);
+          setEditingLog(null);
+          setFormData({ poc: "", comment: "", repurchased: false });
+        }}
+        title="Editar Webhook"
+        centered
+        className="text-black"
+      >
+        <div className="space-y-4 text-black">
+          {editingLog && (
+            <div className="mb-4 p-3 bg-gray-100 rounded-md">
+              <div className="text-sm">
+                <strong>Email:</strong> {editingLog.email}
+              </div>
+              <div className="text-sm">
+                <strong>Nombre:</strong> {editingLog.name || "N/A"}
+              </div>
+              <div className="text-xs text-gray-600 mt-2">
+                ⚠️ Este registro solo puede editarse una vez
+              </div>
+            </div>
+          )}
+
+          <Select
+            label="POC"
+            placeholder="Selecciona un POC"
+            value={formData.poc}
+            onChange={(value) =>
+              setFormData({ ...formData, poc: value || "" })
+            }
+            data={storeUsers}
+            searchable
+            clearable
+            disabled={loadingStores}
+            nothingFoundMessage="No se encontraron usuarios"
+          />
+
+          <Textarea
+            label="Comentario"
+            placeholder="Agrega un comentario sobre este registro"
+            value={formData.comment}
+            onChange={(e) =>
+              setFormData({ ...formData, comment: e.currentTarget.value })
+            }
+            minRows={3}
+            maxLength={250}
+          />
+
+          <Switch
+            label="¿Recompró?"
+            checked={formData.repurchased}
+            onChange={(e) =>
+              setFormData({ ...formData, repurchased: e.currentTarget.checked })
+            }
+          />
+
+          <Button
+            className="btn btn-info btn-sm"
+            fullWidth
+            onClick={handleUpdateWebhook}
+            loading={loading}
+          >
+            Actualizar Webhook
+          </Button>
+        </div>
+      </Modal>
     </div>
   );
 }
