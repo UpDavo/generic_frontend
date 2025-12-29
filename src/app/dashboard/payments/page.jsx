@@ -129,7 +129,7 @@ export default function PaymentsPage() {
         sentAtLte
       );
 
-      console.log("Execution stats:", executionData);
+      //   console.log("Execution stats:", executionData);
       setExecutionStats(executionData);
 
       return executionData;
@@ -155,7 +155,7 @@ export default function PaymentsPage() {
         sentAtLte
       );
 
-      console.log("Webhook stats:", webhookData);
+      //   console.log("Webhook stats:", webhookData);
       setWebhookStats(webhookData);
 
       return webhookData;
@@ -250,7 +250,7 @@ export default function PaymentsPage() {
   // Actualizar totales cuando cambien las estadísticas
   useEffect(() => {
     updateTotals();
-  }, [updateTotals]);
+  }, [pushStats, canvasStats, executionStats, webhookStats]); // Dependencias directas en lugar de la función
 
   // Función principal que ejecuta ambas peticiones en paralelo
   const fetchDashboardData = useCallback(async () => {
@@ -271,6 +271,7 @@ export default function PaymentsPage() {
   }, [fetchPushStats, fetchCanvasStats, fetchExecutionStats, fetchWebhookStats]);
 
   // 2. Llamada inicial SOLO una vez al montar
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   useEffect(() => {
     fetchDashboardData();
   }, []); //  ← vacío: ya no depende de las fechas

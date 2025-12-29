@@ -83,61 +83,89 @@ export default function TrafficReportPage() {
   // Función para obtener el número de semana del año, considerando que el domingo pertenece a la semana actual hasta las 11:59 PM (hora de Ecuador)
   const getWeekNumber = (date) => {
     // Convertir a hora de Ecuador (UTC-5)
+    // Crear una fecha en UTC y ajustar a Ecuador
     const inputDate = new Date(date);
-    const ecuadorTime = new Date(
-      inputDate.getTime() + inputDate.getTimezoneOffset() * 60000 - 5 * 3600000
+    const utcTime = Date.UTC(
+      inputDate.getFullYear(),
+      inputDate.getMonth(),
+      inputDate.getDate(),
+      inputDate.getHours(),
+      inputDate.getMinutes(),
+      inputDate.getSeconds()
     );
+    const ecuadorTime = new Date(utcTime - 5 * 3600000);
 
-    // Si es domingo y no han pasado las 11:59 PM en Ecuador, mantener en la semana actual
-    if (ecuadorTime.getDay() === 0 && ecuadorTime.getHours() < 24) {
-      // Para el domingo, usar el día anterior para calcular la semana
-      ecuadorTime.setDate(ecuadorTime.getDate() - 1);
+    // Si es domingo, usar el día anterior para calcular la semana
+    const dayOfWeek = ecuadorTime.getUTCDay();
+    if (dayOfWeek === 0) {
+      ecuadorTime.setUTCDate(ecuadorTime.getUTCDate() - 1);
     }
 
-    // Cálculo más preciso de semana ISO usando hora de Ecuador
-    const d = new Date(
-      Date.UTC(
-        ecuadorTime.getFullYear(),
-        ecuadorTime.getMonth(),
-        ecuadorTime.getDate()
-      )
-    );
+    // Cálculo de semana ISO usando hora de Ecuador
+    const d = new Date(Date.UTC(
+      ecuadorTime.getUTCFullYear(),
+      ecuadorTime.getUTCMonth(),
+      ecuadorTime.getUTCDate()
+    ));
     const dayNum = d.getUTCDay() || 7;
     d.setUTCDate(d.getUTCDate() + 4 - dayNum);
     const yearStart = new Date(Date.UTC(d.getUTCFullYear(), 0, 1));
-    return Math.ceil(((d - yearStart) / 86400000 + 1) / 7);
+    const weekNum = Math.ceil(((d - yearStart) / 86400000 + 1) / 7);
+    
+    return weekNum;
   };
 
   // Función para obtener las semanas por defecto (semana actual y 3 semanas atrás) basado en la hora de Ecuador
   const getDefaultWeeks = () => {
-    // Obtener la fecha actual en Ecuador (UTC-5)
+    // Obtener la fecha actual en hora local y calcular Ecuador time
     const now = new Date();
     const ecuadorTime = new Date(
       now.getTime() + now.getTimezoneOffset() * 60000 - 5 * 3600000
     );
-
-    const currentWeek = getWeekNumber(ecuadorTime);
-    const startWeek = Math.max(1, currentWeek - 3); // No menos de la semana 1
+    
+    const currentWeek = getWeekNumber(now);
+    let currentYear = ecuadorTime.getFullYear();
+    
+    // Si estamos en semana 1 pero en diciembre, el año ISO es el siguiente
+    const currentMonth = ecuadorTime.getMonth(); // 0-11
+    if (currentWeek === 1 && currentMonth === 11) {
+      currentYear = currentYear + 1;
+    }
+    
+    // Calcular semana inicio (3 semanas atrás)
+    let startWeek = currentWeek - 3;
+    let startYear = currentYear;
+    
+    // Si la semana inicio es menor a 1, ajustar al año anterior
+    if (startWeek < 1) {
+      startYear = currentYear - 1;
+      // Para obtener la última semana del año anterior, buscar una fecha que tenga semana alta
+      // El 28 de diciembre siempre está en la última semana del año
+      const dec28OfPrevYear = new Date(startYear, 11, 28);
+      const lastWeekOfPrevYear = getWeekNumber(dec28OfPrevYear);
+      // Ajustar: si startWeek es -2, y lastWeek es 52, entonces 52 + (-2) = 50
+      startWeek = lastWeekOfPrevYear + startWeek;
+    }
+    
     const endWeek = currentWeek;
+    const endYear = currentYear;
 
     return {
       startWeek: startWeek.toString(),
       endWeek: endWeek.toString(),
+      startYear: startYear,
+      endYear: endYear,
     };
   };
 
   // Parámetros de filtro
   const defaultWeeks = getDefaultWeeks();
-  // Obtener el año actual en Ecuador
-  const now = new Date();
-  const ecuadorTime = new Date(
-    now.getTime() + now.getTimezoneOffset() * 60000 - 5 * 3600000
-  );
 
   const [dia, setDia] = useState(getDefaultDay());
   const [startWeek, setStartWeek] = useState(defaultWeeks.startWeek);
   const [endWeek, setEndWeek] = useState(defaultWeeks.endWeek);
-  const [year, setYear] = useState(ecuadorTime.getFullYear());
+  const [startYear, setStartYear] = useState(defaultWeeks.startYear);
+  const [endYear, setEndYear] = useState(defaultWeeks.endYear);
   const [startHour, setStartHour] = useState(7);
   const [endHour, setEndHour] = useState(3);
 
@@ -166,12 +194,22 @@ export default function TrafficReportPage() {
     setError(null);
 
     try {
+      // Construir los parámetros de la URL
+      const params = new URLSearchParams({ dia: dia.toString() });
+      if (startWeek) params.append("start_week", startWeek.toString());
+      if (endWeek) params.append("end_week", endWeek.toString());
+      if (startYear) params.append("start_year", startYear.toString());
+      if (endYear) params.append("end_year", endYear.toString());
+      if (startHour) params.append("start_hour", startHour.toString());
+      if (endHour) params.append("end_hour", endHour.toString());
+
       const data = await getDateTimeVariation(
         accessToken,
         dia,
         startWeek || null,
         endWeek || null,
-        year,
+        startYear || null,
+        endYear || null,
         startHour,
         endHour
       );
@@ -185,7 +223,7 @@ export default function TrafficReportPage() {
     } finally {
       setLoading(false);
     }
-  }, [accessToken, dia, startWeek, endWeek, year, startHour, endHour]);
+  }, [accessToken, dia, startWeek, endWeek, startYear, endYear, startHour, endHour]);
 
   const sendNotification = useCallback(async () => {
     setNotificationLoading(true);
@@ -198,7 +236,8 @@ export default function TrafficReportPage() {
         dia,
         startWeek || null,
         endWeek || null,
-        year,
+        startYear || null,
+        endYear || null,
         startHour,
         endHour
       );
@@ -210,7 +249,7 @@ export default function TrafficReportPage() {
     } finally {
       setNotificationLoading(false);
     }
-  }, [accessToken, dia, startWeek, endWeek, year, startHour, endHour]);
+  }, [accessToken, dia, startWeek, endWeek, startYear, endYear, startHour, endHour]);
 
   // Función para crear meta diaria
   const createMeta = useCallback(async () => {
@@ -504,8 +543,12 @@ export default function TrafficReportPage() {
             dayOptions.find((d) => d.value === dia.toString())?.label || "Dia";
           const weekRange =
             startWeek && endWeek ? `_S${startWeek}-${endWeek}` : "";
+          const yearRange = 
+            startYear && endYear && startYear !== endYear 
+              ? `_${startYear}-${endYear}` 
+              : `_${endYear || startYear}`;
 
-          link.download = `reporte-trafico-${dayName}${weekRange}_${year}_${dateStr}_${timeStr}.jpg`;
+          link.download = `reporte-trafico-${dayName}${weekRange}${yearRange}_${dateStr}_${timeStr}.jpg`;
           document.body.appendChild(link);
           link.click();
           document.body.removeChild(link);
@@ -522,7 +565,7 @@ export default function TrafficReportPage() {
     } finally {
       setDownloadingImage(false);
     }
-  }, [dia, dayOptions, startWeek, endWeek, year]);
+  }, [dia, dayOptions, startWeek, endWeek, startYear, endYear]);
 
   // Definir la función refetchData correctamente
   const refetchData = useCallback(async () => {
@@ -581,13 +624,52 @@ export default function TrafficReportPage() {
   const hourlyData = reportData?.data?.hourly_data || [];
   const metadata = reportData?.metadata;
 
-  // Obtener las semanas disponibles de los datos
-  const weekNumbers =
-    hourlyData.length > 0
-      ? Object.keys(hourlyData[0].semanas).sort(
-          (a, b) => parseInt(a) - parseInt(b)
-        )
-      : [];
+  // Obtener las semanas disponibles de los datos y organizarlas por año
+  const getWeeksWithYear = () => {
+    if (hourlyData.length === 0) return [];
+    
+    const weekKeys = Object.keys(hourlyData[0].semanas);
+    
+    // Mapear cada semana con su año correspondiente
+    const weeksWithYear = weekKeys.map(weekStr => {
+      const weekNum = parseInt(weekStr);
+      
+      // Si la semana es <= 10 y estamos cruzando años, probablemente es del año siguiente
+      // Si la semana es >= 50, probablemente es del año anterior o actual
+      let weekYear;
+      
+      if (weekNum <= 10 && startYear !== endYear) {
+        // Semanas pequeñas cuando hay cross-year pertenecen al endYear
+        weekYear = endYear;
+      } else if (weekNum >= 40) {
+        // Semanas grandes pertenecen al startYear
+        weekYear = startYear;
+      } else {
+        // Para semanas intermedias, usar la lógica basada en el rango
+        weekYear = (weekNum >= parseInt(startWeek) && weekNum <= parseInt(endWeek) && startYear === endYear) 
+          ? startYear 
+          : (weekNum <= parseInt(endWeek) ? endYear : startYear);
+      }
+      
+      return {
+        week: weekStr,
+        weekNum: weekNum,
+        year: weekYear
+      };
+    });
+    
+    // Ordenar por año primero, luego por número de semana
+    weeksWithYear.sort((a, b) => {
+      if (a.year !== b.year) {
+        return a.year - b.year; // Año anterior primero
+      }
+      return a.weekNum - b.weekNum; // Dentro del mismo año, ordenar por semana
+    });
+    
+    return weeksWithYear;
+  };
+
+  const weekNumbers = getWeeksWithYear();
 
   // Calcular la variación semanal basada en la última hora con datos
   const calculateWeeklyVariation = () => {
@@ -611,8 +693,8 @@ export default function TrafficReportPage() {
     }
 
     // Obtener la semana actual y anterior
-    const currentWeek = weekNumbers[weekNumbers.length - 1];
-    const previousWeek = weekNumbers[weekNumbers.length - 2];
+    const currentWeek = weekNumbers[weekNumbers.length - 1]?.week;
+    const previousWeek = weekNumbers[weekNumbers.length - 2]?.week;
 
     const currentWeekValue = lastHourData.semanas[currentWeek] || 0;
     const previousWeekValue = lastHourData.semanas[previousWeek] || 0;
@@ -695,9 +777,17 @@ export default function TrafficReportPage() {
               />
 
               <NumberInput
-                label="Año"
-                value={year}
-                onChange={(value) => setYear(value)}
+                label="Año inicio"
+                value={startYear}
+                onChange={(value) => setStartYear(value)}
+                min={2020}
+                max={2030}
+              />
+              
+              <NumberInput
+                label="Año fin"
+                value={endYear}
+                onChange={(value) => setEndYear(value)}
                 min={2020}
                 max={2030}
               />
@@ -779,16 +869,12 @@ export default function TrafficReportPage() {
         <Button
           onClick={() => {
             const newDefaultWeeks = getDefaultWeeks();
-            // Obtener el año actual en Ecuador
-            const now = new Date();
-            const ecuadorTime = new Date(
-              now.getTime() + now.getTimezoneOffset() * 60000 - 5 * 3600000
-            );
 
             setDia(getDefaultDay());
             setStartWeek(newDefaultWeeks.startWeek);
             setEndWeek(newDefaultWeeks.endWeek);
-            setYear(ecuadorTime.getFullYear());
+            setStartYear(newDefaultWeeks.startYear);
+            setEndYear(newDefaultWeeks.endYear);
             setStartHour(7);
             setEndHour(3);
             // Refrescar los datos después de reiniciar los filtros
@@ -1017,12 +1103,12 @@ export default function TrafficReportPage() {
                       <th className="px-2 py-1 text-center min-w-[50px]">
                         Hora
                       </th>
-                      {weekNumbers.map((week) => (
+                      {weekNumbers.map((weekData) => (
                         <th
-                          key={week}
+                          key={weekData.week}
                           className="px-1 py-1 text-center min-w-[40px]"
                         >
-                          S.{week}
+                          S.{weekData.week}.{weekData.year}
                         </th>
                       ))}
                       <th className="px-2 py-1 text-center min-w-[70px]">
@@ -1041,9 +1127,9 @@ export default function TrafficReportPage() {
                         <td className="font-bold px-2 py-1 text-center">
                           {hour.hora}
                         </td>
-                        {weekNumbers.map((week) => (
-                          <td key={week} className="text-center px-1 py-1">
-                            {hour.semanas[week] || 0}
+                        {weekNumbers.map((weekData) => (
+                          <td key={weekData.week} className="text-center px-1 py-1">
+                            {hour.semanas[weekData.week] || 0}
                           </td>
                         ))}
                         <td className="text-center px-2 py-1">
@@ -1130,13 +1216,13 @@ export default function TrafficReportPage() {
                     </div>
 
                     <div className="grid grid-cols-2 gap-2">
-                      {weekNumbers.map((week) => (
-                        <div key={week} className="text-center">
+                      {weekNumbers.map((weekData) => (
+                        <div key={weekData.week} className="text-center">
                           <div className="text-xs text-gray-600">
-                            Semana {week}
+                            S.{weekData.week}.{weekData.year}
                           </div>
                           <div className="font-semibold">
-                            {hour.semanas[week] || 0}
+                            {hour.semanas[weekData.week] || 0}
                           </div>
                         </div>
                       ))}
@@ -1358,7 +1444,7 @@ export default function TrafficReportPage() {
                         • Semanas: {startWeek} - {endWeek}
                       </p>
                     )}
-                    <p>• Año: {year}</p>
+                    <p>• Año: {startYear === endYear ? startYear : `${startYear} - ${endYear}`}</p>
                   </div>
                   <p className="text-gray-700 text-sm">
                     <span className="font-semibold">

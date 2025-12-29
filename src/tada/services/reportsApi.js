@@ -5,7 +5,8 @@ export const getDateTimeVariation = async (
   dia,
   start_week = null,
   end_week = null,
-  year = null,
+  start_year = null,
+  end_year = null,
   start_hour = null,
   end_hour = null
 ) => {
@@ -13,7 +14,8 @@ export const getDateTimeVariation = async (
 
   if (start_week) params.append("start_week", start_week.toString());
   if (end_week) params.append("end_week", end_week.toString());
-  if (year) params.append("year", year.toString());
+  if (start_year) params.append("start_year", start_year.toString());
+  if (end_year) params.append("end_year", end_year.toString());
   if (start_hour) params.append("start_hour", start_hour.toString());
   if (end_hour) params.append("end_hour", end_hour.toString());
 
@@ -40,7 +42,8 @@ export const sendReportEmail = async (
   dia,
   start_week = null,
   end_week = null,
-  year = null,
+  start_year = null,
+  end_year = null,
   start_hour = null,
   end_hour = null
 ) => {
@@ -48,7 +51,8 @@ export const sendReportEmail = async (
 
   if (start_week) params.append("start_week", start_week.toString());
   if (end_week) params.append("end_week", end_week.toString());
-  if (year) params.append("year", year.toString());
+  if (start_year) params.append("start_year", start_year.toString());
+  if (end_year) params.append("end_year", end_year.toString());
   if (start_hour) params.append("start_hour", start_hour.toString());
   if (end_hour) params.append("end_hour", end_hour.toString());
 

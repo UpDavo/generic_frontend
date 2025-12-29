@@ -249,8 +249,11 @@ export const listWebhookLogsStats = async (
     params.append("end_date", end_date);
   }
 
+  const url = `${API_BASE_URL}/tada/webhook-logs/stats/?${params.toString()}`
+  console.log("Fetching webhook logs stats from URL:", url);
+
   const response = await fetch(
-    `${API_BASE_URL}/tada/webhook-logs/stats/?${params.toString()}`,
+    url,
     {
       method: "GET",
       headers: {
