@@ -315,7 +315,7 @@ export default function WebhooksPage() {
   if (!authorized) return <Unauthorized />;
 
   return (
-    <div className="text-black">
+    <div className="max-w-7xl mx-auto text-black">
       {/* ---------------- TOTAL DE REGISTROS ---------------- */}
       {/* <div className="flex justify-between items-center mb-4">
         <h2 className="text-xl font-bold">Webhooks</h2>
@@ -446,6 +446,7 @@ export default function WebhooksPage() {
               <th>POC</th>
               <th>Comentario</th>
               <th>Recompra</th>
+              <th>Editado</th>
               <th>Gestionado</th>
               <th>Creado</th>
               <th>Acciones</th>
@@ -454,7 +455,7 @@ export default function WebhooksPage() {
           <tbody className="bg-white text-black">
             {loading ? (
               <tr>
-                <td colSpan={9} className="text-center py-4">
+                <td colSpan={10} className="text-center py-4">
                   <Loader size="sm" color="blue" />
                 </td>
               </tr>
@@ -483,6 +484,13 @@ export default function WebhooksPage() {
                       <span className="badge badge-ghost badge-sm">No</span>
                     )}
                   </td>
+                  <td>
+                    {log.is_edited ? (
+                      <span className="badge badge-success badge-sm">Sí</span>
+                    ) : (
+                      <span className="badge badge-ghost badge-sm">No</span>
+                    )}
+                  </td>
                   <td>{log.edited_by || "-"}</td>
                   <td>{new Date(log.created_at).toLocaleString()}</td>
                   <td>
@@ -490,13 +498,8 @@ export default function WebhooksPage() {
                       <Button
                         size="xs"
                         onClick={() => openEditModal(log)}
-                        disabled={log.is_edited}
                         leftSection={<RiEditLine />}
-                        title={
-                          log.is_edited
-                            ? "Este registro ya fue editado"
-                            : "Editar registro"
-                        }
+                        title="Editar registro"
                       >
                         Editar
                       </Button>
@@ -514,7 +517,7 @@ export default function WebhooksPage() {
               ))
             ) : (
               <tr>
-                <td colSpan={9} className="text-center py-4">
+                <td colSpan={10} className="text-center py-4">
                   No se encontraron logs.
                 </td>
               </tr>
@@ -580,6 +583,15 @@ export default function WebhooksPage() {
                 {new Date(log.created_at).toLocaleString()}
               </div>
 
+              <div className="mb-1 font-semibold">Editado:</div>
+              <div className="mb-2">
+                {log.is_edited ? (
+                  <span className="badge badge-success badge-sm">Sí</span>
+                ) : (
+                  <span className="badge badge-ghost badge-sm">No</span>
+                )}
+              </div>
+
               {log.edited_by && (
                 <>
                   <div className="mb-1 font-semibold">Gestionado:</div>
@@ -591,11 +603,10 @@ export default function WebhooksPage() {
                 <Button
                   size="xs"
                   onClick={() => openEditModal(log)}
-                  disabled={log.is_edited}
                   leftSection={<RiEditLine />}
                   className="w-full"
                 >
-                  {log.is_edited ? "Ya editado" : "Editar"}
+                  Editar
                 </Button>
                 <Button
                   size="xs"
@@ -642,9 +653,6 @@ export default function WebhooksPage() {
               </div>
               <div className="text-sm">
                 <strong>Nombre:</strong> {editingLog.name || "N/A"}
-              </div>
-              <div className="text-xs text-gray-600 mt-2">
-                ⚠️ Este registro solo puede editarse una vez
               </div>
             </div>
           )}
