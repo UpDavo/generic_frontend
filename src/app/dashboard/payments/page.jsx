@@ -4,7 +4,8 @@ import { useEffect, useState, useCallback } from "react";
 import { listLogsStats } from "@/tada/services/pushApi";
 import { listCanvasLogsStats, listWebhookLogsStats } from "@/tada/services/canvasApi";
 import { listExecutionLogsStats } from "@/tada/services/executionApi";
-import { TextInput, Loader, Notification, Button } from "@mantine/core";
+import { getSalesReportLogsStats } from "@/tada/services/salesReportApi";
+import { TextInput, Loader, Notification, Button, Accordion } from "@mantine/core";
 import { RiRefreshLine, RiSearchLine } from "react-icons/ri";
 import { useAuth } from "@/auth/hooks/useAuth";
 
@@ -18,11 +19,13 @@ export default function PaymentsPage() {
   const [canvasLoading, setCanvasLoading] = useState(false);
   const [executionLoading, setExecutionLoading] = useState(false);
   const [webhookLoading, setWebhookLoading] = useState(false);
+  const [salesLoading, setSalesLoading] = useState(false);
   const [error, setError] = useState(null);
   const [pushError, setPushError] = useState(null);
   const [canvasError, setCanvasError] = useState(null);
   const [executionError, setExecutionError] = useState(null);
   const [webhookError, setWebhookError] = useState(null);
+  const [salesError, setSalesError] = useState(null);
   const [totalCalls, setTotalCalls] = useState(0);
   const [cost, setCost] = useState(0);
   const [userCalls, setUserCalls] = useState([]);
@@ -33,6 +36,7 @@ export default function PaymentsPage() {
   const [canvasStats, setCanvasStats] = useState(null);
   const [executionStats, setExecutionStats] = useState(null);
   const [webhookStats, setWebhookStats] = useState(null);
+  const [salesStats, setSalesStats] = useState(null);
 
   /* Filtro en la tabla */
   const [searchValue, setSearchValue] = useState("");
@@ -168,22 +172,49 @@ export default function PaymentsPage() {
     }
   }, [accessToken, sentAtGte, sentAtLte]);
 
+  // Función para obtener estadísticas de SALES REPORT
+  const fetchSalesStats = useCallback(async () => {
+    setSalesLoading(true);
+    setSalesError(null);
+
+    try {
+      const salesData = await getSalesReportLogsStats(
+        accessToken,
+        sentAtGte,
+        sentAtLte
+      );
+
+      //   console.log("Sales stats:", salesData);
+      setSalesStats(salesData);
+
+      return salesData;
+    } catch (err) {
+      console.error("Error fetching sales stats:", err);
+      setSalesError("Error al cargar estadísticas de Reportes de Ventas");
+      return null;
+    } finally {
+      setSalesLoading(false);
+    }
+  }, [accessToken, sentAtGte, sentAtLte]);
+
   // Función para calcular y actualizar los totales
   const updateTotals = useCallback(() => {
-    if (pushStats && canvasStats && executionStats && webhookStats) {
+    if (pushStats && canvasStats && executionStats && webhookStats && salesStats) {
       const totalPushLogs = pushStats.summary?.total_logs || 0;
       const totalCanvasLogs = canvasStats.summary?.total_logs || 0;
       const totalExecutionLogs = executionStats.summary?.total_logs || 0;
       const totalWebhookLogs = webhookStats.summary?.total_logs || 0;
+      const totalSalesLogs = salesStats.summary?.total_logs || 0;
       const totalPushCost = parseFloat(pushStats.summary?.total_cost || 0);
       const totalCanvasCost = parseFloat(canvasStats.summary?.total_cost || 0);
       const totalExecutionCost = parseFloat(
         executionStats.summary?.total_cost || 0
       );
       const totalWebhookCost = parseFloat(webhookStats.summary?.total_cost || 0);
+      const totalSalesCost = parseFloat(salesStats.summary?.total_cost || 0);
 
-      setTotalCalls(totalPushLogs + totalCanvasLogs + totalExecutionLogs + totalWebhookLogs);
-      setCost(totalPushCost + totalCanvasCost + totalExecutionCost + totalWebhookCost);
+      setTotalCalls(totalPushLogs + totalCanvasLogs + totalExecutionLogs + totalWebhookLogs + totalSalesLogs);
+      setCost(totalPushCost + totalCanvasCost + totalExecutionCost + totalWebhookCost + totalSalesCost);
 
       // Combinar usuarios de todos los tipos para la tabla
       const allUsers = [];
@@ -243,14 +274,27 @@ export default function PaymentsPage() {
         });
       }
 
+      // Agregar estadísticas de SALES REPORT
+      if (salesStats.breakdown?.by_user) {
+        salesStats.breakdown.by_user.forEach((user) => {
+          allUsers.push({
+            user: user.user__first_name || user.user__email,
+            count: user.count,
+            cost: parseFloat(salesStats.summary?.unit_price || 0) * user.count,
+            type: "SALES",
+            email: user.user__email,
+          });
+        });
+      }
+
       setUserCalls(allUsers);
     }
-  }, [pushStats, canvasStats, executionStats, webhookStats]);
+  }, [pushStats, canvasStats, executionStats, webhookStats, salesStats]);
 
   // Actualizar totales cuando cambien las estadísticas
   useEffect(() => {
     updateTotals();
-  }, [pushStats, canvasStats, executionStats, webhookStats]); // Dependencias directas en lugar de la función
+  }, [pushStats, canvasStats, executionStats, webhookStats, salesStats]); // Dependencias directas en lugar de la función
 
   // Función principal que ejecuta ambas peticiones en paralelo
   const fetchDashboardData = useCallback(async () => {
@@ -263,12 +307,13 @@ export default function PaymentsPage() {
         fetchCanvasStats(),
         fetchExecutionStats(),
         fetchWebhookStats(),
+        fetchSalesStats(),
       ]);
     } catch (err) {
       console.error("Error general:", err);
       setError("Error al cargar los datos del dashboard.");
     }
-  }, [fetchPushStats, fetchCanvasStats, fetchExecutionStats, fetchWebhookStats]);
+  }, [fetchPushStats, fetchCanvasStats, fetchExecutionStats, fetchWebhookStats, fetchSalesStats]);
 
   // 2. Llamada inicial SOLO una vez al montar
   // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -333,12 +378,12 @@ export default function PaymentsPage() {
           onClick={fetchDashboardData}
           variant="filled"
           leftSection={<RiSearchLine />}
-          disabled={pushLoading || canvasLoading || executionLoading}
+          disabled={pushLoading || canvasLoading || executionLoading || webhookLoading || salesLoading}
         >
           Buscar
         </Button>
 
-        {/* Opcional: refresco “rápido” ignorando filtros */}
+        {/* Opcional: refresco "rápido" ignorando filtros */}
         <Button
           onClick={() => {
             setSentAtGte(getMonthStart());
@@ -347,7 +392,7 @@ export default function PaymentsPage() {
           }}
           variant="filled"
           leftSection={<RiRefreshLine />}
-          disabled={pushLoading || canvasLoading || executionLoading}
+          disabled={pushLoading || canvasLoading || executionLoading || webhookLoading || salesLoading}
         >
           Reiniciar
         </Button>
@@ -409,12 +454,24 @@ export default function PaymentsPage() {
         </Notification>
       )}
 
+      {salesError && (
+        <Notification
+          color="red"
+          className="mb-4"
+          onClose={() => setSalesError(null)}
+          withCloseButton
+        >
+          {salesError}
+        </Notification>
+      )}
+
       {/* ------------- TARJETAS ------------- */}
-      <div className="mt-2">
-        <div className="grid md:grid-cols-6 grid-cols-1 gap-6 mb-6">
+      <div className="mt-2 space-y-6">
+        {/* Total y Registros */}
+        <div className="grid md:grid-cols-2 grid-cols-1 gap-6">
           <div className="card bg-white shadow p-6 text-center">
             <h2 className="text-lg font-bold mb-2 text-black">Total</h2>
-            {pushLoading || canvasLoading || executionLoading || webhookLoading ? (
+            {pushLoading || canvasLoading || executionLoading || webhookLoading || salesLoading ? (
               <div className="flex justify-center">
                 <Loader size="md" />
               </div>
@@ -426,7 +483,7 @@ export default function PaymentsPage() {
           </div>
           <div className="card bg-white shadow p-6 text-center">
             <h2 className="text-lg font-bold mb-2 text-black">Registros</h2>
-            {pushLoading || canvasLoading || executionLoading || webhookLoading ? (
+            {pushLoading || canvasLoading || executionLoading || webhookLoading || salesLoading ? (
               <div className="flex justify-center">
                 <Loader size="md" />
               </div>
@@ -434,105 +491,165 @@ export default function PaymentsPage() {
               <p className="text-4xl font-extrabold text-info">{totalCalls}</p>
             )}
           </div>
-          <div className="card bg-white shadow p-6 text-center">
-            <h2 className="text-lg font-bold mb-2 text-black">Push Enviados</h2>
-            {pushLoading ? (
-              <div className="flex justify-center">
-                <Loader size="md" />
-              </div>
-            ) : pushError ? (
-              <p className="text-sm text-red-500">Error al cargar</p>
-            ) : (
-              <>
-                <p className="text-2xl font-bold text-blue-600">
-                  {pushStats?.summary?.total_logs || 0}
-                </p>
-                <p className="text-sm text-gray-600">
-                  ${parseFloat(pushStats?.summary?.total_cost || 0).toFixed(2)}
-                </p>
-              </>
-            )}
-          </div>
-          <div className="card bg-white shadow p-6 text-center">
-            <h2 className="text-lg font-bold mb-2 text-black">
-              In-Apps Enviados
-            </h2>
-            {canvasLoading ? (
-              <div className="flex justify-center">
-                <Loader size="md" />
-              </div>
-            ) : canvasError ? (
-              <p className="text-sm text-red-500">Error al cargar</p>
-            ) : (
-              <>
-                <p className="text-2xl font-bold text-purple-600">
-                  {canvasStats?.summary?.total_logs || 0}
-                </p>
-                <p className="text-sm text-gray-600">
-                  $
-                  {parseFloat(canvasStats?.summary?.total_cost || 0).toFixed(2)}
-                </p>
-              </>
-            )}
-          </div>
-          <div className="card bg-white shadow p-6 text-center">
-            <h2 className="text-lg font-bold mb-2 text-black">
-              Reportes Enviados
-            </h2>
-            {executionLoading ? (
-              <div className="flex justify-center">
-                <Loader size="md" />
-              </div>
-            ) : executionError ? (
-              <p className="text-sm text-red-500">Error al cargar</p>
-            ) : (
-              <>
-                <p className="text-2xl font-bold text-green-600">
-                  {executionStats?.summary?.total_logs || 0}
-                </p>
-                <p className="text-sm text-gray-600">
-                  $
-                  {parseFloat(executionStats?.summary?.total_cost || 0).toFixed(
-                    2
-                  )}
-                </p>
-              </>
-            )}
-          </div>
-          <div className="card bg-white shadow p-6 text-center">
-            <h2 className="text-lg font-bold mb-2 text-black">
-              Webhooks
-            </h2>
-            {webhookLoading ? (
-              <div className="flex justify-center">
-                <Loader size="md" />
-              </div>
-            ) : webhookError ? (
-              <p className="text-sm text-red-500">Error al cargar</p>
-            ) : (
-              <>
-                <p className="text-2xl font-bold text-orange-600">
-                  {webhookStats?.summary?.total_logs || 0}
-                </p>
-                <p className="text-sm text-gray-600">
-                  $
-                  {parseFloat(webhookStats?.summary?.total_cost || 0).toFixed(
-                    2
-                  )}
-                </p>
-              </>
-            )}
-          </div>
         </div>
+
+        {/* Acordeón de Secciones */}
+        <Accordion defaultValue="comunicacion" variant="contained">
+          {/* Comunicación: Push e In-Apps */}
+          <Accordion.Item value="comunicacion">
+            <Accordion.Control>
+              <span className="text-lg font-bold">Comunicación</span>
+            </Accordion.Control>
+            <Accordion.Panel>
+              <div className="grid md:grid-cols-2 grid-cols-1 gap-6">
+                <div className="card bg-white shadow p-6 text-center">
+                  <h2 className="text-lg font-bold mb-2 text-black">Push Enviados</h2>
+                  {pushLoading ? (
+                    <div className="flex justify-center">
+                      <Loader size="md" />
+                    </div>
+                  ) : pushError ? (
+                    <p className="text-sm text-red-500">Error al cargar</p>
+                  ) : (
+                    <>
+                      <p className="text-2xl font-bold text-blue-600">
+                        {pushStats?.summary?.total_logs || 0}
+                      </p>
+                      <p className="text-sm text-gray-600">
+                        ${parseFloat(pushStats?.summary?.total_cost || 0).toFixed(2)}
+                      </p>
+                    </>
+                  )}
+                </div>
+                <div className="card bg-white shadow p-6 text-center">
+                  <h2 className="text-lg font-bold mb-2 text-black">
+                    In-Apps Enviados
+                  </h2>
+                  {canvasLoading ? (
+                    <div className="flex justify-center">
+                      <Loader size="md" />
+                    </div>
+                  ) : canvasError ? (
+                    <p className="text-sm text-red-500">Error al cargar</p>
+                  ) : (
+                    <>
+                      <p className="text-2xl font-bold text-purple-600">
+                        {canvasStats?.summary?.total_logs || 0}
+                      </p>
+                      <p className="text-sm text-gray-600">
+                        $
+                        {parseFloat(canvasStats?.summary?.total_cost || 0).toFixed(2)}
+                      </p>
+                    </>
+                  )}
+                </div>
+              </div>
+            </Accordion.Panel>
+          </Accordion.Item>
+
+          {/* Alertas: Webhooks */}
+          <Accordion.Item value="alertas">
+            <Accordion.Control>
+              <span className="text-lg font-bold">Alertas</span>
+            </Accordion.Control>
+            <Accordion.Panel>
+              <div className="grid md:grid-cols-1 grid-cols-1 gap-6">
+                <div className="card bg-white shadow p-6 text-center">
+                  <h2 className="text-lg font-bold mb-2 text-black">
+                    Webhooks
+                  </h2>
+                  {webhookLoading ? (
+                    <div className="flex justify-center">
+                      <Loader size="md" />
+                    </div>
+                  ) : webhookError ? (
+                    <p className="text-sm text-red-500">Error al cargar</p>
+                  ) : (
+                    <>
+                      <p className="text-2xl font-bold text-orange-600">
+                        {webhookStats?.summary?.total_logs || 0}
+                      </p>
+                      <p className="text-sm text-gray-600">
+                        $
+                        {parseFloat(webhookStats?.summary?.total_cost || 0).toFixed(
+                          2
+                        )}
+                      </p>
+                    </>
+                  )}
+                </div>
+              </div>
+            </Accordion.Panel>
+          </Accordion.Item>
+
+          {/* Reportes: Tráfico y Ventas */}
+          <Accordion.Item value="reportes">
+            <Accordion.Control>
+              <span className="text-lg font-bold">Reportes</span>
+            </Accordion.Control>
+            <Accordion.Panel>
+              <div className="grid md:grid-cols-2 grid-cols-1 gap-6">
+                <div className="card bg-white shadow p-6 text-center">
+                  <h2 className="text-lg font-bold mb-2 text-black">
+                    Reporte de Tráfico
+                  </h2>
+                  {executionLoading ? (
+                    <div className="flex justify-center">
+                      <Loader size="md" />
+                    </div>
+                  ) : executionError ? (
+                    <p className="text-sm text-red-500">Error al cargar</p>
+                  ) : (
+                    <>
+                      <p className="text-2xl font-bold text-green-600">
+                        {executionStats?.summary?.total_logs || 0}
+                      </p>
+                      <p className="text-sm text-gray-600">
+                        $
+                        {parseFloat(executionStats?.summary?.total_cost || 0).toFixed(
+                          2
+                        )}
+                      </p>
+                    </>
+                  )}
+                </div>
+                <div className="card bg-white shadow p-6 text-center">
+                  <h2 className="text-lg font-bold mb-2 text-black">
+                    Reporte de Ventas
+                  </h2>
+                  {salesLoading ? (
+                    <div className="flex justify-center">
+                      <Loader size="md" />
+                    </div>
+                  ) : salesError ? (
+                    <p className="text-sm text-red-500">Error al cargar</p>
+                  ) : (
+                    <>
+                      <p className="text-2xl font-bold text-teal-600">
+                        {salesStats?.summary?.total_logs || 0}
+                      </p>
+                      <p className="text-sm text-gray-600">
+                        $
+                        {parseFloat(salesStats?.summary?.total_cost || 0).toFixed(
+                          2
+                        )}
+                      </p>
+                    </>
+                  )}
+                </div>
+              </div>
+            </Accordion.Panel>
+          </Accordion.Item>
+        </Accordion>
       </div>
 
       {/* ------------- TABLA ------------- */}
-      <div className="card bg-white shadow-xl p-6 text-black">
+      <div className="card bg-white shadow-xl p-6 text-black mt-8">
         <h2 className="text-lg text-black font-bold mb-4 text-center">
           Notificaciones por Usuario
         </h2>
 
-        {pushLoading || canvasLoading || executionLoading || webhookLoading ? (
+        {pushLoading || canvasLoading || executionLoading || webhookLoading || salesLoading ? (
           <div className="flex justify-center items-center h-32">
             <div className="text-center">
               <Loader size="lg" />
@@ -562,7 +679,7 @@ export default function PaymentsPage() {
                           columnAccessor: "user",
                           direction:
                             sortStatus.columnAccessor === "user" &&
-                            sortStatus.direction === "asc"
+                              sortStatus.direction === "asc"
                               ? "desc"
                               : "asc",
                         })
@@ -579,7 +696,7 @@ export default function PaymentsPage() {
                           columnAccessor: "type",
                           direction:
                             sortStatus.columnAccessor === "type" &&
-                            sortStatus.direction === "asc"
+                              sortStatus.direction === "asc"
                               ? "desc"
                               : "asc",
                         })
@@ -596,7 +713,7 @@ export default function PaymentsPage() {
                           columnAccessor: "count",
                           direction:
                             sortStatus.columnAccessor === "count" &&
-                            sortStatus.direction === "asc"
+                              sortStatus.direction === "asc"
                               ? "desc"
                               : "asc",
                         })
@@ -613,7 +730,7 @@ export default function PaymentsPage() {
                           columnAccessor: "cost",
                           direction:
                             sortStatus.columnAccessor === "cost" &&
-                            sortStatus.direction === "asc"
+                              sortStatus.direction === "asc"
                               ? "desc"
                               : "asc",
                         })
@@ -631,15 +748,16 @@ export default function PaymentsPage() {
                       <td className="uppercase font-bold">{record.user}</td>
                       <td>
                         <span
-                          className={`badge ${
-                            record.type === "PUSH"
+                          className={`badge ${record.type === "PUSH"
                               ? "badge-primary"
                               : record.type === "CANVAS"
-                              ? "badge-secondary"
-                              : record.type === "WEBHOOK"
-                              ? "badge-warning"
-                              : "badge-success"
-                          }`}
+                                ? "badge-secondary"
+                                : record.type === "WEBHOOK"
+                                  ? "badge-warning"
+                                  : record.type === "SALES"
+                                    ? "badge-info"
+                                    : "badge-success"
+                            }`}
                         >
                           {record.type}
                         </span>
@@ -671,15 +789,16 @@ export default function PaymentsPage() {
                       </div>
                     </div>
                     <span
-                      className={`badge ${
-                        record.type === "PUSH"
+                      className={`badge ${record.type === "PUSH"
                           ? "badge-primary"
                           : record.type === "CANVAS"
-                          ? "badge-secondary"
-                          : record.type === "WEBHOOK"
-                          ? "badge-warning"
-                          : "badge-success"
-                      }`}
+                            ? "badge-secondary"
+                            : record.type === "WEBHOOK"
+                              ? "badge-warning"
+                              : record.type === "SALES"
+                                ? "badge-info"
+                                : "badge-success"
+                        }`}
                     >
                       {record.type}
                     </span>

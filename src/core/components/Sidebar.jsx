@@ -92,8 +92,8 @@ export default function Sidebar2({ className = "", user, handleLogout }) {
   return (
     <div
       id="sidebar"
-      className={`transition-all duration-200 relative bg-white rounded-xl ml-4 mt-4 mb-4 shadow-lg border border-gray-200 flex flex-col h-[calc(100vh-2rem)] overflow-hidden
-          ${collapsed ? "w-30" : "w-80"} hidden md:block ${className}`}
+      className={`transition-all duration-200 relative bg-white rounded-xl ml-4 mt-4 mb-4 shadow-lg border border-gray-200 flex flex-col h-[calc(100vh-2rem)] overflow-hidden flex-shrink-0
+          ${collapsed ? "w-20" : "w-80"} hidden md:block ${className}`}
     >
       {/* Header fijo - Toggle button */}
       <div className="flex-none p-4">

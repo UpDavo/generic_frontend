@@ -4,4 +4,5 @@ export const APPS = [
   { value: "3", label: "TRAFFIC" },
   { value: "4", label: "EXECUTION" },
   { value: "5", label: "WEBHOOK" },
+  { value: "6", label: "SALES" },
 ];

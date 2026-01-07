@@ -3,7 +3,6 @@
 import { useEffect, useState, useCallback } from "react";
 import {
   listWebhookLogs,
-  listWebhookLogsReport,
   downloadWebhookLogsExcel,
   updateWebhookLog,
 } from "@/tada/services/webhookApi";
@@ -28,15 +27,6 @@ import {
   RiEditLine,
   RiEyeLine,
 } from "react-icons/ri";
-import {
-  BarChart,
-  Bar,
-  XAxis,
-  YAxis,
-  Tooltip,
-  ResponsiveContainer,
-  Cell,
-} from "recharts";
 import { useRouter } from "next/navigation";
 import { Unauthorized } from "@/core/components/Unauthorized";
 
@@ -315,15 +305,7 @@ export default function WebhooksPage() {
   if (!authorized) return <Unauthorized />;
 
   return (
-    <div className="max-w-7xl mx-auto text-black">
-      {/* ---------------- TOTAL DE REGISTROS ---------------- */}
-      {/* <div className="flex justify-between items-center mb-4">
-        <h2 className="text-xl font-bold">Webhooks</h2>
-        <div className="badge badge-lg badge-primary">
-          Total: {totalRecords} registros
-        </div>
-      </div> */}
-
+    <div className="text-black">
       {error && (
         <Notification color="red" className="mb-4">
           {error}
@@ -442,11 +424,7 @@ export default function WebhooksPage() {
             <tr>
               <th>Nombre</th>
               <th>Email</th>
-              <th>Tipo de Evento</th>
-              <th>POC</th>
-              <th>Comentario</th>
               <th>Recompra</th>
-              <th>Editado</th>
               <th>Gestionado</th>
               <th>Creado</th>
               <th>Acciones</th>
@@ -455,7 +433,7 @@ export default function WebhooksPage() {
           <tbody className="bg-white text-black">
             {loading ? (
               <tr>
-                <td colSpan={10} className="text-center py-4">
+                <td colSpan={6} className="text-center py-4">
                   <Loader size="sm" color="blue" />
                 </td>
               </tr>
@@ -465,27 +443,7 @@ export default function WebhooksPage() {
                   <td className="font-bold">{log.name || "N/A"}</td>
                   <td className="lowercase italic">{log.email}</td>
                   <td>
-                    <span
-                      className="badge badge-sm"
-                      style={{
-                        backgroundColor: getEventTypeColor(log.event_type),
-                        color: "white",
-                      }}
-                    >
-                      {getEventTypeLabel(log.event_type)}
-                    </span>
-                  </td>
-                  <td>{log.poc || "-"}</td>
-                  <td className="max-w-xs truncate">{log.comment || "-"}</td>
-                  <td>
                     {log.repurchased ? (
-                      <span className="badge badge-success badge-sm">Sí</span>
-                    ) : (
-                      <span className="badge badge-ghost badge-sm">No</span>
-                    )}
-                  </td>
-                  <td>
-                    {log.is_edited ? (
                       <span className="badge badge-success badge-sm">Sí</span>
                     ) : (
                       <span className="badge badge-ghost badge-sm">No</span>
@@ -517,7 +475,7 @@ export default function WebhooksPage() {
               ))
             ) : (
               <tr>
-                <td colSpan={10} className="text-center py-4">
+                <td colSpan={6} className="text-center py-4">
                   No se encontraron logs.
                 </td>
               </tr>
@@ -544,32 +502,6 @@ export default function WebhooksPage() {
               <div className="mb-1 font-semibold">Email:</div>
               <div className="lowercase mb-2">{log.email}</div>
 
-              <div className="flex gap-2 mb-2">
-                <span
-                  className="badge badge-sm"
-                  style={{
-                    backgroundColor: getEventTypeColor(log.event_type),
-                    color: "white",
-                  }}
-                >
-                  {getEventTypeLabel(log.event_type)}
-                </span>
-              </div>
-
-              {log.poc && (
-                <>
-                  <div className="mb-1 font-semibold">POC:</div>
-                  <div className="mb-2">{log.poc}</div>
-                </>
-              )}
-
-              {log.comment && (
-                <>
-                  <div className="mb-1 font-semibold">Comentario:</div>
-                  <div className="mb-2">{log.comment}</div>
-                </>
-              )}
-
               <div className="mb-1 font-semibold">Recompra:</div>
               <div className="mb-2">
                 {log.repurchased ? (
@@ -581,15 +513,6 @@ export default function WebhooksPage() {
 
               <div className="text-xs text-gray-500 mt-2">
                 {new Date(log.created_at).toLocaleString()}
-              </div>
-
-              <div className="mb-1 font-semibold">Editado:</div>
-              <div className="mb-2">
-                {log.is_edited ? (
-                  <span className="badge badge-success badge-sm">Sí</span>
-                ) : (
-                  <span className="badge badge-ghost badge-sm">No</span>
-                )}
               </div>
 
               {log.edited_by && (
@@ -624,6 +547,7 @@ export default function WebhooksPage() {
         )}
       </div>
 
+      {/* Paginación */}
       <Pagination
         value={page}
         onChange={setPage}

@@ -20,6 +20,10 @@ import {
   RiBarChart2Line,
   RiMedalLine,
   RiWebhookLine,
+  RiShoppingCartLine,
+  RiStore2Line,
+  RiBoxingLine,
+  RiFileExcel2Line,
 } from "react-icons/ri";
 export const dashboardRoutes = [
   {
@@ -32,6 +36,22 @@ export const dashboardRoutes = [
         icon: RiMoneyDollarCircleLine,
         permission: "/dashboard/payments",
       },
+    ],
+  },
+  {
+    section: "Alertas",
+    children: [
+      {
+        path: "/dashboard/webhooks",
+        name: "Webhooks",
+        icon: RiWebhookLine,
+        permission: "/dashboard/webhooks",
+      },
+    ],
+  },
+  {
+    section: "Comunicación",
+    children: [
       {
         name: "Push",
         icon: RiSmartphoneLine,
@@ -80,6 +100,11 @@ export const dashboardRoutes = [
           },
         ],
       },
+    ],
+  },
+  {
+    section: "Reportes",
+    children: [
       {
         name: "Reporte de Tráfico",
         icon: RiDatabase2Line,
@@ -99,10 +124,28 @@ export const dashboardRoutes = [
         ],
       },
       {
-        path: "/dashboard/webhooks",
-        name: "Webhooks",
-        icon: RiWebhookLine,
-        permission: "/dashboard/webhooks",
+        name: "Reporte de Ventas",
+        icon: RiShoppingCartLine,
+        children: [
+          {
+            path: "/dashboard/sales/pocs",
+            icon: RiStore2Line,
+            name: "POCs",
+            permission: "/dashboard/sales/pocs",
+          },
+          {
+            path: "/dashboard/sales/skus",
+            icon: RiBoxingLine,
+            name: "SKUs",
+            permission: "/dashboard/sales/skus",
+          },
+          {
+            path: "/dashboard/sales/process",
+            icon: RiFileExcel2Line,
+            name: "Procesamiento",
+            permission: "/dashboard/sales/process",
+          },
+        ],
       },
     ],
   },
