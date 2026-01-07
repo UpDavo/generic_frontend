@@ -134,10 +134,16 @@ export const dashboardRoutes = [
             permission: "/dashboard/sales/pocs",
           },
           {
-            path: "/dashboard/sales/skus",
+            path: "/dashboard/sales/productos-compra",
             icon: RiBoxingLine,
-            name: "SKUs",
-            permission: "/dashboard/sales/skus",
+            name: "Productos Compra",
+            permission: "/dashboard/sales/productos-compra",
+          },
+          {
+            path: "/dashboard/sales/productos-app",
+            icon: RiBoxingLine,
+            name: "Productos App",
+            permission: "/dashboard/sales/productos-app",
           },
           {
             path: "/dashboard/sales/process",
