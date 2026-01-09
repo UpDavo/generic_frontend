@@ -1,10 +1,10 @@
 import API_BASE_URL from "@/config/apiConfig";
 
 /**
- * Procesa un archivo Excel y devuelve el resultado
+ * Procesa un archivo Excel y descarga el resultado
  * @param {string} accessToken - Token de autenticación
  * @param {File} excelFile - Archivo Excel a procesar
- * @returns {Promise<{json_result: object, excel_url: string}>}
+ * @returns {Promise<void>} - Inicia la descarga del archivo
  */
 export const processSalesReport = async (accessToken, excelFile) => {
     const formData = new FormData();
@@ -23,7 +23,29 @@ export const processSalesReport = async (accessToken, excelFile) => {
         throw new Error(errorData.detail || errorData.message || "Error al procesar el archivo");
     }
 
-    return await response.json();
+    // Obtener el blob (archivo Excel binario)
+    const blob = await response.blob();
+    
+    // Obtener el nombre del archivo desde el header Content-Disposition
+    const contentDisposition = response.headers.get('Content-Disposition');
+    let filename = 'reporte_ventas_consolidado.xlsx';
+    
+    if (contentDisposition) {
+        const filenameMatch = contentDisposition.match(/filename="?(.+?)"?$/);
+        if (filenameMatch) {
+            filename = filenameMatch[1];
+        }
+    }
+    
+    // Crear URL temporal y descargar
+    const url = window.URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = filename;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    window.URL.revokeObjectURL(url);
 };
 
 /**

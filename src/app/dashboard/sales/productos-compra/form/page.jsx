@@ -67,6 +67,8 @@ export default function ProductosCompraFormPage() {
         cost_per_unit: 0,
         cost_per_box: 0,
         cost_per_hectoliter: 0,
+        hectoliter_per_unit: 0,
+        hectoliter_box: 0,
         brand: "",
         category: "",
     });
@@ -93,9 +95,11 @@ export default function ProductosCompraFormPage() {
                     primary_can: data.primary_can || "",
                     returnable: data.returnable || false,
                     origen: data.origen || "nacional",
-                    cost_per_unit: data.costs?.cost_per_unit || 0,
-                    cost_per_box: data.costs?.cost_per_box || 0,
-                    cost_per_hectoliter: data.costs?.cost_per_hectoliter || 0,
+                    cost_per_unit: data.cost_per_unit || 0,
+                    cost_per_box: data.cost_per_box || 0,
+                    cost_per_hectoliter: data.cost_per_hectoliter || 0,
+                    hectoliter_per_unit: data.hectoliter_per_unit || 0,
+                    hectoliter_box: data.hectoliter_box || 0,
                     brand: data.brand || "",
                     category: data.category || "",
                 });
@@ -155,11 +159,11 @@ export default function ProductosCompraFormPage() {
                 primary_can: formData.primary_can,
                 returnable: formData.returnable,
                 origen: formData.origen,
-                costs: {
-                    cost_per_unit: parseFloat(formData.cost_per_unit) || 0,
-                    cost_per_box: parseFloat(formData.cost_per_box) || 0,
-                    cost_per_hectoliter: parseFloat(formData.cost_per_hectoliter) || 0,
-                },
+                cost_per_unit: parseFloat(formData.cost_per_unit) || 0,
+                cost_per_box: parseFloat(formData.cost_per_box) || 0,
+                cost_per_hectoliter: parseFloat(formData.cost_per_hectoliter) || 0,
+                hectoliter_per_unit: parseFloat(formData.hectoliter_per_unit) || 0,
+                hectoliter_box: parseFloat(formData.hectoliter_box) || 0,
                 brand: formData.brand,
                 category: formData.category,
             };
@@ -381,6 +385,34 @@ export default function ProductosCompraFormPage() {
                                         }
                                         min={0}
                                         step={1}
+                                    />
+                                    <NumberInput
+                                        label="Hectolitros por Unidad"
+                                        placeholder="0.00355"
+                                        value={formData.hectoliter_per_unit}
+                                        onChange={(value) =>
+                                            setFormData({
+                                                ...formData,
+                                                hectoliter_per_unit: value || 0,
+                                            })
+                                        }
+                                        min={0}
+                                        step={0.00001}
+                                        precision={5}
+                                    />
+                                    <NumberInput
+                                        label="Hectolitros por Caja"
+                                        placeholder="0.0852"
+                                        value={formData.hectoliter_box}
+                                        onChange={(value) =>
+                                            setFormData({
+                                                ...formData,
+                                                hectoliter_box: value || 0,
+                                            })
+                                        }
+                                        min={0}
+                                        step={0.0001}
+                                        precision={4}
                                     />
                                 </div>
                             </Accordion.Panel>

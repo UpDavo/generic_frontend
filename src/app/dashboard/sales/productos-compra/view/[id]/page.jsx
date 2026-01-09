@@ -214,6 +214,22 @@ export default function ProductosCompraViewPage() {
                                 {producto.box_units || 0} unidades
                             </div>
                         </div>
+                        <div>
+                            <label className="text-sm font-medium text-gray-600">
+                                Hectolitros por Unidad
+                            </label>
+                            <div className="mt-1 text-lg font-semibold">
+                                {producto.hectoliter_per_unit || 0} hl
+                            </div>
+                        </div>
+                        <div>
+                            <label className="text-sm font-medium text-gray-600">
+                                Hectolitros por Caja
+                            </label>
+                            <div className="mt-1 text-lg font-semibold">
+                                {producto.hectoliter_box || 0} hl
+                            </div>
+                        </div>
                     </div>
                 </Card>
 
@@ -226,7 +242,7 @@ export default function ProductosCompraViewPage() {
                                 Costo por Unidad
                             </label>
                             <div className="mt-1 text-lg font-semibold text-green-600">
-                                S/ {parseFloat(producto.costs?.cost_per_unit || 0).toFixed(2)}
+                                S/ {parseFloat(producto.cost_per_unit || 0).toFixed(2)}
                             </div>
                         </div>
                         <div>
@@ -234,7 +250,7 @@ export default function ProductosCompraViewPage() {
                                 Costo por Caja
                             </label>
                             <div className="mt-1 text-lg font-semibold text-green-600">
-                                S/ {parseFloat(producto.costs?.cost_per_box || 0).toFixed(2)}
+                                S/ {parseFloat(producto.cost_per_box || 0).toFixed(2)}
                             </div>
                         </div>
                         <div>
@@ -242,7 +258,7 @@ export default function ProductosCompraViewPage() {
                                 Costo por Hectolitro
                             </label>
                             <div className="mt-1 text-lg font-semibold text-green-600">
-                                S/ {parseFloat(producto.costs?.cost_per_hectoliter || 0).toFixed(2)}
+                                S/ {parseFloat(producto.cost_per_hectoliter || 0).toFixed(2)}
                             </div>
                         </div>
                     </div>

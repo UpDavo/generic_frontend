@@ -26,6 +26,7 @@ import {
 } from "react-icons/ri";
 import { Unauthorized } from "@/core/components/Unauthorized";
 import ConfirmDeleteModal from "@/core/components/ConfirmDeleteModal";
+import { ProcessingOverlay } from "@/core/components/ProcessingOverlay";
 import {
     listPocs,
     getPocById,
@@ -126,6 +127,7 @@ export default function PocsPage() {
     const [excelModalOpen, setExcelModalOpen] = useState(false);
     const [excelFile, setExcelFile] = useState(null);
     const [uploadingExcel, setUploadingExcel] = useState(false);
+    const [showSuccessOverlay, setShowSuccessOverlay] = useState(false);
 
     /* =========================================================
        Traer POCs
@@ -304,16 +306,15 @@ export default function PocsPage() {
         if (!excelFile) return;
 
         setUploadingExcel(true);
+        setExcelModalOpen(false);
         try {
-            const result = await bulkCreatePocsFromExcel(accessToken, excelFile);
-            setExcelModalOpen(false);
+            await bulkCreatePocsFromExcel(accessToken, excelFile);
+            setShowSuccessOverlay(true);
             setExcelFile(null);
-            fetchPocs();
-            alert(`Carga completada. ${JSON.stringify(result)}`);
+            await fetchPocs();
         } catch (err) {
             console.error(err);
             setError(err.message || "Error al cargar el archivo");
-        } finally {
             setUploadingExcel(false);
         }
     };
@@ -871,6 +872,17 @@ export default function PocsPage() {
                     </Button>
                 </div>
             </Modal>
+
+            <ProcessingOverlay
+                isProcessing={uploadingExcel}
+                showSuccess={showSuccessOverlay}
+                successMessage="¡POCs cargados exitosamente!"
+                processingMessage="Cargando POCs desde Excel..."
+                onSuccessClose={() => {
+                    setShowSuccessOverlay(false);
+                    setUploadingExcel(false);
+                }}
+            />
         </div>
     );
 }

@@ -26,11 +26,13 @@ import {
 } from "react-icons/ri";
 import { Unauthorized } from "@/core/components/Unauthorized";
 import ConfirmDeleteModal from "@/core/components/ConfirmDeleteModal";
+import { ProcessingOverlay } from "@/core/components/ProcessingOverlay";
 import {
     listProductosApp,
     deleteProductoApp,
     bulkCreateProductosAppFromExcel,
     downloadProductosAppTemplate,
+    downloadAllProductosApp,
 } from "@/tada/services/ventasProductosAppApi";
 
 const PERMISSION_PATH = "/dashboard/sales/productos-app";
@@ -84,6 +86,7 @@ export default function ProductosAppPage() {
     const [excelModalOpen, setExcelModalOpen] = useState(false);
     const [excelFile, setExcelFile] = useState(null);
     const [uploadingExcel, setUploadingExcel] = useState(false);
+    const [showSuccessOverlay, setShowSuccessOverlay] = useState(false);
 
     /* =========================================================
        Traer Productos
@@ -187,16 +190,15 @@ export default function ProductosAppPage() {
         if (!excelFile) return;
 
         setUploadingExcel(true);
+        setExcelModalOpen(false);
         try {
-            const result = await bulkCreateProductosAppFromExcel(accessToken, excelFile);
-            setExcelModalOpen(false);
+            await bulkCreateProductosAppFromExcel(accessToken, excelFile);
+            setShowSuccessOverlay(true);
             setExcelFile(null);
-            fetchProductos();
-            alert(`Carga completada. ${JSON.stringify(result)}`);
+            await fetchProductos();
         } catch (err) {
             console.error(err);
             setError(err.message || "Error al cargar el archivo");
-        } finally {
             setUploadingExcel(false);
         }
     };
@@ -207,6 +209,15 @@ export default function ProductosAppPage() {
         } catch (err) {
             console.error(err);
             setError("Error al descargar la plantilla");
+        }
+    };
+
+    const handleDownloadAll = async () => {
+        try {
+            await downloadAllProductosApp(accessToken);
+        } catch (err) {
+            console.error(err);
+            setError("Error al descargar los productos");
         }
     };
 
@@ -251,6 +262,15 @@ export default function ProductosAppPage() {
                         className="flex-1 md:flex-none"
                     >
                         Cargar Excel
+                    </Button>
+                    <Button
+                        onClick={handleDownloadAll}
+                        variant="filled"
+                        color="teal"
+                        leftSection={<RiDownloadCloudLine />}
+                        className="flex-1 md:flex-none"
+                    >
+                        Descargar Todos
                     </Button>
                 </div>
 
@@ -401,8 +421,8 @@ export default function ProductosAppPage() {
                                         <td>
                                             <span
                                                 className={`badge badge-sm ${producto.type === "principal"
-                                                        ? "badge-info"
-                                                        : "badge-warning"
+                                                    ? "badge-info"
+                                                    : "badge-warning"
                                                     }`}
                                             >
                                                 {producto.type}
@@ -474,8 +494,8 @@ export default function ProductosAppPage() {
                                 <div className="flex gap-2 mb-2">
                                     <span
                                         className={`badge badge-sm ${producto.type === "principal"
-                                                ? "badge-info"
-                                                : "badge-warning"
+                                            ? "badge-info"
+                                            : "badge-warning"
                                             }`}
                                     >
                                         {producto.type}
@@ -585,6 +605,17 @@ export default function ProductosAppPage() {
                     </Button>
                 </div>
             </Modal>
+
+            <ProcessingOverlay
+                isProcessing={uploadingExcel}
+                showSuccess={showSuccessOverlay}
+                successMessage="¡Productos cargados exitosamente!"
+                processingMessage="Cargando productos desde Excel..."
+                onSuccessClose={() => {
+                    setShowSuccessOverlay(false);
+                    setUploadingExcel(false);
+                }}
+            />
         </div>
     );
 }

@@ -27,11 +27,13 @@ import {
 } from "react-icons/ri";
 import { Unauthorized } from "@/core/components/Unauthorized";
 import ConfirmDeleteModal from "@/core/components/ConfirmDeleteModal";
+import { ProcessingOverlay } from "@/core/components/ProcessingOverlay";
 import {
     listProductosCompra,
     deleteProductoCompra,
     bulkCreateProductosCompraFromExcel,
     downloadProductosCompraTemplate,
+    downloadAllProductosCompra,
 } from "@/tada/services/ventasProductosCompraApi";
 
 const PERMISSION_PATH = "/dashboard/sales/productos-compra";
@@ -91,6 +93,7 @@ export default function ProductosCompraPage() {
     const [excelModalOpen, setExcelModalOpen] = useState(false);
     const [excelFile, setExcelFile] = useState(null);
     const [uploadingExcel, setUploadingExcel] = useState(false);
+    const [showSuccessOverlay, setShowSuccessOverlay] = useState(false);
 
     /* =========================================================
        Traer Productos
@@ -204,16 +207,15 @@ export default function ProductosCompraPage() {
         if (!excelFile) return;
 
         setUploadingExcel(true);
+        setExcelModalOpen(false);
         try {
-            const result = await bulkCreateProductosCompraFromExcel(accessToken, excelFile);
-            setExcelModalOpen(false);
+            await bulkCreateProductosCompraFromExcel(accessToken, excelFile);
+            setShowSuccessOverlay(true);
             setExcelFile(null);
-            fetchProductos();
-            alert(`Carga completada. ${JSON.stringify(result)}`);
+            await fetchProductos();
         } catch (err) {
             console.error(err);
             setError(err.message || "Error al cargar el archivo");
-        } finally {
             setUploadingExcel(false);
         }
     };
@@ -224,6 +226,15 @@ export default function ProductosCompraPage() {
         } catch (err) {
             console.error(err);
             setError("Error al descargar la plantilla");
+        }
+    };
+
+    const handleDownloadAll = async () => {
+        try {
+            await downloadAllProductosCompra(accessToken);
+        } catch (err) {
+            console.error(err);
+            setError("Error al descargar los productos");
         }
     };
 
@@ -268,6 +279,15 @@ export default function ProductosCompraPage() {
                         className="flex-1 md:flex-none"
                     >
                         Cargar Excel
+                    </Button>
+                    <Button
+                        onClick={handleDownloadAll}
+                        variant="filled"
+                        color="teal"
+                        leftSection={<RiDownloadCloudLine />}
+                        className="flex-1 md:flex-none"
+                    >
+                        Descargar Todos
                     </Button>
                 </div>
 
@@ -434,16 +454,13 @@ export default function ProductosCompraPage() {
                             <tr>
                                 <th>Código</th>
                                 <th>Nombre</th>
-                                <th>Marca</th>
-                                <th>Origen</th>
-                                <th>Retornable</th>
                                 <th>Acciones</th>
                             </tr>
                         </thead>
                         <tbody className="bg-white text-black">
                             {loading ? (
                                 <tr>
-                                    <td colSpan={6} className="text-center py-4">
+                                    <td colSpan={3} className="text-center py-4">
                                         <Loader size="sm" color="blue" />
                                     </td>
                                 </tr>
@@ -452,19 +469,6 @@ export default function ProductosCompraPage() {
                                     <tr key={producto.id} className="hover:bg-gray-100 uppercase">
                                         <td className="font-bold">{producto.code}</td>
                                         <td>{producto.name}</td>
-                                        <td>{producto.brand || "-"}</td>
-                                        <td>
-                                            <span className={`badge badge-sm ${producto.origen === 'nacional' ? 'badge-info' : 'badge-warning'}`}>
-                                                {producto.origen || "-"}
-                                            </span>
-                                        </td>
-                                        <td>
-                                            {producto.returnable ? (
-                                                <span className="badge badge-success badge-xs">Sí</span>
-                                            ) : (
-                                                <span className="badge badge-ghost badge-xs">No</span>
-                                            )}
-                                        </td>
                                         <td>
                                             <Button.Group>
                                                 <Button
@@ -498,7 +502,7 @@ export default function ProductosCompraPage() {
                                 ))
                             ) : (
                                 <tr>
-                                    <td colSpan={6} className="text-center py-4">
+                                    <td colSpan={3} className="text-center py-4">
                                         No se encontraron Productos Compra.
                                     </td>
                                 </tr>
@@ -524,9 +528,6 @@ export default function ProductosCompraPage() {
 
                                 <div className="mb-1 font-semibold">Nombre:</div>
                                 <div className="mb-2">{producto.name}</div>
-
-                                <div className="mb-1 font-semibold">Marca:</div>
-                                <div className="mb-2">{producto.brand || "-"}</div>
 
                                 <div className="flex gap-2 mt-3">
                                     <Button
@@ -625,6 +626,17 @@ export default function ProductosCompraPage() {
                     </Button>
                 </div>
             </Modal>
+
+            <ProcessingOverlay
+                isProcessing={uploadingExcel}
+                showSuccess={showSuccessOverlay}
+                successMessage="¡Productos cargados exitosamente!"
+                processingMessage="Cargando productos desde Excel..."
+                onSuccessClose={() => {
+                    setShowSuccessOverlay(false);
+                    setUploadingExcel(false);
+                }}
+            />
         </div>
     );
 }

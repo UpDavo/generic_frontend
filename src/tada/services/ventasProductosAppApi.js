@@ -207,3 +207,29 @@ export const downloadProductosAppTemplate = async (accessToken) => {
     window.URL.revokeObjectURL(url);
     document.body.removeChild(a);
 };
+
+/**
+ * Descargar todos los Productos App en Excel
+ */
+export const downloadAllProductosApp = async (accessToken) => {
+    const response = await fetch(`${API_URL}/tada/ventas-productos-app/download-all/`, {
+        method: "GET",
+        headers: {
+            Authorization: `Bearer ${accessToken}`,
+        },
+    });
+
+    if (!response.ok) {
+        throw new Error("Error al descargar los productos");
+    }
+
+    const blob = await response.blob();
+    const url = window.URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `productos_app_${new Date().toISOString().split('T')[0]}.xlsx`;
+    document.body.appendChild(a);
+    a.click();
+    window.URL.revokeObjectURL(url);
+    document.body.removeChild(a);
+};
