@@ -277,10 +277,12 @@ export default function PaymentsPage() {
       // Agregar estadísticas de SALES REPORT
       if (salesStats.breakdown?.by_user) {
         salesStats.breakdown.by_user.forEach((user) => {
+          const unitPricePerSecond = parseFloat(salesStats.summary?.unit_price_per_second || 0);
+          const totalSeconds = parseFloat(user.total_seconds || 0);
           allUsers.push({
             user: user.user__first_name || user.user__email,
             count: user.count,
-            cost: parseFloat(salesStats.summary?.unit_price || 0) * user.count,
+            cost: unitPricePerSecond * totalSeconds,
             type: "SALES",
             email: user.user__email,
           });
