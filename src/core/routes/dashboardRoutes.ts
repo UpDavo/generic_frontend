@@ -128,29 +128,47 @@ export const dashboardRoutes = [
         icon: RiShoppingCartLine,
         children: [
           {
-            path: "/dashboard/sales/pocs",
-            icon: RiStore2Line,
-            name: "POCs",
-            permission: "/dashboard/sales/pocs",
-          },
-          {
-            path: "/dashboard/sales/productos-compra",
-            icon: RiBoxingLine,
-            name: "Productos Compra",
-            permission: "/dashboard/sales/productos-compra",
-          },
-          {
-            path: "/dashboard/sales/productos-app",
-            icon: RiBoxingLine,
-            name: "Productos App",
-            permission: "/dashboard/sales/productos-app",
-          },
-          {
             path: "/dashboard/sales/process",
             icon: RiFileExcel2Line,
             name: "Procesamiento",
             permission: "/dashboard/sales/process",
           },
+          {
+            path: "/dashboard/sales/data-historica",
+            icon: RiDatabase2Line,
+            name: "Data Histórica",
+            permission: "/dashboard/sales/data-historica",
+          },
+          {
+            path: "/dashboard/sales/data-historica/hectolitros",
+            icon: RiBarChart2Line,
+            name: "Hectolitros",
+            permission: "/dashboard/sales/data-historica/hectolitros",
+          },
+          {
+            path: "/dashboard/sales/hectolitros-meta",
+            icon: RiMedalLine,
+            name: "Conf. Hectolitros",
+            permission: "/dashboard/sales/hectolitros-meta",
+          },
+          {
+            path: "/dashboard/sales/pocs",
+            icon: RiStore2Line,
+            name: "Conf. Pocs",
+            permission: "/dashboard/sales/pocs",
+          },
+          {
+            path: "/dashboard/sales/productos-compra",
+            icon: RiBoxingLine,
+            name: "Conf. Sku Compra",
+            permission: "/dashboard/sales/productos-compra",
+          },
+          {
+            path: "/dashboard/sales/productos-app",
+            icon: RiBoxingLine,
+            name: "Conf. Sku App",
+            permission: "/dashboard/sales/productos-app",
+          }
         ],
       },
     ],

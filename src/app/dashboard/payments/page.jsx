@@ -5,6 +5,7 @@ import { listLogsStats } from "@/tada/services/pushApi";
 import { listCanvasLogsStats, listWebhookLogsStats } from "@/tada/services/canvasApi";
 import { listExecutionLogsStats } from "@/tada/services/executionApi";
 import { getSalesReportLogsStats } from "@/tada/services/salesReportApi";
+import { getSalesCheckStats } from "@/tada/services/ventasHistoricasApi";
 import { TextInput, Loader, Notification, Button, Accordion } from "@mantine/core";
 import { RiRefreshLine, RiSearchLine } from "react-icons/ri";
 import { useAuth } from "@/auth/hooks/useAuth";
@@ -20,12 +21,14 @@ export default function PaymentsPage() {
   const [executionLoading, setExecutionLoading] = useState(false);
   const [webhookLoading, setWebhookLoading] = useState(false);
   const [salesLoading, setSalesLoading] = useState(false);
+  const [salesCheckLoading, setSalesCheckLoading] = useState(false);
   const [error, setError] = useState(null);
   const [pushError, setPushError] = useState(null);
   const [canvasError, setCanvasError] = useState(null);
   const [executionError, setExecutionError] = useState(null);
   const [webhookError, setWebhookError] = useState(null);
   const [salesError, setSalesError] = useState(null);
+  const [salesCheckError, setSalesCheckError] = useState(null);
   const [totalCalls, setTotalCalls] = useState(0);
   const [cost, setCost] = useState(0);
   const [userCalls, setUserCalls] = useState([]);
@@ -37,6 +40,7 @@ export default function PaymentsPage() {
   const [executionStats, setExecutionStats] = useState(null);
   const [webhookStats, setWebhookStats] = useState(null);
   const [salesStats, setSalesStats] = useState(null);
+  const [salesCheckStats, setSalesCheckStats] = useState(null);
 
   /* Filtro en la tabla */
   const [searchValue, setSearchValue] = useState("");
@@ -197,14 +201,40 @@ export default function PaymentsPage() {
     }
   }, [accessToken, sentAtGte, sentAtLte]);
 
+  // Función para obtener estadísticas de SALES CHECK
+  const fetchSalesCheckStats = useCallback(async () => {
+    setSalesCheckLoading(true);
+    setSalesCheckError(null);
+
+    try {
+      const salesCheckData = await getSalesCheckStats(
+        accessToken,
+        sentAtGte,
+        sentAtLte
+      );
+
+      //   console.log("Sales Check stats:", salesCheckData);
+      setSalesCheckStats(salesCheckData);
+
+      return salesCheckData;
+    } catch (err) {
+      console.error("Error fetching sales check stats:", err);
+      setSalesCheckError("Error al cargar estadísticas de Data Histórica");
+      return null;
+    } finally {
+      setSalesCheckLoading(false);
+    }
+  }, [accessToken, sentAtGte, sentAtLte]);
+
   // Función para calcular y actualizar los totales
   const updateTotals = useCallback(() => {
-    if (pushStats && canvasStats && executionStats && webhookStats && salesStats) {
+    if (pushStats && canvasStats && executionStats && webhookStats && salesStats && salesCheckStats) {
       const totalPushLogs = pushStats.summary?.total_logs || 0;
       const totalCanvasLogs = canvasStats.summary?.total_logs || 0;
       const totalExecutionLogs = executionStats.summary?.total_logs || 0;
       const totalWebhookLogs = webhookStats.summary?.total_logs || 0;
       const totalSalesLogs = salesStats.summary?.total_logs || 0;
+      const totalSalesCheckRecords = salesCheckStats.summary?.total_records || 0;
       const totalPushCost = parseFloat(pushStats.summary?.total_cost || 0);
       const totalCanvasCost = parseFloat(canvasStats.summary?.total_cost || 0);
       const totalExecutionCost = parseFloat(
@@ -212,9 +242,10 @@ export default function PaymentsPage() {
       );
       const totalWebhookCost = parseFloat(webhookStats.summary?.total_cost || 0);
       const totalSalesCost = parseFloat(salesStats.summary?.total_cost || 0);
+      const totalSalesCheckCost = parseFloat(salesCheckStats.summary?.total_price || 0);
 
-      setTotalCalls(totalPushLogs + totalCanvasLogs + totalExecutionLogs + totalWebhookLogs + totalSalesLogs);
-      setCost(totalPushCost + totalCanvasCost + totalExecutionCost + totalWebhookCost + totalSalesCost);
+      setTotalCalls(totalPushLogs + totalCanvasLogs + totalExecutionLogs + totalWebhookLogs + totalSalesLogs + totalSalesCheckRecords);
+      setCost(totalPushCost + totalCanvasCost + totalExecutionCost + totalWebhookCost + totalSalesCost + totalSalesCheckCost);
 
       // Combinar usuarios de todos los tipos para la tabla
       const allUsers = [];
@@ -289,14 +320,27 @@ export default function PaymentsPage() {
         });
       }
 
+      // Agregar estadísticas de SALES CHECK
+      if (salesCheckStats.details) {
+        salesCheckStats.details.forEach((detail) => {
+          allUsers.push({
+            user: detail.user,
+            count: detail.total_records,
+            cost: parseFloat(detail.total_price || 0),
+            type: "SALES_CHECK",
+            email: detail.user,
+          });
+        });
+      }
+
       setUserCalls(allUsers);
     }
-  }, [pushStats, canvasStats, executionStats, webhookStats, salesStats]);
+  }, [pushStats, canvasStats, executionStats, webhookStats, salesStats, salesCheckStats]);
 
   // Actualizar totales cuando cambien las estadísticas
   useEffect(() => {
     updateTotals();
-  }, [pushStats, canvasStats, executionStats, webhookStats, salesStats]); // Dependencias directas en lugar de la función
+  }, [pushStats, canvasStats, executionStats, webhookStats, salesStats, salesCheckStats]); // Dependencias directas en lugar de la función
 
   // Función principal que ejecuta ambas peticiones en paralelo
   const fetchDashboardData = useCallback(async () => {
@@ -310,12 +354,13 @@ export default function PaymentsPage() {
         fetchExecutionStats(),
         fetchWebhookStats(),
         fetchSalesStats(),
+        fetchSalesCheckStats(),
       ]);
     } catch (err) {
       console.error("Error general:", err);
       setError("Error al cargar los datos del dashboard.");
     }
-  }, [fetchPushStats, fetchCanvasStats, fetchExecutionStats, fetchWebhookStats, fetchSalesStats]);
+  }, [fetchPushStats, fetchCanvasStats, fetchExecutionStats, fetchWebhookStats, fetchSalesStats, fetchSalesCheckStats]);
 
   // 2. Llamada inicial SOLO una vez al montar
   // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -380,7 +425,7 @@ export default function PaymentsPage() {
           onClick={fetchDashboardData}
           variant="filled"
           leftSection={<RiSearchLine />}
-          disabled={pushLoading || canvasLoading || executionLoading || webhookLoading || salesLoading}
+          disabled={pushLoading || canvasLoading || executionLoading || webhookLoading || salesLoading || salesCheckLoading}
         >
           Buscar
         </Button>
@@ -394,7 +439,7 @@ export default function PaymentsPage() {
           }}
           variant="filled"
           leftSection={<RiRefreshLine />}
-          disabled={pushLoading || canvasLoading || executionLoading || webhookLoading || salesLoading}
+          disabled={pushLoading || canvasLoading || executionLoading || webhookLoading || salesLoading || salesCheckLoading}
         >
           Reiniciar
         </Button>
@@ -467,13 +512,24 @@ export default function PaymentsPage() {
         </Notification>
       )}
 
+      {salesCheckError && (
+        <Notification
+          color="red"
+          className="mb-4"
+          onClose={() => setSalesCheckError(null)}
+          withCloseButton
+        >
+          {salesCheckError}
+        </Notification>
+      )}
+
       {/* ------------- TARJETAS ------------- */}
       <div className="mt-2 space-y-6">
         {/* Total y Registros */}
         <div className="grid md:grid-cols-2 grid-cols-1 gap-6">
           <div className="card bg-white shadow p-6 text-center">
             <h2 className="text-lg font-bold mb-2 text-black">Total</h2>
-            {pushLoading || canvasLoading || executionLoading || webhookLoading || salesLoading ? (
+            {pushLoading || canvasLoading || executionLoading || webhookLoading || salesLoading || salesCheckLoading ? (
               <div className="flex justify-center">
                 <Loader size="md" />
               </div>
@@ -485,7 +541,7 @@ export default function PaymentsPage() {
           </div>
           <div className="card bg-white shadow p-6 text-center">
             <h2 className="text-lg font-bold mb-2 text-black">Registros</h2>
-            {pushLoading || canvasLoading || executionLoading || webhookLoading || salesLoading ? (
+            {pushLoading || canvasLoading || executionLoading || webhookLoading || salesLoading || salesCheckLoading ? (
               <div className="flex justify-center">
                 <Loader size="md" />
               </div>
@@ -590,7 +646,7 @@ export default function PaymentsPage() {
               <span className="text-lg font-bold">Reportes</span>
             </Accordion.Control>
             <Accordion.Panel>
-              <div className="grid md:grid-cols-2 grid-cols-1 gap-6">
+              <div className="grid md:grid-cols-3 grid-cols-1 gap-6">
                 <div className="card bg-white shadow p-6 text-center">
                   <h2 className="text-lg font-bold mb-2 text-black">
                     Reporte de Tráfico
@@ -639,6 +695,30 @@ export default function PaymentsPage() {
                     </>
                   )}
                 </div>
+                <div className="card bg-white shadow p-6 text-center">
+                  <h2 className="text-lg font-bold mb-2 text-black">
+                    Data Histórica
+                  </h2>
+                  {salesCheckLoading ? (
+                    <div className="flex justify-center">
+                      <Loader size="md" />
+                    </div>
+                  ) : salesCheckError ? (
+                    <p className="text-sm text-red-500">Error al cargar</p>
+                  ) : (
+                    <>
+                      <p className="text-2xl font-bold text-indigo-600">
+                        {salesCheckStats?.summary?.total_records || 0}
+                      </p>
+                      <p className="text-sm text-gray-600">
+                        $
+                        {parseFloat(salesCheckStats?.summary?.total_price || 0).toFixed(
+                          2
+                        )}
+                      </p>
+                    </>
+                  )}
+                </div>
               </div>
             </Accordion.Panel>
           </Accordion.Item>
@@ -651,7 +731,7 @@ export default function PaymentsPage() {
           Notificaciones por Usuario
         </h2>
 
-        {pushLoading || canvasLoading || executionLoading || webhookLoading || salesLoading ? (
+        {pushLoading || canvasLoading || executionLoading || webhookLoading || salesLoading || salesCheckLoading ? (
           <div className="flex justify-center items-center h-32">
             <div className="text-center">
               <Loader size="lg" />
@@ -751,13 +831,15 @@ export default function PaymentsPage() {
                       <td>
                         <span
                           className={`badge ${record.type === "PUSH"
-                              ? "badge-primary"
-                              : record.type === "CANVAS"
-                                ? "badge-secondary"
-                                : record.type === "WEBHOOK"
-                                  ? "badge-warning"
-                                  : record.type === "SALES"
-                                    ? "badge-info"
+                            ? "badge-primary"
+                            : record.type === "CANVAS"
+                              ? "badge-secondary"
+                              : record.type === "WEBHOOK"
+                                ? "badge-warning"
+                                : record.type === "SALES"
+                                  ? "badge-info"
+                                  : record.type === "SALES_CHECK"
+                                    ? "badge-accent"
                                     : "badge-success"
                             }`}
                         >
@@ -792,13 +874,15 @@ export default function PaymentsPage() {
                     </div>
                     <span
                       className={`badge ${record.type === "PUSH"
-                          ? "badge-primary"
-                          : record.type === "CANVAS"
-                            ? "badge-secondary"
-                            : record.type === "WEBHOOK"
-                              ? "badge-warning"
-                              : record.type === "SALES"
-                                ? "badge-info"
+                        ? "badge-primary"
+                        : record.type === "CANVAS"
+                          ? "badge-secondary"
+                          : record.type === "WEBHOOK"
+                            ? "badge-warning"
+                            : record.type === "SALES"
+                              ? "badge-info"
+                              : record.type === "SALES_CHECK"
+                                ? "badge-accent"
                                 : "badge-success"
                         }`}
                     >

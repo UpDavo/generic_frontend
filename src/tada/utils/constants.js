@@ -5,4 +5,5 @@ export const APPS = [
   { value: "4", label: "EXECUTION" },
   { value: "5", label: "WEBHOOK" },
   { value: "6", label: "SALES" },
+  { value: "7", label: "SALES_CHECK" },
 ];
