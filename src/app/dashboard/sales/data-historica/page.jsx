@@ -306,18 +306,6 @@ export default function DataHistoricaPage() {
                 </div>
             </div>
 
-            {/* ---------------- MÉTRICAS ---------------- */}
-            {totalRecords > 0 && (
-                <div className="mb-4 flex-shrink-0">
-                    <div className="card bg-white shadow-md p-6 border-l-4 border-blue-500">
-                        <div className="text-sm text-gray-500 uppercase mb-2">
-                            Total de Registros
-                        </div>
-                        <div className="text-4xl font-bold text-black">{totalRecords.toLocaleString()}</div>
-                    </div>
-                </div>
-            )}
-
             {/* ---------------- TABLA ---------------- */}
             <div className="flex-1 min-h-0 flex flex-col">
                 <div className="hidden md:block flex-1 overflow-auto rounded-md">
@@ -341,7 +329,7 @@ export default function DataHistoricaPage() {
                                 ventas.map((venta, index) => (
                                     <tr key={`${venta.id}-${index}`} className="hover:bg-gray-100 uppercase">
                                         <td className="font-semibold">{venta.poc_name}</td>
-                                        <td>{venta.name_homologated || venta.name}</td>
+                                        <td>{venta.name_homologated && venta.name_homologated !== "NONE" ? venta.name_homologated : venta.name}</td>
                                         <td>{venta.year_month}</td>
                                         <td className="font-bold">{venta.hectolitros?.toFixed(4) || "0.0000"}</td>
                                     </tr>
@@ -373,7 +361,7 @@ export default function DataHistoricaPage() {
                                 <div className="mb-2 font-bold">{venta.poc_name}</div>
 
                                 <div className="mb-1 font-semibold">Producto:</div>
-                                <div className="mb-2">{venta.name_homologated || venta.name}</div>
+                                <div className="mb-2">{venta.name_homologated && venta.name_homologated !== "NONE" ? venta.name_homologated : venta.name}</div>
 
                                 <div className="mb-1 font-semibold">Período:</div>
                                 <div className="mb-2">{venta.year_month}</div>

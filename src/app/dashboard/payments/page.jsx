@@ -234,7 +234,7 @@ export default function PaymentsPage() {
       const totalExecutionLogs = executionStats.summary?.total_logs || 0;
       const totalWebhookLogs = webhookStats.summary?.total_logs || 0;
       const totalSalesLogs = salesStats.summary?.total_logs || 0;
-      const totalSalesCheckRecords = salesCheckStats.summary?.total_records || 0;
+      const totalSalesCheckRecords = salesCheckStats.summary?.total_records_returned || 0;
       const totalPushCost = parseFloat(pushStats.summary?.total_cost || 0);
       const totalCanvasCost = parseFloat(canvasStats.summary?.total_cost || 0);
       const totalExecutionCost = parseFloat(
@@ -242,7 +242,7 @@ export default function PaymentsPage() {
       );
       const totalWebhookCost = parseFloat(webhookStats.summary?.total_cost || 0);
       const totalSalesCost = parseFloat(salesStats.summary?.total_cost || 0);
-      const totalSalesCheckCost = parseFloat(salesCheckStats.summary?.total_price || 0);
+      const totalSalesCheckCost = parseFloat(salesCheckStats.summary?.total_cost || 0);
 
       setTotalCalls(totalPushLogs + totalCanvasLogs + totalExecutionLogs + totalWebhookLogs + totalSalesLogs + totalSalesCheckRecords);
       setCost(totalPushCost + totalCanvasCost + totalExecutionCost + totalWebhookCost + totalSalesCost + totalSalesCheckCost);
@@ -321,14 +321,18 @@ export default function PaymentsPage() {
       }
 
       // Agregar estadísticas de SALES CHECK
-      if (salesCheckStats.details) {
-        salesCheckStats.details.forEach((detail) => {
+      if (salesCheckStats.breakdown?.by_user) {
+        salesCheckStats.breakdown.by_user.forEach((user) => {
+          const userName = `${user.user__first_name || ""} ${user.user__last_name || ""}`.trim() || user.user__email || "Usuario desconocido";
+          const unitPrice = parseFloat(salesCheckStats.summary?.unit_price_per_record || 0);
+          const userCost = user.total_records * unitPrice;
+          
           allUsers.push({
-            user: detail.user,
-            count: detail.total_records,
-            cost: parseFloat(detail.total_price || 0),
+            user: userName,
+            count: user.total_records,
+            cost: userCost,
             type: "SALES_CHECK",
-            email: detail.user,
+            email: user.user__email,
           });
         });
       }
@@ -390,13 +394,13 @@ export default function PaymentsPage() {
   /* Filtro de nombre + orden */
   const filtered = userCalls.filter(
     (r) =>
-      r.user.toLowerCase().includes(searchValue.toLowerCase()) ||
-      r.type.toLowerCase().includes(searchValue.toLowerCase())
+      (r.user?.toLowerCase() || "").includes(searchValue.toLowerCase()) ||
+      (r.type?.toLowerCase() || "").includes(searchValue.toLowerCase())
   );
   const sorted = [...filtered].sort((a, b) => {
     const dir = sortStatus.direction === "asc" ? 1 : -1;
     if (sortStatus.columnAccessor === "user") {
-      return dir * a.user.localeCompare(b.user);
+      return dir * (a.user || "").localeCompare(b.user || "");
     } else if (sortStatus.columnAccessor === "cost") {
       return dir * (a.cost - b.cost);
     }
@@ -708,11 +712,11 @@ export default function PaymentsPage() {
                   ) : (
                     <>
                       <p className="text-2xl font-bold text-indigo-600">
-                        {salesCheckStats?.summary?.total_records || 0}
+                        {salesCheckStats?.summary?.total_records_returned || 0}
                       </p>
                       <p className="text-sm text-gray-600">
                         $
-                        {parseFloat(salesCheckStats?.summary?.total_price || 0).toFixed(
+                        {parseFloat(salesCheckStats?.summary?.total_cost || 0).toFixed(
                           2
                         )}
                       </p>

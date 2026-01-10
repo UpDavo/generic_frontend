@@ -52,7 +52,7 @@ function DashboardLayout({ children }) {
   };
 
   return (
-    <div className="flex h-screen bg-white overflow-x-hidden">
+    <div className="flex h-screen bg-gray-50 overflow-hidden">
       {/* Sidebar Desktop */}
       <Sidebar user={user} handleLogout={handleLogout} />
 
@@ -64,30 +64,24 @@ function DashboardLayout({ children }) {
         user={user}
       />
 
-      {/* Contenedor principal ajustable */}
-      <div
-        className={`flex flex-col flex-1 h-full transition-all duration-300 ${
-          sidebarVisible ? "ml-0" : "-ml-96"
-        }`}
-      >
-        <header className="md:hidden w-full flex-none">
-          <div className="flex items-center justify-between ml-5 mt-6 mb-1 w-full">
+      {/* Contenedor principal */}
+      <div className="flex flex-col flex-1 h-screen overflow-hidden">
+        <header className="md:hidden w-full flex-none bg-white border-b border-gray-200">
+          <div className="flex items-center px-4 py-3">
             <button
               onClick={() => setDrawerOpened(true)}
-              className="mr-4 md:hidden"
+              className="flex items-center gap-2 text-gray-700 hover:text-primary transition-colors"
             >
-              <div className="flex items-center space-x-2">
-                <RiMenuLine className="text-xl text-black" />
-                <span className=" text-black">Menú</span>
-              </div>
+              <RiMenuLine className="text-2xl" />
+              <span className="font-medium">Menú</span>
             </button>
           </div>
         </header>
 
         {/* Contenido central */}
-        <main className="flex-1 p-4 bg-white flex flex-col overflow-hidden">
-          <div className="flex-1 p-8 bg-gray-100 rounded-xl shadow-lg border border-gray-200 flex flex-col min-h-0">
-            <div className="flex-1 overflow-y-auto">{children}</div>
+        <main className="flex-1 overflow-hidden p-4 md:p-6">
+          <div className="h-full bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden flex flex-col">
+            <div className="flex-1 overflow-y-auto p-4 md:p-6">{children}</div>
           </div>
         </main>
       </div>

@@ -7,20 +7,20 @@ import {
   RiSettingsLine,
   RiMenuLine,
   RiCloseLine,
+  RiLogoutBoxLine,
+  RiUserLine,
 } from "react-icons/ri";
-import { useState, useMemo, useEffect } from "react";
+import { useState, useMemo } from "react";
 import { dashboardRoutes } from "@/core/routes/dashboardRoutes";
 import Image from "next/image";
 
 export default function Sidebar2({ className = "", user, handleLogout }) {
   const pathname = usePathname();
-  const [isShortScreen, setIsShortScreen] = useState(false);
+  const [collapsed, setCollapsed] = useState(false);
 
   const userPermissions =
     user?.role?.permissions?.map((perm) => perm.path) || [];
-  // console.log("User Permissions:", userPermissions);
   const isAdmin = user?.role?.is_admin;
-  // console.log("Is Admin:", isAdmin);
 
   const filterRoutes = (routeList) => {
     return routeList
@@ -51,13 +51,6 @@ export default function Sidebar2({ className = "", user, handleLogout }) {
       .filter((section) => section.children.length > 0);
   };
 
-  useEffect(() => {
-    const update = () => setIsShortScreen(window.innerHeight < 700);
-    update();
-    window.addEventListener("resize", update);
-    return () => window.removeEventListener("resize", update);
-  }, []);
-
   const filteredRoutes = useMemo(
     () => filterRoutes(dashboardRoutes),
     [dashboardRoutes, userPermissions, isAdmin, user]
@@ -87,168 +80,197 @@ export default function Sidebar2({ className = "", user, handleLogout }) {
     }));
   };
 
-  const [collapsed, setCollapsed] = useState(false);
-
   return (
-    <div
-      id="sidebar"
-      className={`transition-all duration-200 relative bg-white rounded-xl ml-4 mt-4 mb-4 shadow-lg border border-gray-200 flex flex-col h-[calc(100vh-2rem)] overflow-hidden flex-shrink-0
-          ${collapsed ? "w-20" : "w-80"} hidden md:block ${className}`}
+    <aside
+      className={`hidden md:flex flex-col bg-gradient-to-b from-white to-gray-50 shadow-2xl border-r border-gray-200 transition-all duration-300 ease-in-out ${
+        collapsed ? "w-20" : "w-72"
+      } ${className}`}
+      style={{ height: "100vh" }}
     >
-      {/* Header fijo - Toggle button */}
-      <div className="flex-none p-4">
-        <div className="mt-4 flex flex-col items-center">
-          {/* Swap hamburger/close button DaisyUI con Remix Icons */}
-          <label className="swap swap-rotate">
-            <input
-              type="checkbox"
-              checked={collapsed}
-              onChange={() => setCollapsed((c) => !c)}
-              aria-label={collapsed ? "Abrir menú" : "Cerrar menú"}
-              className="hidden"
-            />
-            {/* hamburger icon */}
-            <span className="swap-off">
-              <RiCloseLine className="text-3xl text-primary" />
-            </span>
-            {/* close icon */}
-            <span className="swap-on">
-              <RiMenuLine className="text-3xl text-primary" />
-            </span>
-          </label>
-        </div>
-
-        {/* Logo */}
-        <div className="mt-8 flex flex-col items-center">
-          <h1
-            className={`uppercase font-bold text-primary transition-all ${collapsed ? "text-2xl" : "text-6xl"
-              }`}
+      {/* Header - Logo y Toggle */}
+      <div className="flex-shrink-0 px-4 py-5 border-b border-gray-200 bg-white">
+        <div className="flex items-center justify-between">
+          {!collapsed && (
+            <h1 className="text-4xl font-black text-primary tracking-tight">
+              HINT
+            </h1>
+          )}
+          <button
+            onClick={() => setCollapsed(!collapsed)}
+            className="p-2 rounded-lg hover:bg-gray-100 transition-colors"
+            aria-label={collapsed ? "Expandir menú" : "Contraer menú"}
           >
-            HINT
-          </h1>
+            {collapsed ? (
+              <RiMenuLine className="text-2xl text-primary" />
+            ) : (
+              <RiCloseLine className="text-2xl text-primary" />
+            )}
+          </button>
         </div>
       </div>
 
-      {/* Menú con scroll */}
-      <div className="flex-1 overflow-y-auto px-4 min-h-0 scrollbar-thin scrollbar-thumb-gray-300 scrollbar-track-gray-100 hover:scrollbar-thumb-gray-400">
-        <div className="py-4">
-          <ul className="menu w-full menu-lg menu-vertical p-0 text-primary text-lg [&_li>*]:rounded-md [&_details>*]:rounded-md">
-            {filteredRoutes.map((section) => (
-              <div key={section.section}>
-                {!collapsed && (
-                  <div className="divider divider-gray-200 text-md">
-                    {section.section}
-                  </div>
-                )}
+      {/* Menú de navegación con scroll */}
+      <nav className="flex-1 overflow-y-auto overflow-x-hidden px-3 py-4" style={{ minHeight: 0 }}>
+        <div className="space-y-1">
+          {filteredRoutes.map((section, sectionIdx) => (
+            <div key={section.section} className={sectionIdx > 0 ? "mt-6" : ""}>
+              {!collapsed && (
+                <h3 className="px-3 mb-2 text-xs font-bold text-gray-500 uppercase tracking-wider">
+                  {section.section}
+                </h3>
+              )}
+              
+              <div className="space-y-1">
                 {section.children.map((route) => {
                   const isSubrouteActive =
                     route.children &&
                     route.children.some((child) => pathname === child.path);
                   const isActive = pathname === route.path || isSubrouteActive;
+
                   return (
-                    <li className="mt-1" key={route.name}>
+                    <div key={route.name}>
                       {route.children ? (
-                        <details open={openSubmenus[route.name]}>
-                          <summary
-                            className={isActive ? "menu-active" : ""}
+                        <div>
+                          <button
                             onClick={() => toggleSubmenu(route.name)}
+                            className={`w-full flex items-center justify-between px-3 py-2.5 rounded-lg transition-all duration-200 group ${
+                              isActive
+                                ? "bg-primary text-white shadow-md"
+                                : "text-gray-700 hover:bg-gray-100"
+                            }`}
                           >
-                            {route.icon ? <route.icon /> : <RiSettingsLine />}
+                            <div className="flex items-center gap-3">
+                              {route.icon ? (
+                                <route.icon className="text-xl flex-shrink-0" />
+                              ) : (
+                                <RiSettingsLine className="text-xl flex-shrink-0" />
+                              )}
+                              {!collapsed && (
+                                <span className="font-medium text-sm">
+                                  {route.name}
+                                </span>
+                              )}
+                            </div>
                             {!collapsed && (
-                              <span className="ms-3">{route.name}</span>
+                              <svg
+                                className={`w-4 h-4 transition-transform duration-200 ${
+                                  openSubmenus[route.name] ? "rotate-180" : ""
+                                }`}
+                                fill="none"
+                                stroke="currentColor"
+                                viewBox="0 0 24 24"
+                              >
+                                <path
+                                  strokeLinecap="round"
+                                  strokeLinejoin="round"
+                                  strokeWidth={2}
+                                  d="M19 9l-7 7-7-7"
+                                />
+                              </svg>
                             )}
-                          </summary>
-                          <ul>
-                            {route.children.map((child) => (
-                              <li className="mt-1" key={child.path}>
+                          </button>
+                          
+                          {openSubmenus[route.name] && !collapsed && (
+                            <div className="ml-4 mt-1 space-y-1 border-l-2 border-gray-200 pl-4">
+                              {route.children.map((child) => (
                                 <Link
+                                  key={child.path}
                                   href={child.path}
-                                  className={`${pathname === child.path ? "menu-active" : ""
-                                    }`}
+                                  className={`flex items-center gap-3 px-3 py-2 rounded-lg transition-all duration-200 text-sm ${
+                                    pathname === child.path
+                                      ? "bg-primary/10 text-primary font-semibold"
+                                      : "text-gray-600 hover:bg-gray-100 hover:text-gray-900"
+                                  }`}
                                 >
                                   {child.icon ? (
-                                    <child.icon />
+                                    <child.icon className="text-lg flex-shrink-0" />
                                   ) : (
-                                    <RiDashboardLine />
+                                    <RiDashboardLine className="text-lg flex-shrink-0" />
                                   )}
-                                  {!collapsed && (
-                                    <span className="ms-3">{child.name}</span>
-                                  )}
+                                  <span>{child.name}</span>
                                 </Link>
-                              </li>
-                            ))}
-                          </ul>
-                        </details>
+                              ))}
+                            </div>
+                          )}
+                        </div>
                       ) : (
                         <Link
                           href={route.path}
-                          className={` ${isActive ? "menu-active" : ""}`}
+                          className={`flex items-center gap-3 px-3 py-2.5 rounded-lg transition-all duration-200 group ${
+                            isActive
+                              ? "bg-primary text-white shadow-md"
+                              : "text-gray-700 hover:bg-gray-100"
+                          }`}
                         >
-                          {route.icon ? <route.icon /> : <RiDashboardLine />}
+                          {route.icon ? (
+                            <route.icon className="text-xl flex-shrink-0" />
+                          ) : (
+                            <RiDashboardLine className="text-xl flex-shrink-0" />
+                          )}
                           {!collapsed && (
-                            <span className="ms-3">{route.name}</span>
+                            <span className="font-medium text-sm">
+                              {route.name}
+                            </span>
                           )}
                         </Link>
                       )}
-                    </li>
+                    </div>
                   );
                 })}
               </div>
-            ))}
-          </ul>
+            </div>
+          ))}
         </div>
-      </div>
+      </nav>
 
-      {/* Footer fijo - Perfil y logout */}
-      <div className="flex-none p-4 border-t border-gray-200">
-        <div className="text-white transition-all duration-300">
+      {/* Footer - Usuario y Logout */}
+      <div className="flex-shrink-0 border-t border-gray-200 bg-white">
+        <div className="p-3 space-y-2">
           <Link
             href="/dashboard/profile"
-            className={`btn btn-ghost flex flex-row items-center gap-4 px-4 py-10 w-full ${collapsed
-              ? "justify-center px-2 py-4 min-w-[60px] max-w-[60px]"
-              : "min-w-[220px]"
-              }`}
+            className={`flex items-center gap-3 p-2.5 rounded-lg hover:bg-gray-100 transition-all duration-200 ${
+              collapsed ? "justify-center" : ""
+            }`}
           >
-            <div className="avatar avatar-online avatar-placeholder">
-              <div className="w-12 rounded-full bg-neutral">
-                {user?.photoUrl ? (
-                  <Image
-                    src={user.photoUrl}
-                    alt="avatar"
-                    width={48}
-                    height={48}
-                    className="object-cover w-full h-full rounded-full"
-                  />
-                ) : (
-                  <span className="text-2xl font-bold text-white">
-                    {user?.first_name?.charAt(0) || (
-                      <span className="icon-[mdi--account]" />
-                    )}
+            <div className="relative flex-shrink-0">
+              {user?.photoUrl ? (
+                <Image
+                  src={user.photoUrl}
+                  alt="avatar"
+                  width={40}
+                  height={40}
+                  className="rounded-full object-cover ring-2 ring-primary/20"
+                />
+              ) : (
+                <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center ring-2 ring-primary/20">
+                  <span className="text-primary font-bold text-lg">
+                    {user?.first_name?.charAt(0) || <RiUserLine />}
                   </span>
-                )}
-              </div>
+                </div>
+              )}
+              <div className="absolute -bottom-0.5 -right-0.5 w-3 h-3 bg-green-500 rounded-full border-2 border-white"></div>
             </div>
             {!collapsed && (
-              <div className="flex flex-col items-start">
-                <span className="text-base font-semibold text-primary line-clamp-1">
+              <div className="flex-1 min-w-0">
+                <p className="text-sm font-semibold text-gray-900 truncate">
                   {user?.first_name || "Usuario"}
-                </span>
-                <span className="text-xs text-gray-500 font-medium mt-1">
-                  Ver perfil
-                </span>
+                </p>
+                <p className="text-xs text-gray-500">Ver perfil</p>
               </div>
             )}
           </Link>
-          {/* Botón de logout debajo de Ver perfil */}
+
           <button
             onClick={handleLogout}
-            className={`btn btn-outline btn-primary w-full mt-1 ${collapsed ? "px-2 py-2 min-w-[60px] max-w-[60px]" : " "
-              }`}
+            className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-red-600 hover:bg-red-50 transition-all duration-200 font-medium text-sm ${
+              collapsed ? "justify-center" : ""
+            }`}
           >
-            <span className="text-base font-semibold">Salir</span>
+            <RiLogoutBoxLine className="text-xl flex-shrink-0" />
+            {!collapsed && <span>Cerrar sesión</span>}
           </button>
         </div>
       </div>
-    </div>
+    </aside>
   );
 }
