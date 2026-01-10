@@ -37,6 +37,7 @@ export default function SalesProcessPage() {
     const [processing, setProcessing] = useState(false);
     const [error, setError] = useState(null);
     const [showSuccessOverlay, setShowSuccessOverlay] = useState(false);
+    const [stats, setStats] = useState(null);
 
     /* =========================================================
        Handlers
@@ -51,7 +52,8 @@ export default function SalesProcessPage() {
         setError(null);
 
         try {
-            await processSalesReport(accessToken, excelFile);
+            const statistics = await processSalesReport(accessToken, excelFile);
+            setStats(statistics);
             setShowSuccessOverlay(true);
         } catch (err) {
             console.error(err);
@@ -64,6 +66,7 @@ export default function SalesProcessPage() {
         setShowSuccessOverlay(false);
         setProcessing(false);
         setExcelFile(null);
+        setStats(null);
     };
 
     /* =========================================================
@@ -131,6 +134,46 @@ export default function SalesProcessPage() {
                             <p className="mt-4 text-sm md:text-base text-gray-600 animate-pulse text-center">
                                 Procesando archivo, por favor espera...
                             </p>
+                        </div>
+                    )}
+
+                    {stats && !processing && (
+                        <div className="mt-6 p-4 bg-blue-50 rounded-lg border border-blue-200">
+                            <h3 className="text-lg font-semibold text-blue-900 mb-4 text-center">
+                                Estadísticas del Procesamiento
+                            </h3>
+                            <div className="grid grid-cols-2 md:grid-cols-3 gap-3 md:gap-4">
+                                <div className="bg-white p-3 rounded-lg shadow-sm">
+                                    <p className="text-xs text-gray-500 mb-1">Registros Nuevos</p>
+                                    <p className="text-xl md:text-2xl font-bold text-green-600">
+                                        {stats.recordsCreated}
+                                    </p>
+                                </div>
+                                <div className="bg-white p-3 rounded-lg shadow-sm">
+                                    <p className="text-xs text-gray-500 mb-1">Registros Actualizados</p>
+                                    <p className="text-xl md:text-2xl font-bold text-blue-600">
+                                        {stats.recordsUpdated}
+                                    </p>
+                                </div>
+                                <div className="bg-white p-3 rounded-lg shadow-sm">
+                                    <p className="text-xs text-gray-500 mb-1">Duplicados Ignorados</p>
+                                    <p className="text-xl md:text-2xl font-bold text-orange-600">
+                                        {stats.recordsDuplicated}
+                                    </p>
+                                </div>
+                                <div className="bg-white p-3 rounded-lg shadow-sm">
+                                    <p className="text-xs text-gray-500 mb-1">Total Procesado</p>
+                                    <p className="text-xl md:text-2xl font-bold text-purple-600">
+                                        {stats.totalProcessed}
+                                    </p>
+                                </div>
+                                <div className="bg-white p-3 rounded-lg shadow-sm col-span-2 md:col-span-2">
+                                    <p className="text-xs text-gray-500 mb-1">Tiempo de Procesamiento</p>
+                                    <p className="text-xl md:text-2xl font-bold text-gray-700">
+                                        {stats.processingTime.toFixed(2)}s
+                                    </p>
+                                </div>
+                            </div>
                         </div>
                     )}
                 </div>

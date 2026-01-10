@@ -4,7 +4,7 @@ import API_BASE_URL from "@/config/apiConfig";
  * Procesa un archivo Excel y descarga el resultado
  * @param {string} accessToken - Token de autenticación
  * @param {File} excelFile - Archivo Excel a procesar
- * @returns {Promise<void>} - Inicia la descarga del archivo
+ * @returns {Promise<Object>} - Retorna las estadísticas del procesamiento y descarga el archivo
  */
 export const processSalesReport = async (accessToken, excelFile) => {
     const formData = new FormData();
@@ -22,6 +22,15 @@ export const processSalesReport = async (accessToken, excelFile) => {
         const errorData = await response.json().catch(() => ({}));
         throw new Error(errorData.detail || errorData.message || "Error al procesar el archivo");
     }
+
+    // Extraer estadísticas de los headers HTTP
+    const stats = {
+        recordsCreated: parseInt(response.headers.get('X-Records-Created') || '0'),
+        recordsUpdated: parseInt(response.headers.get('X-Records-Updated') || '0'),
+        recordsDuplicated: parseInt(response.headers.get('X-Records-Duplicated') || '0'),
+        totalProcessed: parseInt(response.headers.get('X-Total-Processed') || '0'),
+        processingTime: parseFloat(response.headers.get('X-Processing-Time') || '0'),
+    };
 
     // Obtener el blob (archivo Excel binario)
     const blob = await response.blob();
@@ -46,6 +55,9 @@ export const processSalesReport = async (accessToken, excelFile) => {
     link.click();
     document.body.removeChild(link);
     window.URL.revokeObjectURL(url);
+
+    // Retornar las estadísticas
+    return stats;
 };
 
 /**
