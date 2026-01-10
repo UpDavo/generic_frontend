@@ -213,7 +213,7 @@ export default function PaymentsPage() {
         sentAtLte
       );
 
-        console.log("Sales Check stats:", salesCheckData);
+        // console.log("Sales Check stats:", salesCheckData);
       setSalesCheckStats(salesCheckData);
 
       return salesCheckData;
