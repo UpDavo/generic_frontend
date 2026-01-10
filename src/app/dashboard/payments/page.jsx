@@ -213,7 +213,7 @@ export default function PaymentsPage() {
         sentAtLte
       );
 
-      //   console.log("Sales Check stats:", salesCheckData);
+        console.log("Sales Check stats:", salesCheckData);
       setSalesCheckStats(salesCheckData);
 
       return salesCheckData;
@@ -234,7 +234,7 @@ export default function PaymentsPage() {
       const totalExecutionLogs = executionStats.summary?.total_logs || 0;
       const totalWebhookLogs = webhookStats.summary?.total_logs || 0;
       const totalSalesLogs = salesStats.summary?.total_logs || 0;
-      const totalSalesCheckRecords = salesCheckStats.summary?.total_records_returned || 0;
+      const totalSalesCheckQueries = salesCheckStats.summary?.total_queries || 0;
       const totalPushCost = parseFloat(pushStats.summary?.total_cost || 0);
       const totalCanvasCost = parseFloat(canvasStats.summary?.total_cost || 0);
       const totalExecutionCost = parseFloat(
@@ -244,7 +244,7 @@ export default function PaymentsPage() {
       const totalSalesCost = parseFloat(salesStats.summary?.total_cost || 0);
       const totalSalesCheckCost = parseFloat(salesCheckStats.summary?.total_cost || 0);
 
-      setTotalCalls(totalPushLogs + totalCanvasLogs + totalExecutionLogs + totalWebhookLogs + totalSalesLogs + totalSalesCheckRecords);
+      setTotalCalls(totalPushLogs + totalCanvasLogs + totalExecutionLogs + totalWebhookLogs + totalSalesLogs + totalSalesCheckQueries);
       setCost(totalPushCost + totalCanvasCost + totalExecutionCost + totalWebhookCost + totalSalesCost + totalSalesCheckCost);
 
       // Combinar usuarios de todos los tipos para la tabla
@@ -712,7 +712,7 @@ export default function PaymentsPage() {
                   ) : (
                     <>
                       <p className="text-2xl font-bold text-indigo-600">
-                        {salesCheckStats?.summary?.total_records_returned || 0}
+                        {salesCheckStats?.summary?.total_queries || 0}
                       </p>
                       <p className="text-sm text-gray-600">
                         $
