@@ -36,18 +36,24 @@ export default function DataHistoricaPage() {
     }, [user]);
 
     /* ------------------- FILTROS ------------------- */
-    const [startDate, setStartDate] = useState("");
-    const [endDate, setEndDate] = useState("");
-    const [pocName, setPocName] = useState("");
-    const [skuVtex, setSkuVtex] = useState("");
+    const getMonthStart = () =>
+        new Date(new Date().getFullYear(), new Date().getMonth(), 1)
+            .toISOString()
+            .slice(0, 10);
+
+    const getMonthEnd = () =>
+        new Date(new Date().getFullYear(), new Date().getMonth() + 1, 0)
+            .toISOString()
+            .slice(0, 10);
+
+    const [startDate, setStartDate] = useState(getMonthStart());
+    const [endDate, setEndDate] = useState(getMonthEnd());
     const [filtering, setFiltering] = useState(false);
 
     /* ------------------- FILTROS APLICADOS ------------------- */
     const [appliedFilters, setAppliedFilters] = useState({
-        startDate: "",
-        endDate: "",
-        pocName: "",
-        skuVtex: "",
+        startDate: getMonthStart(),
+        endDate: getMonthEnd(),
     });
 
     /* ------------------- TABLA ------------------- */
@@ -71,14 +77,14 @@ export default function DataHistoricaPage() {
                 page,
                 appliedFilters.startDate,
                 appliedFilters.endDate,
-                appliedFilters.pocName,
-                appliedFilters.skuVtex,
-                10
+                null,
+                null,
+                25
             );
             const results = data.results || [];
             setVentas(results);
 
-            const itemsPerPage = 10;
+            const itemsPerPage = 25;
             const count = data.count || 0;
             setTotalRecords(count);
             setTotalPages(Math.ceil(count / itemsPerPage));
@@ -105,8 +111,6 @@ export default function DataHistoricaPage() {
             setAppliedFilters({
                 startDate: startDate,
                 endDate: endDate,
-                pocName: pocName,
-                skuVtex: skuVtex,
             });
             setPage(1);
         } finally {
@@ -117,15 +121,11 @@ export default function DataHistoricaPage() {
     const clearFilters = async () => {
         setFiltering(true);
         try {
-            setStartDate("");
-            setEndDate("");
-            setPocName("");
-            setSkuVtex("");
+            setStartDate(getMonthStart());
+            setEndDate(getMonthEnd());
             setAppliedFilters({
-                startDate: "",
-                endDate: "",
-                pocName: "",
-                skuVtex: "",
+                startDate: getMonthStart(),
+                endDate: getMonthEnd(),
             });
             setPage(1);
         } finally {
@@ -140,8 +140,8 @@ export default function DataHistoricaPage() {
                 accessToken,
                 appliedFilters.startDate,
                 appliedFilters.endDate,
-                appliedFilters.pocName,
-                appliedFilters.skuVtex
+                null,
+                null
             );
             setError(null);
         } catch (err) {
@@ -211,18 +211,6 @@ export default function DataHistoricaPage() {
                                         value={endDate}
                                         onChange={(e) => setEndDate(e.target.value)}
                                     />
-                                    <TextInput
-                                        label="Nombre POC"
-                                        placeholder="Ej: Super Mercado Central"
-                                        value={pocName}
-                                        onChange={(e) => setPocName(e.target.value)}
-                                    />
-                                    <TextInput
-                                        label="SKU VTEX"
-                                        placeholder="Ej: MAT001"
-                                        value={skuVtex}
-                                        onChange={(e) => setSkuVtex(e.target.value)}
-                                    />
                                     <div className="grid grid-cols-2 gap-2 mt-2">
                                         <Button
                                             onClick={applyFilters}
@@ -260,7 +248,7 @@ export default function DataHistoricaPage() {
                 </div>
 
                 {/* Filtros normales en desktop */}
-                <div className="hidden md:grid md:grid-cols-6 grid-cols-1 gap-2 items-end">
+                <div className="hidden md:grid md:grid-cols-4 grid-cols-1 gap-2 items-end">
                     <TextInput
                         label="Fecha Inicial"
                         type="date"
@@ -274,18 +262,6 @@ export default function DataHistoricaPage() {
                         placeholder="YYYY-MM-DD"
                         value={endDate}
                         onChange={(e) => setEndDate(e.target.value)}
-                    />
-                    <TextInput
-                        label="Nombre POC"
-                        placeholder="Ej: Super Mercado"
-                        value={pocName}
-                        onChange={(e) => setPocName(e.target.value)}
-                    />
-                    <TextInput
-                        label="SKU VTEX"
-                        placeholder="Ej: MAT001"
-                        value={skuVtex}
-                        onChange={(e) => setSkuVtex(e.target.value)}
                     />
                     <Button
                         onClick={applyFilters}

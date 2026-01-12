@@ -14,12 +14,24 @@ import {
     RiRefreshLine,
     RiCloseCircleLine,
     RiDownloadCloudLine,
+    RiBarChartBoxLine,
 } from "react-icons/ri";
 import { Unauthorized } from "@/core/components/Unauthorized";
 import {
     getWeeklyHectolitresReport,
     downloadWeeklyHectolitresReport,
 } from "@/tada/services/ventasHistoricasApi";
+import {
+    ComposedChart,
+    Bar,
+    Line,
+    XAxis,
+    YAxis,
+    CartesianGrid,
+    Tooltip,
+    Legend,
+    ResponsiveContainer,
+} from "recharts";
 
 const PERMISSION_PATH = "/dashboard/sales/data-historica/hectolitros";
 
@@ -157,6 +169,32 @@ export default function HectolitrosPage() {
     const getWeekKeys = () => {
         if (!reportData) return [];
         return Object.keys(reportData).filter((key) => key.startsWith("w")).sort();
+    };
+
+    /* =========================================================
+       Preparar datos para la gráfica
+    ========================================================= */
+    const getChartData = () => {
+        if (!reportData) return [];
+        const chartData = [];
+        
+        getWeekKeys().forEach((weekKey) => {
+            const weekData = reportData[weekKey];
+            DIAS_SEMANA.forEach((dia) => {
+                const diaData = weekData[dia];
+                if (diaData) {
+                    chartData.push({
+                        label: `${weekKey.replace("w", "W")} - ${DIAS_NOMBRES[dia].substring(0, 3)}`,
+                        fecha: diaData.fecha,
+                        meta: parseFloat(diaData.ht_meta) || 0,
+                        vendidos: parseFloat(diaData.ht) || 0,
+                        cumplimiento: parseFloat(diaData.cumplimiento?.replace('%', '')) || 0,
+                    });
+                }
+            });
+        });
+        
+        return chartData;
     };
 
     /* =========================================================
@@ -351,6 +389,89 @@ export default function HectolitrosPage() {
                             </div>
                         </div>
                     </div>
+                </div>
+            )}
+
+            {/* ---------------- GRÁFICA ---------------- */}
+            {reportData && getWeekKeys().length > 0 && (
+                <div className="mb-4 flex-shrink-0">
+                    <Accordion variant="contained">
+                        <Accordion.Item value="chart">
+                            <Accordion.Control>
+                                <div className="flex items-center gap-2">
+                                    <RiBarChartBoxLine size={20} />
+                                    <span className="font-bold">Gráfica de Hectolitros</span>
+                                </div>
+                            </Accordion.Control>
+                            <Accordion.Panel>
+                                <div className="bg-white p-4 rounded-lg">
+                                    <ResponsiveContainer width="100%" height={400}>
+                                        <ComposedChart
+                                            data={getChartData()}
+                                            margin={{ top: 20, right: 30, left: 20, bottom: 60 }}
+                                        >
+                                            <CartesianGrid strokeDasharray="3 3" stroke="#e0e0e0" />
+                                            <XAxis 
+                                                dataKey="label" 
+                                                angle={-45}
+                                                textAnchor="end"
+                                                height={100}
+                                                interval={0}
+                                                tick={{ fontSize: 11 }}
+                                            />
+                                            <YAxis 
+                                                yAxisId="left"
+                                                label={{ value: 'Hectolitros', angle: -90, position: 'insideLeft' }}
+                                            />
+                                            <YAxis 
+                                                yAxisId="right" 
+                                                orientation="right"
+                                                label={{ value: 'Cumplimiento %', angle: 90, position: 'insideRight' }}
+                                            />
+                                            <Tooltip 
+                                                contentStyle={{ backgroundColor: '#fff', border: '1px solid #ccc' }}
+                                                formatter={(value, name) => {
+                                                    if (name === 'cumplimiento') return [value + '%', 'Cumplimiento'];
+                                                    return [value.toFixed(2), name === 'meta' ? 'Meta' : 'Vendidos'];
+                                                }}
+                                            />
+                                            <Legend 
+                                                wrapperStyle={{ paddingTop: '10px' }}
+                                                formatter={(value) => {
+                                                    if (value === 'meta') return 'Meta';
+                                                    if (value === 'vendidos') return 'Vendidos';
+                                                    if (value === 'cumplimiento') return 'Cumplimiento %';
+                                                    return value;
+                                                }}
+                                            />
+                                            <Bar 
+                                                yAxisId="left"
+                                                dataKey="meta" 
+                                                fill="#d946ef" 
+                                                opacity={0.7}
+                                                name="meta"
+                                            />
+                                            <Bar 
+                                                yAxisId="left"
+                                                dataKey="vendidos" 
+                                                fill="#9333ea" 
+                                                name="vendidos"
+                                            />
+                                            <Line 
+                                                yAxisId="right"
+                                                type="monotone" 
+                                                dataKey="cumplimiento" 
+                                                stroke="#000000" 
+                                                strokeWidth={2}
+                                                dot={{ fill: '#000000', r: 4 }}
+                                                name="cumplimiento"
+                                            />
+                                        </ComposedChart>
+                                    </ResponsiveContainer>
+                                </div>
+                            </Accordion.Panel>
+                        </Accordion.Item>
+                    </Accordion>
                 </div>
             )}
 
