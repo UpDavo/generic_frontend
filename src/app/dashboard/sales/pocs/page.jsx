@@ -144,7 +144,7 @@ export default function PocsPage() {
                 appliedFilters.city,
                 appliedFilters.idPoc,
                 appliedFilters.search,
-                10
+                25
             );
             const results = data.results || [];
             setPocs(results);

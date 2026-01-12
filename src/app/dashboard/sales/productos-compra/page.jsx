@@ -112,7 +112,7 @@ export default function ProductosCompraPage() {
                 appliedFilters.origen,
                 appliedFilters.returnable,
                 appliedFilters.search,
-                10
+                25
             );
             const results = data.results || [];
             setProductos(results);

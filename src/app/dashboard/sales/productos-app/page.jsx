@@ -102,7 +102,7 @@ export default function ProductosAppPage() {
                 appliedFilters.code,
                 appliedFilters.name,
                 appliedFilters.search,
-                10
+                25
             );
             const results = data.results || [];
             setProductos(results);
