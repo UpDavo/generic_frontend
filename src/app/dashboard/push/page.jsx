@@ -119,7 +119,7 @@ export default function MessagePage() {
     try {
       const response = await listMessages(accessToken, page, searchQuery);
       setData(response.results || []);
-      const pages = Math.ceil(response.count / 10);
+      const pages = Math.ceil(response.count / 25);
       setTotalPages(pages);
       setError(null);
     } catch (err) {

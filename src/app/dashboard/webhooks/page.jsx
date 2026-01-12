@@ -111,7 +111,6 @@ export default function WebhooksPage() {
   const [email, setEmail] = useState("");
   const [startDate, setStartDate] = useState(defaultDates.start);
   const [endDate, setEndDate] = useState(defaultDates.end);
-  const [source, setSource] = useState(null);
   const [downloadingExcel, setDownloadingExcel] = useState(false);
   const [filtering, setFiltering] = useState(false);
 
@@ -120,7 +119,6 @@ export default function WebhooksPage() {
     email: "",
     startDate: defaultDates.start,
     endDate: defaultDates.end,
-    source: null,
   });
 
   /* ------------------- TABLA ------------------- */
@@ -161,14 +159,13 @@ export default function WebhooksPage() {
         page,
         appliedFilters.email,
         appliedFilters.startDate,
-        appliedFilters.endDate,
-        appliedFilters.source
+        appliedFilters.endDate
       );
       const results = data.results || [];
       setLogs(results);
 
       // Calcular páginas totales basándose en el count del backend
-      const itemsPerPage = 10;
+      const itemsPerPage = 25;
       const count = data.count || 0;
       setTotalRecords(count);
       setTotalPages(Math.ceil(count / itemsPerPage));
@@ -230,7 +227,6 @@ export default function WebhooksPage() {
         email: email,
         startDate: startDate,
         endDate: endDate,
-        source: source,
       });
       setPage(1);
     } finally {
@@ -245,12 +241,10 @@ export default function WebhooksPage() {
       setEmail("");
       setStartDate(defaultDates.start);
       setEndDate(defaultDates.end);
-      setSource(null);
       setAppliedFilters({
         email: "",
         startDate: defaultDates.start,
         endDate: defaultDates.end,
-        source: null,
       });
       setPage(1);
     } finally {
@@ -335,13 +329,6 @@ export default function WebhooksPage() {
           onChange={(e) => setEndDate(e.target.value || null)}
           leftSection={<RiSearchLine />}
         />
-        <Select
-          data={SOURCE_OPTIONS}
-          label="Origen"
-          placeholder="Selecciona origen"
-          value={source}
-          onChange={setSource}
-        />
         <Button
           onClick={applyFilters}
           variant="filled"
@@ -359,8 +346,7 @@ export default function WebhooksPage() {
                 accessToken,
                 email,
                 startDate,
-                endDate,
-                source
+                endDate
               );
             } catch (err) {
               console.error("Error al descargar:", err);
