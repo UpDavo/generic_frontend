@@ -324,12 +324,12 @@ export default function PaymentsPage() {
       if (salesCheckStats.breakdown?.by_user) {
         salesCheckStats.breakdown.by_user.forEach((user) => {
           const userName = `${user.user__first_name || ""} ${user.user__last_name || ""}`.trim() || user.user__email || "Usuario desconocido";
-          const unitPrice = parseFloat(salesCheckStats.summary?.unit_price_per_record || 0);
-          const userCost = user.total_records * unitPrice;
+          const unitPrice = parseFloat(salesCheckStats.summary?.unit_price_per_query || 0);
+          const userCost = user.query_count * unitPrice;
           
           allUsers.push({
             user: userName,
-            count: user.total_records,
+            count: user.query_count,
             cost: userCost,
             type: "SALES_CHECK",
             email: user.user__email,
