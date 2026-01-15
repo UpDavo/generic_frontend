@@ -33,16 +33,12 @@ export const processSalesReport = async (accessToken, excelFile) => {
         processingTime: parseFloat(response.headers.get('X-Processing-Time') || '0'),
     };
 
-    // Obtener el blob (archivo Excel binario o ZIP)
+    // Obtener el blob (archivo Excel binario)
     const blob = await response.blob();
-    
-    // Determinar el tipo de contenido
-    const contentType = response.headers.get('Content-Type');
-    const isZip = contentType === 'application/zip' || stats.recordsUnprocessed > 0;
     
     // Obtener el nombre del archivo desde el header Content-Disposition
     const contentDisposition = response.headers.get('Content-Disposition');
-    let filename = isZip ? 'reporte_ventas.zip' : 'reporte_ventas_consolidado.xlsx';
+    let filename = 'reporte_ventas_consolidado.xlsx';
     
     if (contentDisposition) {
         const filenameMatch = contentDisposition.match(/filename="?(.+?)"?$/);
@@ -61,11 +57,10 @@ export const processSalesReport = async (accessToken, excelFile) => {
     document.body.removeChild(link);
     window.URL.revokeObjectURL(url);
 
-    // Retornar las estadísticas con información del tipo de archivo
+    // Retornar las estadísticas con información sobre errores
     return {
         ...stats,
-        hasErrors: isZip,
-        fileType: isZip ? 'zip' : 'xlsx',
+        hasErrors: stats.recordsUnprocessed > 0,
         filename,
     };
 };
@@ -101,6 +96,28 @@ export const getSalesReportLogsStats = async (accessToken, startDate = null, end
     if (!response.ok) {
         const errorData = await response.json().catch(() => ({}));
         throw new Error(errorData.detail || errorData.message || "Error al obtener estadísticas de reportes de ventas");
+    }
+
+    return await response.json();
+};
+
+/**
+ * Obtiene información del último archivo cargado
+ * @param {string} accessToken - Token de autenticación
+ * @returns {Promise<Object>}
+ */
+export const getLastSalesUpload = async (accessToken) => {
+    const response = await fetch(`${API_BASE_URL}/tada/sales-upload/last/`, {
+        method: "GET",
+        headers: {
+            Authorization: `Bearer ${accessToken}`,
+            "Content-Type": "application/json",
+        },
+    });
+
+    if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.detail || errorData.message || "Error al obtener información de la última carga");
     }
 
     return await response.json();

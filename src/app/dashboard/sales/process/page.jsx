@@ -1,5 +1,5 @@
 "use client";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/auth/hooks/useAuth";
 import {
@@ -15,7 +15,7 @@ import {
 } from "react-icons/ri";
 import { Unauthorized } from "@/core/components/Unauthorized";
 import { ProcessingOverlay } from "@/core/components/ProcessingOverlay";
-import { processSalesReport } from "@/tada/services/salesReportApi";
+import { processSalesReport, getLastSalesUpload } from "@/tada/services/salesReportApi";
 
 const PERMISSION_PATH = "/dashboard/sales/process";
 
@@ -38,6 +38,27 @@ export default function SalesProcessPage() {
     const [error, setError] = useState(null);
     const [showSuccessOverlay, setShowSuccessOverlay] = useState(false);
     const [stats, setStats] = useState(null);
+    const [lastUpload, setLastUpload] = useState(null);
+    const [loadingLastUpload, setLoadingLastUpload] = useState(true);
+
+    /* ------------------- EFECTOS ------------------- */
+    useEffect(() => {
+        const fetchLastUpload = async () => {
+            if (!accessToken || !authorized) return;
+            
+            try {
+                const data = await getLastSalesUpload(accessToken);
+                setLastUpload(data.last_upload);
+            } catch (err) {
+                console.error("Error al cargar último upload:", err);
+                // No mostramos error al usuario, es información opcional
+            } finally {
+                setLoadingLastUpload(false);
+            }
+        };
+
+        fetchLastUpload();
+    }, [accessToken, authorized]);
 
     /* =========================================================
        Handlers
@@ -62,11 +83,19 @@ export default function SalesProcessPage() {
         }
     };
 
-    const handleSuccessOverlayClose = () => {
+    const handleSuccessOverlayClose = async () => {
         setShowSuccessOverlay(false);
         setProcessing(false);
         setExcelFile(null);
         setStats(null);
+        
+        // Recargar información del último upload
+        try {
+            const data = await getLastSalesUpload(accessToken);
+            setLastUpload(data.last_upload);
+        } catch (err) {
+            console.error("Error al recargar último upload:", err);
+        }
     };
 
     /* =========================================================
@@ -105,6 +134,52 @@ export default function SalesProcessPage() {
                 </p>
 
                 <div className="space-y-4 md:space-y-6">
+                    {/* Información del último archivo cargado */}
+                    {!loadingLastUpload && lastUpload && (
+                        <div className="p-4 bg-gray-50 border border-gray-200 rounded-lg">
+                            <h3 className="text-sm font-semibold text-gray-700 mb-3">
+                                📋 Último archivo procesado
+                            </h3>
+                            <div className="grid grid-cols-2 gap-2 text-xs">
+                                <div>
+                                    <p className="text-gray-500">Fecha de procesamiento</p>
+                                    <p className="font-medium text-gray-800">
+                                        {new Date(lastUpload.date_processed).toLocaleString('es-ES', {
+                                            year: 'numeric',
+                                            month: 'short',
+                                            day: 'numeric',
+                                            hour: '2-digit',
+                                            minute: '2-digit'
+                                        })}
+                                    </p>
+                                </div>
+                                <div>
+                                    <p className="text-gray-500">Usuario</p>
+                                    <p className="font-medium text-gray-800">{lastUpload.user}</p>
+                                </div>
+                                <div>
+                                    <p className="text-gray-500">Rango de fechas</p>
+                                    <p className="font-medium text-gray-800">
+                                        {new Date(lastUpload.initrowdate).toLocaleDateString('es-ES')} - {new Date(lastUpload.endrowdate).toLocaleDateString('es-ES')}
+                                    </p>
+                                </div>
+                                <div>
+                                    <p className="text-gray-500">Registros procesados</p>
+                                    <p className="font-medium text-gray-800">{lastUpload.rows_count.toLocaleString()}</p>
+                                </div>
+                            </div>
+                        </div>
+                    )}
+
+                    {loadingLastUpload && (
+                        <div className="p-4 bg-gray-50 border border-gray-200 rounded-lg">
+                            <div className="flex items-center gap-2">
+                                <Loader size="xs" />
+                                <p className="text-xs text-gray-500">Cargando información...</p>
+                            </div>
+                        </div>
+                    )}
+
                     <FileInput
                         label="Archivo Excel"
                         placeholder="Selecciona un archivo Excel"
@@ -142,7 +217,7 @@ export default function SalesProcessPage() {
                             {stats.hasErrors && (
                                 <div className="mb-4 p-3 bg-yellow-100 border border-yellow-300 rounded-lg">
                                     <p className="text-sm font-semibold text-yellow-800 text-center">
-                                        ⚠️ Se descargó un archivo ZIP con registros procesados y errores
+                                        ⚠️ El archivo Excel incluye una hoja con registros con errores
                                     </p>
                                 </div>
                             )}
@@ -192,11 +267,11 @@ export default function SalesProcessPage() {
                             {stats.hasErrors && (
                                 <div className="mt-4 p-3 bg-blue-100 border border-blue-300 rounded-lg">
                                     <p className="text-xs text-blue-800">
-                                        📦 El archivo ZIP descargado contiene:
+                                        📊 El archivo Excel descargado contiene:
                                     </p>
                                     <ul className="text-xs text-blue-700 mt-2 ml-4 list-disc">
-                                        <li>reporte_ventas_nuevos_*.xlsx - Registros procesados exitosamente</li>
-                                        <li>reporte_ventas_errores_*.xlsx - Registros con errores para revisar</li>
+                                        <li><strong>Hoja 1: "Registros Nuevos"</strong> - Registros procesados exitosamente</li>
+                                        <li><strong>Hoja 2: "Registros con Errores"</strong> - Registros con errores para revisar</li>
                                     </ul>
                                 </div>
                             )}
@@ -210,7 +285,7 @@ export default function SalesProcessPage() {
                 showSuccess={showSuccessOverlay}
                 successMessage={
                     stats?.hasErrors
-                        ? "¡Archivo procesado! Se descargó un ZIP con registros procesados y errores"
+                        ? "¡Archivo procesado! Revisa la hoja de errores en el Excel descargado"
                         : "¡Archivo procesado y descargado exitosamente!"
                 }
                 processingMessage="Procesando el reporte de ventas..."
