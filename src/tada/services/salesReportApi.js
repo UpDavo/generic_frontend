@@ -29,15 +29,20 @@ export const processSalesReport = async (accessToken, excelFile) => {
         recordsUpdated: parseInt(response.headers.get('X-Records-Updated') || '0'),
         recordsDuplicated: parseInt(response.headers.get('X-Records-Duplicated') || '0'),
         totalProcessed: parseInt(response.headers.get('X-Total-Processed') || '0'),
+        recordsUnprocessed: parseInt(response.headers.get('X-Records-Unprocessed') || '0'),
         processingTime: parseFloat(response.headers.get('X-Processing-Time') || '0'),
     };
 
-    // Obtener el blob (archivo Excel binario)
+    // Obtener el blob (archivo Excel binario o ZIP)
     const blob = await response.blob();
+    
+    // Determinar el tipo de contenido
+    const contentType = response.headers.get('Content-Type');
+    const isZip = contentType === 'application/zip' || stats.recordsUnprocessed > 0;
     
     // Obtener el nombre del archivo desde el header Content-Disposition
     const contentDisposition = response.headers.get('Content-Disposition');
-    let filename = 'reporte_ventas_consolidado.xlsx';
+    let filename = isZip ? 'reporte_ventas.zip' : 'reporte_ventas_consolidado.xlsx';
     
     if (contentDisposition) {
         const filenameMatch = contentDisposition.match(/filename="?(.+?)"?$/);
@@ -56,8 +61,13 @@ export const processSalesReport = async (accessToken, excelFile) => {
     document.body.removeChild(link);
     window.URL.revokeObjectURL(url);
 
-    // Retornar las estadísticas
-    return stats;
+    // Retornar las estadísticas con información del tipo de archivo
+    return {
+        ...stats,
+        hasErrors: isZip,
+        fileType: isZip ? 'zip' : 'xlsx',
+        filename,
+    };
 };
 
 /**

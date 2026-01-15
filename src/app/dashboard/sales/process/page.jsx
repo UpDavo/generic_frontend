@@ -139,6 +139,13 @@ export default function SalesProcessPage() {
 
                     {stats && !processing && (
                         <div className="mt-6 p-4 bg-blue-50 rounded-lg border border-blue-200">
+                            {stats.hasErrors && (
+                                <div className="mb-4 p-3 bg-yellow-100 border border-yellow-300 rounded-lg">
+                                    <p className="text-sm font-semibold text-yellow-800 text-center">
+                                        ⚠️ Se descargó un archivo ZIP con registros procesados y errores
+                                    </p>
+                                </div>
+                            )}
                             <h3 className="text-lg font-semibold text-blue-900 mb-4 text-center">
                                 Estadísticas del Procesamiento
                             </h3>
@@ -161,6 +168,14 @@ export default function SalesProcessPage() {
                                         {stats.recordsDuplicated}
                                     </p>
                                 </div>
+                                {stats.recordsUnprocessed > 0 && (
+                                    <div className="bg-white p-3 rounded-lg shadow-sm border-2 border-red-300">
+                                        <p className="text-xs text-gray-500 mb-1">Registros con Errores</p>
+                                        <p className="text-xl md:text-2xl font-bold text-red-600">
+                                            {stats.recordsUnprocessed}
+                                        </p>
+                                    </div>
+                                )}
                                 <div className="bg-white p-3 rounded-lg shadow-sm">
                                     <p className="text-xs text-gray-500 mb-1">Total Procesado</p>
                                     <p className="text-xl md:text-2xl font-bold text-purple-600">
@@ -174,6 +189,17 @@ export default function SalesProcessPage() {
                                     </p>
                                 </div>
                             </div>
+                            {stats.hasErrors && (
+                                <div className="mt-4 p-3 bg-blue-100 border border-blue-300 rounded-lg">
+                                    <p className="text-xs text-blue-800">
+                                        📦 El archivo ZIP descargado contiene:
+                                    </p>
+                                    <ul className="text-xs text-blue-700 mt-2 ml-4 list-disc">
+                                        <li>reporte_ventas_nuevos_*.xlsx - Registros procesados exitosamente</li>
+                                        <li>reporte_ventas_errores_*.xlsx - Registros con errores para revisar</li>
+                                    </ul>
+                                </div>
+                            )}
                         </div>
                     )}
                 </div>
@@ -182,7 +208,11 @@ export default function SalesProcessPage() {
             <ProcessingOverlay
                 isProcessing={processing}
                 showSuccess={showSuccessOverlay}
-                successMessage="¡Archivo procesado y descargado exitosamente!"
+                successMessage={
+                    stats?.hasErrors
+                        ? "¡Archivo procesado! Se descargó un ZIP con registros procesados y errores"
+                        : "¡Archivo procesado y descargado exitosamente!"
+                }
                 processingMessage="Procesando el reporte de ventas..."
                 onSuccessClose={handleSuccessOverlayClose}
             />
