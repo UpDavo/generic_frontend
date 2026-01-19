@@ -65,7 +65,6 @@ export default function HectolitrosPage() {
     const [endYear, setEndYear] = useState(currentYear);
     const [startWeek, setStartWeek] = useState(1);
     const [endWeek, setEndWeek] = useState(4);
-    const [reportType, setReportType] = useState("hectolitros");
     const [filtering, setFiltering] = useState(false);
 
     /* ------------------- FILTROS APLICADOS ------------------- */
@@ -74,7 +73,6 @@ export default function HectolitrosPage() {
         endYear: currentYear,
         startWeek: 1,
         endWeek: 4,
-        reportType: "hectolitros",
     });
 
     /* ------------------- DATOS ------------------- */
@@ -96,7 +94,7 @@ export default function HectolitrosPage() {
                 appliedFilters.endYear,
                 appliedFilters.startWeek,
                 appliedFilters.endWeek,
-                appliedFilters.reportType
+                "hectolitros"
             );
             setReportData(data);
             setError(null);
@@ -123,7 +121,6 @@ export default function HectolitrosPage() {
                 endYear: endYear,
                 startWeek: startWeek,
                 endWeek: endWeek,
-                reportType: reportType,
             });
         } finally {
             setFiltering(false);
@@ -138,13 +135,11 @@ export default function HectolitrosPage() {
             setEndYear(currentYear);
             setStartWeek(1);
             setEndWeek(4);
-            setReportType("hectolitros");
             setAppliedFilters({
                 startYear: currentYear,
                 endYear: currentYear,
                 startWeek: 1,
                 endWeek: 4,
-                reportType: "hectolitros",
             });
         } finally {
             setFiltering(false);
@@ -160,7 +155,7 @@ export default function HectolitrosPage() {
                 appliedFilters.endYear,
                 appliedFilters.startWeek,
                 appliedFilters.endWeek,
-                appliedFilters.reportType
+                "hectolitros"
             );
             setError(null);
         } catch (err) {
@@ -282,16 +277,6 @@ export default function HectolitrosPage() {
                                         min={1}
                                         max={53}
                                     />
-                                    <Select
-                                        label="Tipo de Reporte"
-                                        placeholder="Selecciona el tipo"
-                                        value={reportType}
-                                        onChange={setReportType}
-                                        data={[
-                                            { value: "hectolitros", label: "Hectolitros" },
-                                            { value: "caja", label: "Caja" },
-                                        ]}
-                                    />
                                     <div className="grid grid-cols-2 gap-2 mt-2">
                                         <Button
                                             onClick={applyFilters}
@@ -326,7 +311,7 @@ export default function HectolitrosPage() {
                 </div>
 
                 {/* Filtros normales en desktop */}
-                <div className="hidden md:grid md:grid-cols-7 grid-cols-1 gap-2 items-end">
+                <div className="hidden md:grid md:grid-cols-6 grid-cols-1 gap-2 items-end">
                     <NumberInput
                         label="Año Inicial"
                         placeholder="Ej: 2026"
@@ -358,16 +343,6 @@ export default function HectolitrosPage() {
                         onChange={setEndWeek}
                         min={1}
                         max={53}
-                    />
-                    <Select
-                        label="Tipo de Reporte"
-                        placeholder="Selecciona"
-                        value={reportType}
-                        onChange={setReportType}
-                        data={[
-                            { value: "hectolitros", label: "Hectolitros" },
-                            { value: "caja", label: "Caja" },
-                        ]}
                     />
                     <Button
                         onClick={applyFilters}
@@ -432,7 +407,7 @@ export default function HectolitrosPage() {
                                 </div>
                             </Accordion.Control>
                             <Accordion.Panel>
-                                <div className="bg-white p-4 rounded-lg">
+                                <div className="bg-white p-4 rounded-lg space-y-4">
                                     <ResponsiveContainer width="100%" height={400}>
                                         <ComposedChart
                                             data={getChartData()}
@@ -496,6 +471,48 @@ export default function HectolitrosPage() {
                                             />
                                         </ComposedChart>
                                     </ResponsiveContainer>
+
+                                    {/* Tabla de datos debajo de la gráfica */}
+                                    <div className="overflow-x-auto">
+                                        <table className="table w-full text-xs border-collapse">
+                                            <thead>
+                                                <tr className="bg-gray-100">
+                                                    <th className="border border-gray-300 px-2 py-1 text-center font-bold">Día</th>
+                                                    {getChartData().map((item, idx) => (
+                                                        <th key={idx} className="border border-gray-300 px-2 py-1 text-center font-bold">
+                                                            {idx + 1}
+                                                        </th>
+                                                    ))}
+                                                </tr>
+                                            </thead>
+                                            <tbody>
+                                                <tr className="bg-purple-50">
+                                                    <td className="border border-gray-300 px-2 py-1 font-bold text-center">Meta</td>
+                                                    {getChartData().map((item, idx) => (
+                                                        <td key={idx} className="border border-gray-300 px-2 py-1 text-center">
+                                                            {item.meta.toFixed(2)}
+                                                        </td>
+                                                    ))}
+                                                </tr>
+                                                <tr className="bg-blue-50">
+                                                    <td className="border border-gray-300 px-2 py-1 font-bold text-center">Venta</td>
+                                                    {getChartData().map((item, idx) => (
+                                                        <td key={idx} className="border border-gray-300 px-2 py-1 text-center">
+                                                            {item.vendidos.toFixed(2)}
+                                                        </td>
+                                                    ))}
+                                                </tr>
+                                                <tr className="bg-gray-50">
+                                                    <td className="border border-gray-300 px-2 py-1 font-bold text-center">% Cumpl.</td>
+                                                    {getChartData().map((item, idx) => (
+                                                        <td key={idx} className="border border-gray-300 px-2 py-1 text-center font-semibold">
+                                                            {item.cumplimiento.toFixed(0)}%
+                                                        </td>
+                                                    ))}
+                                                </tr>
+                                            </tbody>
+                                        </table>
+                                    </div>
                                 </div>
                             </Accordion.Panel>
                         </Accordion.Item>
