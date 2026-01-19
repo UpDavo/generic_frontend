@@ -7,6 +7,7 @@ import {
     Loader,
     Notification,
     NumberInput,
+    Select,
     Accordion,
 } from "@mantine/core";
 import {
@@ -64,6 +65,7 @@ export default function HectolitrosPage() {
     const [endYear, setEndYear] = useState(currentYear);
     const [startWeek, setStartWeek] = useState(1);
     const [endWeek, setEndWeek] = useState(4);
+    const [reportType, setReportType] = useState("hectolitros");
     const [filtering, setFiltering] = useState(false);
 
     /* ------------------- FILTROS APLICADOS ------------------- */
@@ -72,6 +74,7 @@ export default function HectolitrosPage() {
         endYear: currentYear,
         startWeek: 1,
         endWeek: 4,
+        reportType: "hectolitros",
     });
 
     /* ------------------- DATOS ------------------- */
@@ -92,7 +95,8 @@ export default function HectolitrosPage() {
                 appliedFilters.startYear,
                 appliedFilters.endYear,
                 appliedFilters.startWeek,
-                appliedFilters.endWeek
+                appliedFilters.endWeek,
+                appliedFilters.reportType
             );
             setReportData(data);
             setError(null);
@@ -119,6 +123,7 @@ export default function HectolitrosPage() {
                 endYear: endYear,
                 startWeek: startWeek,
                 endWeek: endWeek,
+                reportType: reportType,
             });
         } finally {
             setFiltering(false);
@@ -133,11 +138,13 @@ export default function HectolitrosPage() {
             setEndYear(currentYear);
             setStartWeek(1);
             setEndWeek(4);
+            setReportType("hectolitros");
             setAppliedFilters({
                 startYear: currentYear,
                 endYear: currentYear,
                 startWeek: 1,
                 endWeek: 4,
+                reportType: "hectolitros",
             });
         } finally {
             setFiltering(false);
@@ -152,7 +159,8 @@ export default function HectolitrosPage() {
                 appliedFilters.startYear,
                 appliedFilters.endYear,
                 appliedFilters.startWeek,
-                appliedFilters.endWeek
+                appliedFilters.endWeek,
+                appliedFilters.reportType
             );
             setError(null);
         } catch (err) {
@@ -274,6 +282,16 @@ export default function HectolitrosPage() {
                                         min={1}
                                         max={53}
                                     />
+                                    <Select
+                                        label="Tipo de Reporte"
+                                        placeholder="Selecciona el tipo"
+                                        value={reportType}
+                                        onChange={setReportType}
+                                        data={[
+                                            { value: "hectolitros", label: "Hectolitros" },
+                                            { value: "caja", label: "Caja" },
+                                        ]}
+                                    />
                                     <div className="grid grid-cols-2 gap-2 mt-2">
                                         <Button
                                             onClick={applyFilters}
@@ -308,7 +326,7 @@ export default function HectolitrosPage() {
                 </div>
 
                 {/* Filtros normales en desktop */}
-                <div className="hidden md:grid md:grid-cols-6 grid-cols-1 gap-2 items-end">
+                <div className="hidden md:grid md:grid-cols-7 grid-cols-1 gap-2 items-end">
                     <NumberInput
                         label="Año Inicial"
                         placeholder="Ej: 2026"
@@ -340,6 +358,16 @@ export default function HectolitrosPage() {
                         onChange={setEndWeek}
                         min={1}
                         max={53}
+                    />
+                    <Select
+                        label="Tipo de Reporte"
+                        placeholder="Selecciona"
+                        value={reportType}
+                        onChange={setReportType}
+                        data={[
+                            { value: "hectolitros", label: "Hectolitros" },
+                            { value: "caja", label: "Caja" },
+                        ]}
                     />
                     <Button
                         onClick={applyFilters}

@@ -140,6 +140,7 @@ export async function getSalesCheckStats(token, startDate = "", endDate = "") {
  * @param {number} endYear - Año final (ej: 2026)
  * @param {number} startWeek - Semana inicial (1-53)
  * @param {number} endWeek - Semana final (1-53)
+ * @param {string} reportType - Tipo de reporte: "hectolitros" o "caja" (default: "hectolitros")
  * @returns {Promise<Object>} - Respuesta con total y datos por semana
  */
 export async function getWeeklyHectolitresReport(
@@ -147,7 +148,8 @@ export async function getWeeklyHectolitresReport(
     startYear,
     endYear,
     startWeek,
-    endWeek
+    endWeek,
+    reportType = "hectolitros"
 ) {
     const url = new URL(`${ENV.API_URL}/tada/hectolitres-daily-meta/weekly-report/`);
     
@@ -155,6 +157,7 @@ export async function getWeeklyHectolitresReport(
     if (endYear) url.searchParams.append("end_year", endYear);
     if (startWeek) url.searchParams.append("start_week", startWeek);
     if (endWeek) url.searchParams.append("end_week", endWeek);
+    if (reportType) url.searchParams.append("report_type", reportType);
 
     const response = await fetch(url.toString(), {
         method: "GET",
@@ -179,6 +182,7 @@ export async function getWeeklyHectolitresReport(
  * @param {number} endYear - Año final (ej: 2026)
  * @param {number} startWeek - Semana inicial (1-53)
  * @param {number} endWeek - Semana final (1-53)
+ * @param {string} reportType - Tipo de reporte: "hectolitros" o "caja" (default: "hectolitros")
  * @returns {Promise<void>} - Descarga el archivo automáticamente
  */
 export async function downloadWeeklyHectolitresReport(
@@ -186,7 +190,8 @@ export async function downloadWeeklyHectolitresReport(
     startYear,
     endYear,
     startWeek,
-    endWeek
+    endWeek,
+    reportType = "hectolitros"
 ) {
     const url = new URL(`${ENV.API_URL}/tada/hectolitres-daily-meta/weekly-report/download/`);
     
@@ -194,6 +199,7 @@ export async function downloadWeeklyHectolitresReport(
     if (endYear) url.searchParams.append("end_year", endYear);
     if (startWeek) url.searchParams.append("start_week", startWeek);
     if (endWeek) url.searchParams.append("end_week", endWeek);
+    if (reportType) url.searchParams.append("report_type", reportType);
 
     const response = await fetch(url.toString(), {
         method: "GET",
