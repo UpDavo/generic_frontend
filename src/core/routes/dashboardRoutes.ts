@@ -24,6 +24,7 @@ import {
   RiStore2Line,
   RiBoxingLine,
   RiFileExcel2Line,
+  RiLineChartLine,
 } from "react-icons/ri";
 export const dashboardRoutes = [
   {
@@ -124,8 +125,8 @@ export const dashboardRoutes = [
         ],
       },
       {
-        name: "Reporte de Ventas",
-        icon: RiShoppingCartLine,
+        name: "Analiticas Ventas",
+        icon: RiBarChart2Line,
         children: [
           {
             path: "/dashboard/sales/process",
@@ -145,6 +146,24 @@ export const dashboardRoutes = [
             name: "Hectolitros",
             permission: "/dashboard/sales/data-historica/hectolitros",
           },
+          {
+            path: "/dashboard/sales/data-historica/comparacion-anual",
+            icon: RiLineChartLine,
+            name: "Comparación Anual",
+            permission: "/dashboard/sales/data-historica/comparacion-anual",
+          },
+          {
+            path: "/dashboard/sales/data-historica/top-skus",
+            icon: RiBarChart2Line,
+            name: "Top SKUs por Región",
+            permission: "/dashboard/sales/data-historica/top-skus",
+          },
+        ],
+      },
+      {
+        name: "Conf. reporte ventas",
+        icon: RiSettingsLine,
+        children: [
           {
             path: "/dashboard/sales/hectolitros-meta",
             icon: RiMedalLine,
@@ -168,7 +187,7 @@ export const dashboardRoutes = [
             icon: RiBoxingLine,
             name: "Conf. Sku App",
             permission: "/dashboard/sales/productos-app",
-          }
+          },
         ],
       },
     ],
