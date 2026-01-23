@@ -24,6 +24,7 @@ import {
     getProductoCompraById,
     createProductoCompra,
     patchProductoCompra,
+    getCategoriesProductosCompra,
 } from "@/tada/services/ventasProductosCompraApi";
 
 const PERMISSION_PATH = "/dashboard/sales/productos-compra";
@@ -75,6 +76,36 @@ export default function ProductosCompraFormPage() {
 
     const [homologatedInput, setHomologatedInput] = useState("");
     const [homologatedNames, setHomologatedNames] = useState([]);
+
+    /* ------------------- CATEGORÍAS ------------------- */
+    const [categories, setCategories] = useState([]);
+    const [loadingCategories, setLoadingCategories] = useState(false);
+
+    /* =========================================================
+       Cargar categorías
+    ========================================================= */
+    useEffect(() => {
+        const loadCategories = async () => {
+            if (!accessToken) return;
+
+            setLoadingCategories(true);
+            try {
+                const data = await getCategoriesProductosCompra(accessToken);
+                // Convertir el array de strings a formato para Select de Mantine
+                const categoryOptions = data.categories.map((cat) => ({
+                    value: cat,
+                    label: cat,
+                }));
+                setCategories(categoryOptions);
+            } catch (err) {
+                console.error("Error al cargar categorías:", err);
+            } finally {
+                setLoadingCategories(false);
+            }
+        };
+
+        loadCategories();
+    }, [accessToken]);
 
     /* =========================================================
        Cargar producto en modo edición
@@ -261,16 +292,20 @@ export default function ProductosCompraFormPage() {
                                             setFormData({ ...formData, brand: e.currentTarget.value })
                                         }
                                     />
-                                    <TextInput
+                                    <Select
                                         label="Categoría"
-                                        placeholder="Ej: Bebidas"
+                                        placeholder="Selecciona una categoría"
+                                        data={categories}
                                         value={formData.category}
-                                        onChange={(e) =>
+                                        onChange={(value) =>
                                             setFormData({
                                                 ...formData,
-                                                category: e.currentTarget.value,
+                                                category: value || "",
                                             })
                                         }
+                                        searchable
+                                        clearable
+                                        disabled={loadingCategories}
                                     />
                                     <Select
                                         data={ORIGEN_OPTIONS}

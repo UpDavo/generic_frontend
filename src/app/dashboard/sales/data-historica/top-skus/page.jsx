@@ -8,6 +8,7 @@ import {
     NumberInput,
     Select,
     Accordion,
+    Switch,
 } from "@mantine/core";
 import {
     RiSearchLine,
@@ -41,6 +42,9 @@ export default function TopSkusPage() {
     const [endWeek, setEndWeek] = useState(4);
     const [reportType, setReportType] = useState("caja");
     const [productCategory, setProductCategory] = useState("");
+    const [groupByRegion, setGroupByRegion] = useState(true);
+    const [groupByCity, setGroupByCity] = useState(false);
+    const [groupByPoc, setGroupByPoc] = useState(false);
     const [filtering, setFiltering] = useState(false);
 
     /* ------------------- FILTROS APLICADOS ------------------- */
@@ -51,6 +55,9 @@ export default function TopSkusPage() {
         endWeek: 4,
         reportType: "caja",
         productCategory: "",
+        groupByRegion: true,
+        groupByCity: false,
+        groupByPoc: false,
     });
 
     /* ------------------- DATOS ------------------- */
@@ -116,6 +123,9 @@ export default function TopSkusPage() {
                 endWeek,
                 reportType,
                 productCategory,
+                groupByRegion,
+                groupByCity,
+                groupByPoc,
             });
         } finally {
             setFiltering(false);
@@ -131,6 +141,9 @@ export default function TopSkusPage() {
             setEndWeek(4);
             setReportType("caja");
             setProductCategory("");
+            setGroupByRegion(true);
+            setGroupByCity(false);
+            setGroupByPoc(false);
             setAppliedFilters({
                 startYear: currentYear,
                 endYear: currentYear,
@@ -138,6 +151,9 @@ export default function TopSkusPage() {
                 endWeek: 4,
                 reportType: "caja",
                 productCategory: "",
+                groupByRegion: true,
+                groupByCity: false,
+                groupByPoc: false,
             });
         } finally {
             setFiltering(false);
@@ -185,6 +201,13 @@ export default function TopSkusPage() {
     };
 
     /* =========================================================
+       Verificar si un objeto es un SKU (tiene total y semanas)
+    ========================================================= */
+    const isSkuData = (obj) => {
+        return obj && typeof obj === 'object' && 'total' in obj && Object.keys(obj).some(k => k.startsWith('w'));
+    };
+
+    /* =========================================================
        Detectar si tiene categorías con datos
     ========================================================= */
     const hasCategories = () => {
@@ -202,43 +225,25 @@ export default function TopSkusPage() {
     };
 
     /* =========================================================
-       Obtener semanas del reporte
+       Obtener semanas del reporte (recursivo para cualquier jerarquía)
     ========================================================= */
     const getWeeks = () => {
         if (!reportData) return [];
         const weeks = new Set();
         
-        if (hasCategories()) {
-            // Estructura con categorías
-            Object.values(reportData).forEach((categoryData) => {
-                if (typeof categoryData === 'object' && categoryData !== null) {
-                    Object.values(categoryData).forEach((regionData) => {
-                        if (typeof regionData === 'object' && regionData !== null) {
-                            Object.values(regionData).forEach((skuData) => {
-                                Object.keys(skuData).forEach((key) => {
-                                    if (key.startsWith("w")) {
-                                        weeks.add(key);
-                                    }
-                                });
-                            });
-                        }
-                    });
-                }
-            });
-        } else {
-            // Estructura sin categorías (directamente regiones)
-            Object.values(reportData).forEach((regionData) => {
-                if (typeof regionData === 'object' && regionData !== null) {
-                    Object.values(regionData).forEach((skuData) => {
-                        Object.keys(skuData).forEach((key) => {
-                            if (key.startsWith("w")) {
-                                weeks.add(key);
-                            }
-                        });
-                    });
-                }
-            });
-        }
+        const extractWeeks = (obj) => {
+            if (isSkuData(obj)) {
+                Object.keys(obj).forEach((key) => {
+                    if (key.startsWith("w")) {
+                        weeks.add(key);
+                    }
+                });
+            } else if (typeof obj === 'object' && obj !== null) {
+                Object.values(obj).forEach(extractWeeks);
+            }
+        };
+        
+        extractWeeks(reportData);
         
         return Array.from(weeks).sort((a, b) => {
             const numA = parseInt(a.replace("w", ""));
@@ -248,7 +253,7 @@ export default function TopSkusPage() {
     };
 
     /* =========================================================
-       Calcular totales generales
+       Calcular totales generales (recursivo)
     ========================================================= */
     const getGrandTotals = () => {
         if (!reportData) return {};
@@ -259,37 +264,106 @@ export default function TopSkusPage() {
             totals[week] = 0;
         });
         
-        if (hasCategories()) {
-            // Estructura con categorías
-            Object.values(reportData).forEach((categoryData) => {
-                if (typeof categoryData === 'object' && categoryData !== null) {
-                    Object.values(categoryData).forEach((regionData) => {
-                        if (typeof regionData === 'object' && regionData !== null) {
-                            Object.values(regionData).forEach((skuData) => {
-                                totals.total += skuData.total || 0;
-                                weeks.forEach((week) => {
-                                    totals[week] += skuData[week] || 0;
-                                });
-                            });
-                        }
-                    });
-                }
-            });
-        } else {
-            // Estructura sin categorías
-            Object.values(reportData).forEach((regionData) => {
-                if (typeof regionData === 'object' && regionData !== null) {
-                    Object.values(regionData).forEach((skuData) => {
-                        totals.total += skuData.total || 0;
-                        weeks.forEach((week) => {
-                            totals[week] += skuData[week] || 0;
-                        });
-                    });
-                }
-            });
-        }
-
+        const sumTotals = (obj) => {
+            if (isSkuData(obj)) {
+                totals.total += obj.total || 0;
+                weeks.forEach((week) => {
+                    totals[week] += obj[week] || 0;
+                });
+            } else if (typeof obj === 'object' && obj !== null) {
+                Object.values(obj).forEach(sumTotals);
+            }
+        };
+        
+        sumTotals(reportData);
         return totals;
+    };
+
+    /* =========================================================
+       Renderizar jerarquía móvil recursivamente
+    ========================================================= */
+    const renderMobileHierarchy = (data, weeks, level = 0) => {
+        return Object.entries(data).map(([key, value]) => {
+            // Si es un SKU
+            if (isSkuData(value)) {
+                return (
+                    <div key={key} className="bg-white p-3 rounded-lg border">
+                        <div className="font-bold text-sm mb-2">{key}</div>
+                        <div className="grid grid-cols-2 gap-2 text-sm">
+                            {weeks.map((week) => (
+                                <div key={week} className="flex justify-between">
+                                    <span className="font-semibold">{week.replace("w", "W")}:</span>
+                                    <span>{value[week] ? value[week].toFixed(0) : "-"}</span>
+                                </div>
+                            ))}
+                            <div className="flex justify-between col-span-2 border-t pt-2 mt-2 font-bold">
+                                <span>Total:</span>
+                                <span>{value.total ? value.total.toFixed(0) : "0"}</span>
+                            </div>
+                        </div>
+                    </div>
+                );
+            }
+            
+            // Si es un nivel jerárquico
+            return (
+                <Accordion key={key} variant="contained">
+                    <Accordion.Item value={key}>
+                        <Accordion.Control>
+                            <div className="font-bold uppercase">{key}</div>
+                        </Accordion.Control>
+                        <Accordion.Panel>
+                            <div className="space-y-3">
+                                {renderMobileHierarchy(value, weeks, level + 1)}
+                            </div>
+                        </Accordion.Panel>
+                    </Accordion.Item>
+                </Accordion>
+            );
+        });
+    };
+
+    /* =========================================================
+       Renderizar jerarquía recursivamente
+    ========================================================= */
+    const renderHierarchy = (data, weeks, level = 0, parentKey = '') => {
+        const entries = Object.entries(data);
+        
+        return entries.map(([key, value]) => {
+            const fullKey = parentKey ? `${parentKey}-${key}` : key;
+            
+            // Si es un SKU (tiene total y semanas)
+            if (isSkuData(value)) {
+                const paddingClass = level === 0 ? 'pl-4' : level === 1 ? 'pl-8' : level === 2 ? 'pl-12' : 'pl-16';
+                return (
+                    <tr key={fullKey}>
+                        <td className={paddingClass}>{key}</td>
+                        {weeks.map((week) => (
+                            <td key={week} className="text-center">
+                                {value[week] ? value[week].toFixed(0) : "-"}
+                            </td>
+                        ))}
+                        <td className="text-center font-bold">
+                            {value.total ? value.total.toFixed(0) : "0"}
+                        </td>
+                    </tr>
+                );
+            }
+            
+            // Si es un nivel jerárquico (región, ciudad, POC)
+            const bgClass = level === 0 ? 'bg-blue-50' : level === 1 ? 'bg-blue-100' : 'bg-blue-150';
+            const textPadding = level === 0 ? '' : level === 1 ? 'pl-4' : 'pl-8';
+            return (
+                <>
+                    <tr key={`header-${fullKey}`} className={`${bgClass} font-bold`}>
+                        <td colSpan={weeks.length + 2} className={`uppercase ${textPadding}`}>
+                            {key}
+                        </td>
+                    </tr>
+                    {renderHierarchy(value, weeks, level + 1, fullKey)}
+                </>
+            );
+        });
     };
 
     /* =========================================================
@@ -302,7 +376,7 @@ export default function TopSkusPage() {
                 <table className="table w-full">
                     <thead className="bg-primary text-white text-md uppercase font-bold sticky top-0 z-10">
                         <tr>
-                            <th className="text-left">Región / SKU</th>
+                            <th className="text-left">Jerarquía / SKU</th>
                             {weeks.map((week) => (
                                 <th key={week}>{week.replace("w", "W")}</th>
                             ))}
@@ -310,28 +384,7 @@ export default function TopSkusPage() {
                         </tr>
                     </thead>
                     <tbody className="bg-white text-black">
-                        {Object.entries(data).map(([region, skus]) => (
-                            <>
-                                <tr key={region} className="bg-blue-50 font-bold">
-                                    <td colSpan={weeks.length + 2} className="uppercase">
-                                        {region}
-                                    </td>
-                                </tr>
-                                {Object.entries(skus).map(([skuName, skuData]) => (
-                                    <tr key={`${region}-${skuName}`}>
-                                        <td className="pl-8">{skuName}</td>
-                                        {weeks.map((week) => (
-                                            <td key={week} className="text-center">
-                                                {skuData[week] ? skuData[week].toFixed(0) : "-"}
-                                            </td>
-                                        ))}
-                                        <td className="text-center font-bold">
-                                            {skuData.total ? skuData.total.toFixed(0) : "0"}
-                                        </td>
-                                    </tr>
-                                ))}
-                            </>
-                        ))}
+                        {renderHierarchy(data, weeks)}
                     </tbody>
                     <tfoot className="bg-yellow-100 font-bold text-black sticky bottom-0">
                         <tr>
@@ -351,49 +404,7 @@ export default function TopSkusPage() {
 
             {/* Vista Móvil */}
             <div className="md:hidden block flex-1 overflow-auto space-y-4">
-                {Object.entries(data).map(([region, skus]) => (
-                    <Accordion key={region} variant="contained">
-                        <Accordion.Item value={region}>
-                            <Accordion.Control>
-                                <div className="font-bold uppercase">{region}</div>
-                            </Accordion.Control>
-                            <Accordion.Panel>
-                                <div className="space-y-3">
-                                    {Object.entries(skus).map(([skuName, skuData]) => (
-                                        <div
-                                            key={`${region}-${skuName}`}
-                                            className="bg-white p-3 rounded-lg border"
-                                        >
-                                            <div className="font-bold text-sm mb-2">{skuName}</div>
-                                            <div className="grid grid-cols-2 gap-2 text-sm">
-                                                {weeks.map((week) => (
-                                                    <div key={week} className="flex justify-between">
-                                                        <span className="font-semibold">
-                                                            {week.replace("w", "W")}:
-                                                        </span>
-                                                        <span>
-                                                            {skuData[week]
-                                                                ? skuData[week].toFixed(0)
-                                                                : "-"}
-                                                        </span>
-                                                    </div>
-                                                ))}
-                                                <div className="flex justify-between col-span-2 border-t pt-2 mt-2 font-bold">
-                                                    <span>Total:</span>
-                                                    <span>
-                                                        {skuData.total
-                                                            ? skuData.total.toFixed(0)
-                                                            : "0"}
-                                                    </span>
-                                                </div>
-                                            </div>
-                                        </div>
-                                    ))}
-                                </div>
-                            </Accordion.Panel>
-                        </Accordion.Item>
-                    </Accordion>
-                ))}
+                {renderMobileHierarchy(data, weeks)}
 
                 {/* Total General Mobile */}
                 <div className="bg-yellow-100 p-4 rounded-lg border-2 border-yellow-300">
@@ -524,6 +535,38 @@ export default function TopSkusPage() {
                                         ]}
                                         clearable
                                     />
+                                    <div className="space-y-2 mt-3">
+                                        <Switch
+                                            label="Agrupar por Región"
+                                            checked={groupByRegion}
+                                            onChange={(e) => {
+                                                const checked = e.currentTarget.checked;
+                                                setGroupByRegion(checked);
+                                                if (!checked) {
+                                                    setGroupByCity(false);
+                                                    setGroupByPoc(false);
+                                                }
+                                            }}
+                                        />
+                                        <Switch
+                                            label="Agrupar por Ciudad"
+                                            checked={groupByCity}
+                                            disabled={!groupByRegion}
+                                            onChange={(e) => {
+                                                const checked = e.currentTarget.checked;
+                                                setGroupByCity(checked);
+                                                if (!checked) {
+                                                    setGroupByPoc(false);
+                                                }
+                                            }}
+                                        />
+                                        <Switch
+                                            label="Agrupar por POC"
+                                            checked={groupByPoc}
+                                            disabled={!groupByCity}
+                                            onChange={(e) => setGroupByPoc(e.currentTarget.checked)}
+                                        />
+                                    </div>
                                     <div className="grid grid-cols-2 gap-2 mt-2">
                                         <Button
                                             onClick={applyFilters}
@@ -558,7 +601,40 @@ export default function TopSkusPage() {
                 </div>
 
                 {/* Filtros normales en desktop */}
-                <div className="hidden md:grid md:grid-cols-8 grid-cols-1 gap-2 items-end">
+                <div className="hidden md:block space-y-3">
+                    <div className="flex gap-4 mb-3">
+                        <Switch
+                            label="Agrupar por Región"
+                            checked={groupByRegion}
+                            onChange={(e) => {
+                                const checked = e.currentTarget.checked;
+                                setGroupByRegion(checked);
+                                if (!checked) {
+                                    setGroupByCity(false);
+                                    setGroupByPoc(false);
+                                }
+                            }}
+                        />
+                        <Switch
+                            label="Agrupar por Ciudad"
+                            checked={groupByCity}
+                            disabled={!groupByRegion}
+                            onChange={(e) => {
+                                const checked = e.currentTarget.checked;
+                                setGroupByCity(checked);
+                                if (!checked) {
+                                    setGroupByPoc(false);
+                                }
+                            }}
+                        />
+                        <Switch
+                            label="Agrupar por POC"
+                            checked={groupByPoc}
+                            disabled={!groupByCity}
+                            onChange={(e) => setGroupByPoc(e.currentTarget.checked)}
+                        />
+                    </div>
+                <div className="grid md:grid-cols-8 grid-cols-1 gap-2 items-end">
                     <NumberInput
                         label="Año Inicial"
                         placeholder="Ej: 2026"
@@ -629,6 +705,7 @@ export default function TopSkusPage() {
                     >
                         Limpiar
                     </Button>
+                </div>
                 </div>
             </div>
 

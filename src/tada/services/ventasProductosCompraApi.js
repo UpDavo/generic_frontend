@@ -3,6 +3,25 @@ import API_BASE_URL from "@/config/apiConfig";
 const API_URL = API_BASE_URL;
 
 /**
+ * Obtener categorías disponibles
+ */
+export const getCategoriesProductosCompra = async (accessToken) => {
+    const response = await fetch(`${API_URL}/tada/ventas-productos-compra/categories/`, {
+        method: "GET",
+        headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${accessToken}`,
+        },
+    });
+
+    if (!response.ok) {
+        throw new Error("Error al obtener las categorías");
+    }
+
+    return response.json();
+};
+
+/**
  * Listar Productos Compra con filtros y paginación
  */
 export const listProductosCompra = async (
