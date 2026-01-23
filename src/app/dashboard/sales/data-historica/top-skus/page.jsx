@@ -40,7 +40,7 @@ export default function TopSkusPage() {
     const [endYear, setEndYear] = useState(currentYear);
     const [startWeek, setStartWeek] = useState(1);
     const [endWeek, setEndWeek] = useState(4);
-    const [reportType, setReportType] = useState("caja");
+    const [reportType, setReportType] = useState("hectolitros");
     const [productCategory, setProductCategory] = useState("");
     const [groupByRegion, setGroupByRegion] = useState(true);
     const [groupByCity, setGroupByCity] = useState(false);
@@ -53,7 +53,7 @@ export default function TopSkusPage() {
         endYear: currentYear,
         startWeek: 1,
         endWeek: 4,
-        reportType: "caja",
+        reportType: "hectolitros",
         productCategory: "",
         groupByRegion: true,
         groupByCity: false,
@@ -82,6 +82,9 @@ export default function TopSkusPage() {
             if (appliedFilters.productCategory) {
                 url.searchParams.append("retornable", appliedFilters.productCategory);
             }
+            url.searchParams.append("group_by_region", appliedFilters.groupByRegion);
+            url.searchParams.append("group_by_city", appliedFilters.groupByCity);
+            url.searchParams.append("group_by_poc", appliedFilters.groupByPoc);
 
             const response = await fetch(url.toString(), {
                 method: "GET",
@@ -139,7 +142,7 @@ export default function TopSkusPage() {
             setEndYear(currentYear);
             setStartWeek(1);
             setEndWeek(4);
-            setReportType("caja");
+            setReportType("hectolitros");
             setProductCategory("");
             setGroupByRegion(true);
             setGroupByCity(false);
@@ -149,7 +152,7 @@ export default function TopSkusPage() {
                 endYear: currentYear,
                 startWeek: 1,
                 endWeek: 4,
-                reportType: "caja",
+                reportType: "hectolitros",
                 productCategory: "",
                 groupByRegion: true,
                 groupByCity: false,
@@ -172,6 +175,9 @@ export default function TopSkusPage() {
             if (appliedFilters.productCategory) {
                 url.searchParams.append("retornable", appliedFilters.productCategory);
             }
+            url.searchParams.append("group_by_region", appliedFilters.groupByRegion);
+            url.searchParams.append("group_by_city", appliedFilters.groupByCity);
+            url.searchParams.append("group_by_poc", appliedFilters.groupByPoc);
 
             const response = await fetch(url.toString(), {
                 method: "GET",
