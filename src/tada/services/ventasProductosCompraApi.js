@@ -22,6 +22,25 @@ export const getCategoriesProductosCompra = async (accessToken) => {
 };
 
 /**
+ * Obtener marcas disponibles
+ */
+export const getBrandsProductosCompra = async (accessToken) => {
+    const response = await fetch(`${API_URL}/tada/ventas-productos-compra/brands/`, {
+        method: "GET",
+        headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${accessToken}`,
+        },
+    });
+
+    if (!response.ok) {
+        throw new Error("Error al obtener las marcas");
+    }
+
+    return response.json();
+};
+
+/**
  * Listar Productos Compra con filtros y paginación
  */
 export const listProductosCompra = async (

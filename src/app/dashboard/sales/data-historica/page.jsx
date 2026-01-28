@@ -8,17 +8,21 @@ import {
     Notification,
     Pagination,
     Accordion,
+    Modal,
+    Text,
 } from "@mantine/core";
 import {
     RiSearchLine,
     RiRefreshLine,
     RiCloseCircleLine,
     RiDownloadCloudLine,
+    RiDeleteBin6Line,
 } from "react-icons/ri";
 import { Unauthorized } from "@/core/components/Unauthorized";
 import {
     listVentasHistoricas,
     downloadVentasHistoricas,
+    deleteVentasHistoricasByDateRange,
 } from "@/tada/services/ventasHistoricasApi";
 
 const PERMISSION_PATH = "/dashboard/sales/data-historica";
@@ -64,6 +68,11 @@ export default function DataHistoricaPage() {
     const [totalPages, setTotalPages] = useState(1);
     const [totalRecords, setTotalRecords] = useState(0);
     const [downloading, setDownloading] = useState(false);
+
+    /* ------------------- MODAL DE ELIMINACIÓN ------------------- */
+    const [deleteModalOpen, setDeleteModalOpen] = useState(false);
+    const [deleting, setDeleting] = useState(false);
+    const [deleteResult, setDeleteResult] = useState(null);
 
     /* =========================================================
        Traer Ventas Históricas
@@ -152,6 +161,27 @@ export default function DataHistoricaPage() {
         }
     };
 
+    const handleDeleteByDateRange = async () => {
+        setDeleting(true);
+        setDeleteResult(null);
+        try {
+            const result = await deleteVentasHistoricasByDateRange(
+                accessToken,
+                appliedFilters.startDate,
+                appliedFilters.endDate
+            );
+            setDeleteResult(result);
+            setError(null);
+            // Refrescar la tabla después de eliminar
+            await fetchVentas();
+        } catch (err) {
+            console.error(err);
+            setError(err.message || "Error al eliminar registros de ventas");
+        } finally {
+            setDeleting(false);
+        }
+    };
+
     /* =========================================================
        Render
     ========================================================= */
@@ -172,6 +202,54 @@ export default function DataHistoricaPage() {
                 </Notification>
             )}
 
+            {deleteResult && (
+                <Notification color="green" className="mb-4" onClose={() => setDeleteResult(null)}>
+                    {deleteResult.message} - Se eliminaron {deleteResult.records_deleted} registros
+                </Notification>
+            )}
+
+            {/* Modal de confirmación de eliminación */}
+            <Modal
+                opened={deleteModalOpen}
+                onClose={() => !deleting && setDeleteModalOpen(false)}
+                title="⚠️ Confirmar Eliminación Masiva"
+                centered
+                size="md"
+            >
+                <div className="space-y-4">
+                    <Text>
+                        ¿Está seguro de que desea eliminar todos los registros de ventas en el siguiente rango de fechas?
+                    </Text>
+                    <div className="bg-gray-100 p-4 rounded-md">
+                        <Text className="font-semibold">Fecha Inicial: {appliedFilters.startDate}</Text>
+                        <Text className="font-semibold">Fecha Final: {appliedFilters.endDate}</Text>
+                    </div>
+                    <Text className="text-red-600 font-bold">
+                        ⚠️ Esta acción no se puede deshacer
+                    </Text>
+                    <div className="flex gap-2 justify-end">
+                        <Button
+                            variant="outline"
+                            onClick={() => setDeleteModalOpen(false)}
+                            disabled={deleting}
+                        >
+                            Cancelar
+                        </Button>
+                        <Button
+                            color="red"
+                            onClick={async () => {
+                                await handleDeleteByDateRange();
+                                setDeleteModalOpen(false);
+                            }}
+                            loading={deleting}
+                            leftSection={<RiDeleteBin6Line />}
+                        >
+                            Eliminar Registros
+                        </Button>
+                    </div>
+                </div>
+            </Modal>
+
             {/* ---------------- FILTROS ---------------- */}
             <div className="mb-4 flex-shrink-0">
                 {/* Botón de descarga siempre visible */}
@@ -185,6 +263,16 @@ export default function DataHistoricaPage() {
                         className="flex-1 md:flex-none"
                     >
                         Descargar Excel
+                    </Button>
+                    <Button
+                        onClick={() => setDeleteModalOpen(true)}
+                        variant="filled"
+                        color="red"
+                        leftSection={<RiDeleteBin6Line />}
+                        disabled={loading || deleting}
+                        className="flex-1 md:flex-none"
+                    >
+                        Eliminar por Rango de Fechas
                     </Button>
                 </div>
 

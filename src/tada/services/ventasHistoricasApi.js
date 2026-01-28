@@ -105,6 +105,42 @@ export async function downloadVentasHistoricas(
 }
 
 /**
+ * Eliminar registros de ventas por rango de fechas
+ * @param {string} token - Token de autenticación
+ * @param {string} startDate - Fecha inicial YYYY-MM-DD (requerida)
+ * @param {string} endDate - Fecha final YYYY-MM-DD (requerida)
+ * @returns {Promise<Object>} - Respuesta con message, records_deleted, date_range_days
+ */
+export async function deleteVentasHistoricasByDateRange(
+    token,
+    startDate,
+    endDate
+) {
+    if (!startDate || !endDate) {
+        throw new Error("Las fechas inicial y final son requeridas");
+    }
+
+    const url = new URL(`${ENV.API_URL}/tada/sales-record/delete-by-date/`);
+    url.searchParams.append("start_date", startDate);
+    url.searchParams.append("end_date", endDate);
+
+    const response = await fetch(url.toString(), {
+        method: "DELETE",
+        headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${token}`,
+        },
+    });
+
+    if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.message || "Error al eliminar registros de ventas");
+    }
+
+    return await response.json();
+}
+
+/**
  * Obtener estadísticas de ventas históricas (para payments/métricas)
  * @param {string} token - Token de autenticación
  * @param {string} startDate - Fecha inicial YYYY-MM-DD

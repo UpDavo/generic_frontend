@@ -25,6 +25,7 @@ import {
     createProductoCompra,
     patchProductoCompra,
     getCategoriesProductosCompra,
+    getBrandsProductosCompra,
 } from "@/tada/services/ventasProductosCompraApi";
 
 const PERMISSION_PATH = "/dashboard/sales/productos-compra";
@@ -81,6 +82,10 @@ export default function ProductosCompraFormPage() {
     const [categories, setCategories] = useState([]);
     const [loadingCategories, setLoadingCategories] = useState(false);
 
+    /* ------------------- MARCAS ------------------- */
+    const [brands, setBrands] = useState([]);
+    const [loadingBrands, setLoadingBrands] = useState(false);
+
     /* =========================================================
        Cargar categorías
     ========================================================= */
@@ -105,6 +110,32 @@ export default function ProductosCompraFormPage() {
         };
 
         loadCategories();
+    }, [accessToken]);
+
+    /* =========================================================
+       Cargar marcas
+    ========================================================= */
+    useEffect(() => {
+        const loadBrands = async () => {
+            if (!accessToken) return;
+
+            setLoadingBrands(true);
+            try {
+                const data = await getBrandsProductosCompra(accessToken);
+                // Convertir el array de strings a formato para Select de Mantine
+                const brandOptions = data.brands.map((brand) => ({
+                    value: brand,
+                    label: brand,
+                }));
+                setBrands(brandOptions);
+            } catch (err) {
+                console.error("Error al cargar marcas:", err);
+            } finally {
+                setLoadingBrands(false);
+            }
+        };
+
+        loadBrands();
     }, [accessToken]);
 
     /* =========================================================
@@ -284,13 +315,20 @@ export default function ProductosCompraFormPage() {
                                         }
                                         required
                                     />
-                                    <TextInput
+                                    <Select
                                         label="Marca"
-                                        placeholder="Ej: Pilsen"
+                                        placeholder="Selecciona una marca"
+                                        data={brands}
                                         value={formData.brand}
-                                        onChange={(e) =>
-                                            setFormData({ ...formData, brand: e.currentTarget.value })
+                                        onChange={(value) =>
+                                            setFormData({
+                                                ...formData,
+                                                brand: value || "",
+                                            })
                                         }
+                                        searchable
+                                        clearable
+                                        disabled={loadingBrands}
                                     />
                                     <Select
                                         label="Categoría"
