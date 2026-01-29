@@ -13,7 +13,7 @@ export const listPocs = async (
   city = null,
   idPoc = null,
   search = null,
-  pageSize = 10
+  pageSize = 20
 ) => {
   const params = new URLSearchParams();
   if (page) params.append("page", page);

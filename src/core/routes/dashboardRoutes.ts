@@ -25,6 +25,7 @@ import {
   RiBoxingLine,
   RiFileExcel2Line,
   RiLineChartLine,
+  RiCustomerService2Line,
 } from "react-icons/ri";
 export const dashboardRoutes = [
   {
@@ -47,6 +48,12 @@ export const dashboardRoutes = [
         name: "Webhooks",
         icon: RiWebhookLine,
         permission: "/dashboard/webhooks",
+      },
+      {
+        path: "/dashboard/ticket-support",
+        name: "Soporte de Tickets",
+        permission: "/dashboard/ticket-support",
+        icon: RiCustomerService2Line,
       },
     ],
   },
