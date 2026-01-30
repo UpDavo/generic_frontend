@@ -192,10 +192,27 @@ export default function HectolitrosPage() {
         setError(null);
 
         try {
+            // Calcular número de semanas para ajustar el ancho
+            const numWeeks = appliedFilters.endWeek - appliedFilters.startWeek + 1;
+            const numYears = appliedFilters.endYear - appliedFilters.startYear + 1;
+            const totalWeeks = numWeeks * numYears;
+            
+            // Ajustar ancho basado en el número de semanas (mínimo 1600, máximo 3200)
+            const baseWidth = 1600;
+            const extraWidthPerWeek = totalWeeks > 4 ? (totalWeeks - 4) * 150 : 0;
+            const dynamicWidth = Math.min(baseWidth + extraWidthPerWeek, 3200);
+            
+            // Ajustar escala de fuente si hay muchas semanas
+            const fontScale = totalWeeks > 8 ? 0.8 : totalWeeks > 4 ? 0.9 : 1;
+
             const filename = generateHectolitrosFilename(appliedFilters);
             await generateChartImage(chartSectionRef.current, {
                 filename,
                 sectionId: "chartSection",
+                width: dynamicWidth,
+                scale: 2,
+                padding: "40px 60px",
+                fontScale,
             });
             setSuccessMessage("Imagen de la gráfica descargada exitosamente");
         } catch (err) {
@@ -216,12 +233,26 @@ export default function HectolitrosPage() {
         setError(null);
 
         try {
+            // Calcular número de semanas para ajustar el ancho
+            const numWeeks = appliedFilters.endWeek - appliedFilters.startWeek + 1;
+            const numYears = appliedFilters.endYear - appliedFilters.startYear + 1;
+            const totalWeeks = numWeeks * numYears;
+            
+            // Ajustar ancho basado en el número de semanas (mínimo 1600, máximo 3200)
+            const baseWidth = 1600;
+            const extraWidthPerWeek = totalWeeks > 4 ? (totalWeeks - 4) * 150 : 0;
+            const dynamicWidth = Math.min(baseWidth + extraWidthPerWeek, 3200);
+            
+            // Ajustar escala de fuente si hay muchas semanas
+            const fontScale = totalWeeks > 8 ? 0.8 : totalWeeks > 4 ? 0.9 : 1;
+
             // Generar imagen en base64
             const imageBase64 = await generateChartImageBase64(chartSectionRef.current, {
                 sectionId: "chartSection",
-                width: 1600,
+                width: dynamicWidth,
                 scale: 2,
-                padding: "60px 80px",
+                padding: "40px 60px",
+                fontScale,
             });
 
             // Generar título del reporte
@@ -458,42 +489,10 @@ export default function HectolitrosPage() {
                 </div>
             </div>
 
-            {/* ---------------- RESUMEN TOTAL ---------------- */}
-            {reportData?.total && (
-                <div className="mb-4 flex-shrink-0">
-                    <div className="grid md:grid-cols-3 grid-cols-1 gap-4">
-                        <div className="card bg-white shadow-md p-6 border-l-4 border-blue-500">
-                            <div className="text-sm text-gray-500 uppercase mb-2">
-                                Hectolitros Vendidos
-                            </div>
-                            <div className="text-4xl font-bold text-blue-600">
-                                {reportData.total.ht_vendidos?.toFixed(2) || "0.00"}
-                            </div>
-                        </div>
-                        <div className="card bg-white shadow-md p-6 border-l-4 border-green-500">
-                            <div className="text-sm text-gray-500 uppercase mb-2">
-                                Meta de Hectolitros
-                            </div>
-                            <div className="text-4xl font-bold text-green-600">
-                                {reportData.total.ht_meta?.toFixed(2) || "0.00"}
-                            </div>
-                        </div>
-                        <div className="card bg-white shadow-md p-6 border-l-4 border-purple-500">
-                            <div className="text-sm text-gray-500 uppercase mb-2">
-                                Cumplimiento
-                            </div>
-                            <div className="text-4xl font-bold text-purple-600">
-                                {reportData.total.cumplimiento || "0%"}
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            )}
-
             {/* ---------------- GRÁFICA ---------------- */}
             {reportData && getWeekKeys().length > 0 && (
                 <div className="mb-4 flex-shrink-0">
-                    <Accordion variant="contained">
+                    <Accordion variant="contained" defaultValue="chart">
                         <Accordion.Item value="chart">
                             <Accordion.Control>
                                 <div className="flex items-center gap-2">
@@ -523,7 +522,39 @@ export default function HectolitrosPage() {
                                         Enviar por WhatsApp
                                     </Button>
                                 </div>
-                                <div id="chartSection" ref={chartSectionRef} className="bg-white p-4 rounded-lg space-y-4">
+                                
+                                {/* Contenedor para capturar imagen con métricas y gráfica */}
+                                <div ref={chartSectionRef} style={{ backgroundColor: '#ffffff', padding: '32px', borderRadius: '8px' }}>
+                                    {/* Métricas resumen dentro de la captura */}
+                                    {reportData?.total && (
+                                        <div style={{ display: 'flex', flexDirection: 'row', gap: '16px', marginBottom: '24px' }}>
+                                            <div style={{ flex: 1, backgroundColor: '#eff6ff', padding: '16px', borderRadius: '8px', borderLeft: '4px solid #3b82f6' }}>
+                                                <div style={{ fontSize: '14px', backgroundColor: '#eff6ff', color: '#6b7280', textTransform: 'uppercase', marginBottom: '4px' }}>
+                                                    Hectolitros Vendidos
+                                                </div>
+                                                <div style={{ fontSize: '24px', fontWeight: 'bold', backgroundColor: '#eff6ff', color: '#2563eb' }}>
+                                                    {reportData.total.ht_vendidos?.toFixed(2) || "0.00"}
+                                                </div>
+                                            </div>
+                                            <div style={{ flex: 1, backgroundColor: '#f0fdf4', padding: '16px', borderRadius: '8px', borderLeft: '4px solid #22c55e' }}>
+                                                <div style={{ fontSize: '14px',backgroundColor: '#f0fdf4', color: '#6b7280', textTransform: 'uppercase', marginBottom: '4px' }}>
+                                                    Meta de Hectolitros
+                                                </div>
+                                                <div style={{ fontSize: '24px', fontWeight: 'bold', backgroundColor: '#f0fdf4', color: '#16a34a' }}>
+                                                    {reportData.total.ht_meta?.toFixed(2) || "0.00"}
+                                                </div>
+                                            </div>
+                                            <div style={{ flex: 1, backgroundColor: '#faf5ff', padding: '16px', borderRadius: '8px', borderLeft: '4px solid #a855f7' }}>
+                                                <div style={{ fontSize: '14px', backgroundColor: '#faf5ff', color: '#6b7280', textTransform: 'uppercase', marginBottom: '4px' }}>
+                                                    Cumplimiento
+                                                </div>
+                                                <div style={{ fontSize: '24px', fontWeight: 'bold', backgroundColor: '#faf5ff', color: '#9333ea' }}>
+                                                    {reportData.total.cumplimiento || "0%"}
+                                                </div>
+                                            </div>
+                                        </div>
+                                    )}
+                                    
                                     <ResponsiveContainer width="100%" height={400}>
                                         <ComposedChart
                                             data={getChartData()}
@@ -635,6 +666,38 @@ export default function HectolitrosPage() {
                     </Accordion>
                 </div>
             )}
+
+            {/* ---------------- RESUMEN TOTAL (visible en la página) ---------------- */}
+            {/* {reportData?.total && (
+                <div className="mb-4 flex-shrink-0">
+                    <div className="grid md:grid-cols-3 grid-cols-1 gap-4">
+                        <div className="card bg-white shadow-md p-6 border-l-4 border-blue-500">
+                            <div className="text-sm text-gray-500 uppercase mb-2">
+                                Hectolitros Vendidos
+                            </div>
+                            <div className="text-4xl font-bold text-blue-600">
+                                {reportData.total.ht_vendidos?.toFixed(2) || "0.00"}
+                            </div>
+                        </div>
+                        <div className="card bg-white shadow-md p-6 border-l-4 border-green-500">
+                            <div className="text-sm text-gray-500 uppercase mb-2">
+                                Meta de Hectolitros
+                            </div>
+                            <div className="text-4xl font-bold text-green-600">
+                                {reportData.total.ht_meta?.toFixed(2) || "0.00"}
+                            </div>
+                        </div>
+                        <div className="card bg-white shadow-md p-6 border-l-4 border-purple-500">
+                            <div className="text-sm text-gray-500 uppercase mb-2">
+                                Cumplimiento
+                            </div>
+                            <div className="text-4xl font-bold text-purple-600">
+                                {reportData.total.cumplimiento || "0%"}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            )} */}
 
             {/* ---------------- TABLA ---------------- */}
             <div className="flex-1 min-h-0 flex flex-col">

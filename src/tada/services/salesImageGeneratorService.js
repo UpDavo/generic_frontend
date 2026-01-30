@@ -24,7 +24,21 @@ export const generateChartImage = async (element, options = {}) => {
         padding = "60px 80px",
         sectionId = "chartSection",
         hideSelectors = [],
+        fontScale = 1,
     } = options;
+
+    // Calcular tamaños de fuente basados en fontScale
+    const baseFontSize = Math.round(11 * fontScale);
+    const smallFontSize = Math.round(10 * fontScale);
+    const cellPadding = fontScale < 1 ? "6px 4px" : "10px 6px";
+
+    // Calcular altura real del contenido
+    const elementHeight = Math.max(
+        element.scrollHeight,
+        element.offsetHeight,
+        element.clientHeight,
+        1500 // Altura mínima para asegurar que se capture todo
+    );
 
     const canvas = await html2canvas(element, {
         backgroundColor: "#ffffff",
@@ -33,11 +47,11 @@ export const generateChartImage = async (element, options = {}) => {
         logging: false,
         removeContainer: false,
         foreignObjectRendering: false,
-        imageTimeout: 20000,
+        imageTimeout: 30000,
         scale: scale,
         width: width,
         windowWidth: width,
-        windowHeight: element.scrollHeight + 200,
+        windowHeight: elementHeight + 500,
         scrollX: 0,
         scrollY: 0,
         onclone: (clonedDoc, clonedElement) => {
@@ -102,7 +116,8 @@ export const generateChartImage = async (element, options = {}) => {
                     background-color: #ffffff !important;
                     box-sizing: border-box !important;
                     color: #000000 !important;
-                    overflow: hidden !important;
+                    overflow: visible !important;
+                    height: auto !important;
                 }
 
                 /* Contenedor de la gráfica */
@@ -174,25 +189,25 @@ export const generateChartImage = async (element, options = {}) => {
                 
                 th, td { 
                     border: 1px solid #d1d5db !important;
-                    padding: 10px 6px !important;
+                    padding: ${cellPadding} !important;
                     text-align: center !important;
                     word-wrap: break-word !important;
                     vertical-align: middle !important;
                     background-color: #ffffff !important;
                     color: #000000 !important;
-                    font-size: 11px !important;
+                    font-size: ${baseFontSize}px !important;
                 }
                 
                 thead th {
                     background-color: #f3f4f6 !important;
                     color: #000000 !important;
                     font-weight: bold !important;
-                    font-size: 11px !important;
+                    font-size: ${baseFontSize}px !important;
                 }
 
                 /* Primera columna más ancha */
                 th:first-child, td:first-child {
-                    min-width: 120px !important;
+                    min-width: ${fontScale < 1 ? '80px' : '120px'} !important;
                     text-align: left !important;
                 }
 
@@ -377,7 +392,21 @@ export const generateChartImageBase64 = async (element, options = {}) => {
         padding = "60px 80px",
         sectionId = "chartSection",
         hideSelectors = [],
+        fontScale = 1,
     } = options;
+
+    // Calcular tamaños de fuente basados en fontScale
+    const baseFontSize = Math.round(11 * fontScale);
+    const smallFontSize = Math.round(10 * fontScale);
+    const cellPadding = fontScale < 1 ? "6px 4px" : "10px 6px";
+
+    // Calcular altura real del contenido
+    const elementHeight = Math.max(
+        element.scrollHeight,
+        element.offsetHeight,
+        element.clientHeight,
+        1500 // Altura mínima para asegurar que se capture todo
+    );
 
     const canvas = await html2canvas(element, {
         backgroundColor: "#ffffff",
@@ -386,11 +415,11 @@ export const generateChartImageBase64 = async (element, options = {}) => {
         logging: false,
         removeContainer: false,
         foreignObjectRendering: false,
-        imageTimeout: 20000,
+        imageTimeout: 30000,
         scale: scale,
         width: width,
         windowWidth: width,
-        windowHeight: element.scrollHeight + 200,
+        windowHeight: elementHeight + 500,
         scrollX: 0,
         scrollY: 0,
         onclone: (clonedDoc, clonedElement) => {
@@ -454,7 +483,8 @@ export const generateChartImageBase64 = async (element, options = {}) => {
                     background-color: #ffffff !important;
                     box-sizing: border-box !important;
                     color: #000000 !important;
-                    overflow: hidden !important;
+                    overflow: visible !important;
+                    height: auto !important;
                 }
 
                 /* Contenedor de la gráfica */
@@ -527,25 +557,25 @@ export const generateChartImageBase64 = async (element, options = {}) => {
                 
                 th, td { 
                     border: 1px solid #d1d5db !important;
-                    padding: 10px 6px !important;
+                    padding: ${cellPadding} !important;
                     text-align: center !important;
                     word-wrap: break-word !important;
                     vertical-align: middle !important;
                     background-color: #ffffff !important;
                     color: #000000 !important;
-                    font-size: 11px !important;
+                    font-size: ${baseFontSize}px !important;
                 }
                 
                 thead th {
                     background-color: #f3f4f6 !important;
                     color: #000000 !important;
                     font-weight: bold !important;
-                    font-size: 11px !important;
+                    font-size: ${baseFontSize}px !important;
                 }
 
                 /* Primera columna más ancha */
                 th:first-child, td:first-child {
-                    min-width: 120px !important;
+                    min-width: ${fontScale < 1 ? '80px' : '120px'} !important;
                     text-align: left !important;
                 }
 
