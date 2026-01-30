@@ -1,5 +1,5 @@
 "use client";
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import { useAuth } from "@/auth/hooks/useAuth";
 import {
     TextInput,
@@ -16,12 +16,20 @@ import {
     RiCloseCircleLine,
     RiDownloadCloudLine,
     RiBarChartBoxLine,
+    RiImageLine,
+    RiWhatsappLine,
 } from "react-icons/ri";
 import { Unauthorized } from "@/core/components/Unauthorized";
 import {
     getWeeklyHectolitresReport,
     downloadWeeklyHectolitresReport,
 } from "@/tada/services/ventasHistoricasApi";
+import {
+    generateChartImage,
+    generateChartImageBase64,
+    generateHectolitrosFilename,
+} from "@/tada/services/salesImageGeneratorService";
+import { sendReportToWhatsApp } from "@/tada/services/salesReportApi";
 import {
     ComposedChart,
     Bar,
@@ -49,6 +57,9 @@ const DIAS_NOMBRES = {
 
 export default function HectolitrosPage() {
     const { accessToken, user } = useAuth();
+
+    // Ref para capturar la sección de la gráfica
+    const chartSectionRef = useRef(null);
 
     /* ------------------- AUTORIZACIÓN ------------------- */
     const [authorized, setAuthorized] = useState(null);
@@ -80,6 +91,9 @@ export default function HectolitrosPage() {
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState(null);
     const [downloading, setDownloading] = useState(false);
+    const [downloadingImage, setDownloadingImage] = useState(false);
+    const [sendingWhatsApp, setSendingWhatsApp] = useState(false);
+    const [successMessage, setSuccessMessage] = useState(null);
 
     /* =========================================================
        Traer Reporte
@@ -167,6 +181,72 @@ export default function HectolitrosPage() {
     };
 
     /* =========================================================
+       Descargar imagen de la gráfica
+    ========================================================= */
+    const downloadChartImage = useCallback(async () => {
+        if (!chartSectionRef.current) return;
+
+        setDownloadingImage(true);
+        setError(null);
+
+        try {
+            const filename = generateHectolitrosFilename(appliedFilters);
+            await generateChartImage(chartSectionRef.current, {
+                filename,
+                sectionId: "chartSection",
+            });
+            setSuccessMessage("Imagen de la gráfica descargada exitosamente");
+        } catch (err) {
+            console.error("Error downloading chart image:", err);
+            setError("Error al descargar la imagen. Intenta nuevamente.");
+        } finally {
+            setDownloadingImage(false);
+        }
+    }, [appliedFilters]);
+
+    /* =========================================================
+       Enviar imagen por WhatsApp
+    ========================================================= */
+    const sendChartToWhatsApp = useCallback(async () => {
+        if (!chartSectionRef.current) return;
+
+        setSendingWhatsApp(true);
+        setError(null);
+
+        try {
+            // Generar imagen en base64
+            const imageBase64 = await generateChartImageBase64(chartSectionRef.current, {
+                sectionId: "chartSection",
+                width: 1600,
+                scale: 2,
+                padding: "60px 80px",
+            });
+
+            // Generar título del reporte
+            const weekRange = `S${appliedFilters.startWeek}-${appliedFilters.endWeek}`;
+            const yearRange = appliedFilters.startYear !== appliedFilters.endYear
+                ? `${appliedFilters.startYear}-${appliedFilters.endYear}`
+                : `${appliedFilters.startYear}`;
+            const title = `Reporte Hectolitros ${weekRange} ${yearRange}`;
+
+            // Enviar por WhatsApp
+            const response = await sendReportToWhatsApp(
+                accessToken,
+                imageBase64,
+                title
+            );
+
+            setSuccessMessage(`${response.message}`);
+            setTimeout(() => setSuccessMessage(null), 5000);
+        } catch (err) {
+            console.error("Error sending to WhatsApp:", err);
+            setError(err.message || "Error al enviar el reporte por WhatsApp");
+        } finally {
+            setSendingWhatsApp(false);
+        }
+    }, [accessToken, appliedFilters]);
+
+    /* =========================================================
        Obtener las semanas del reporte
     ========================================================= */
     const getWeekKeys = () => {
@@ -217,6 +297,12 @@ export default function HectolitrosPage() {
             {error && (
                 <Notification color="red" className="mb-4" onClose={() => setError(null)}>
                     {error}
+                </Notification>
+            )}
+
+            {successMessage && (
+                <Notification color="green" className="mb-4" onClose={() => setSuccessMessage(null)}>
+                    {successMessage}
                 </Notification>
             )}
 
@@ -407,7 +493,28 @@ export default function HectolitrosPage() {
                                 </div>
                             </Accordion.Control>
                             <Accordion.Panel>
-                                <div className="bg-white p-4 rounded-lg space-y-4">
+                                {/* Botones de descarga de imagen y WhatsApp */}
+                                <div className="mb-4 flex gap-2 flex-wrap">
+                                    <Button
+                                        onClick={downloadChartImage}
+                                        variant="outline"
+                                        color="violet"
+                                        leftSection={<RiImageLine />}
+                                        loading={downloadingImage}
+                                    >
+                                        Descargar Imagen
+                                    </Button>
+                                    <Button
+                                        onClick={sendChartToWhatsApp}
+                                        variant="filled"
+                                        color="green"
+                                        leftSection={<RiWhatsappLine />}
+                                        loading={sendingWhatsApp}
+                                    >
+                                        Enviar por WhatsApp
+                                    </Button>
+                                </div>
+                                <div id="chartSection" ref={chartSectionRef} className="bg-white p-4 rounded-lg space-y-4">
                                     <ResponsiveContainer width="100%" height={400}>
                                         <ComposedChart
                                             data={getChartData()}
@@ -477,17 +584,17 @@ export default function HectolitrosPage() {
                                         <table className="table w-full text-xs border-collapse">
                                             <thead>
                                                 <tr className="bg-gray-100">
-                                                    <th className="border border-gray-300 px-2 py-1 text-center font-bold">Día</th>
+                                                    <th className="border border-gray-300 px-4 py-2 text-center font-bold min-w-[80px]">Día</th>
                                                     {getChartData().map((item, idx) => (
-                                                        <th key={idx} className="border border-gray-300 px-2 py-1 text-center font-bold">
-                                                            {idx + 1}
+                                                        <th key={idx} className="border border-gray-300 px-2 py-1 text-center font-bold whitespace-nowrap">
+                                                            {item.label}
                                                         </th>
                                                     ))}
                                                 </tr>
                                             </thead>
                                             <tbody>
                                                 <tr className="bg-purple-50">
-                                                    <td className="border border-gray-300 px-2 py-1 font-bold text-center">Meta</td>
+                                                    <td className="border border-gray-300 px-4 py-2 font-bold text-center whitespace-nowrap">Meta</td>
                                                     {getChartData().map((item, idx) => (
                                                         <td key={idx} className="border border-gray-300 px-2 py-1 text-center">
                                                             {item.meta.toFixed(2)}
@@ -495,7 +602,7 @@ export default function HectolitrosPage() {
                                                     ))}
                                                 </tr>
                                                 <tr className="bg-blue-50">
-                                                    <td className="border border-gray-300 px-2 py-1 font-bold text-center">Venta</td>
+                                                    <td className="border border-gray-300 px-4 py-2 font-bold text-center whitespace-nowrap">Venta</td>
                                                     {getChartData().map((item, idx) => (
                                                         <td key={idx} className="border border-gray-300 px-2 py-1 text-center">
                                                             {item.vendidos.toFixed(2)}
@@ -503,7 +610,7 @@ export default function HectolitrosPage() {
                                                     ))}
                                                 </tr>
                                                 <tr className="bg-gray-50">
-                                                    <td className="border border-gray-300 px-2 py-1 font-bold text-center">% Cumpl.</td>
+                                                    <td className="border border-gray-300 px-4 py-2 font-bold text-center whitespace-nowrap">% Cumpl.</td>
                                                     {getChartData().map((item, idx) => (
                                                         <td key={idx} className="border border-gray-300 px-2 py-1 text-center font-semibold">
                                                             {item.cumplimiento.toFixed(0)}%

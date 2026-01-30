@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import {
     Button,
     Loader,
@@ -15,15 +15,26 @@ import {
     RiCloseCircleLine,
     RiDownloadCloudLine,
     RiRefreshLine,
+    RiImageLine,
+    RiWhatsappLine,
 } from "react-icons/ri";
 import { useAuth } from "@/auth/hooks/useAuth";
 import { Unauthorized } from "@/core/components/Unauthorized";
 import { ENV } from "@/config/env";
+import {
+    generateChartImage,
+    generateChartImageBase64,
+    generateTopSkusFilename,
+} from "@/tada/services/salesImageGeneratorService";
+import { sendReportToWhatsApp } from "@/tada/services/salesReportApi";
 
 const PERMISSION_PATH = "/dashboard/sales/data-historica/top-skus";
 
 export default function TopSkusPage() {
     const { accessToken, user } = useAuth();
+
+    // Ref para capturar la sección de las tablas
+    const tableSectionRef = useRef(null);
 
     /* ------------------- AUTORIZACIÓN ------------------- */
     const [authorized, setAuthorized] = useState(null);
@@ -65,6 +76,9 @@ export default function TopSkusPage() {
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState(null);
     const [downloading, setDownloading] = useState(false);
+    const [downloadingImage, setDownloadingImage] = useState(false);
+    const [sendingWhatsApp, setSendingWhatsApp] = useState(false);
+    const [successMessage, setSuccessMessage] = useState(null);
 
     /* =========================================================
        Traer Reporte
@@ -205,6 +219,70 @@ export default function TopSkusPage() {
             setDownloading(false);
         }
     };
+
+    /* =========================================================
+       Descargar imagen de las tablas
+    ========================================================= */
+    const downloadTableImage = useCallback(async () => {
+        if (!tableSectionRef.current) return;
+
+        setDownloadingImage(true);
+        setError(null);
+
+        try {
+            const filename = generateTopSkusFilename(appliedFilters);
+            await generateChartImage(tableSectionRef.current, {
+                filename,
+                sectionId: "tableSection",
+                width: 1600,
+                scale: 2,
+                padding: "40px 60px",
+                hideSelectors: [".md\\:hidden", "[class*='md:hidden']"],
+            });
+            setSuccessMessage("Imagen de las tablas descargada exitosamente");
+        } catch (err) {
+            console.error("Error downloading table image:", err);
+            setError("Error al descargar la imagen. Intenta nuevamente.");
+        } finally {
+            setDownloadingImage(false);
+        }
+    }, [appliedFilters]);
+
+    /* =========================================================
+       Enviar imagen por WhatsApp
+    ========================================================= */
+    const sendTableToWhatsApp = useCallback(async () => {
+        if (!tableSectionRef.current) return;
+
+        setSendingWhatsApp(true);
+        setError(null);
+
+        try {
+            const imageBase64 = await generateChartImageBase64(tableSectionRef.current, {
+                sectionId: "tableSection",
+                width: 1600,
+                scale: 2,
+                padding: "40px 60px",
+                hideSelectors: [".md\\:hidden", "[class*='md:hidden']"],
+            });
+
+            const weekRange = `S${appliedFilters.startWeek}-${appliedFilters.endWeek}`;
+            const yearRange = appliedFilters.startYear !== appliedFilters.endYear
+                ? `${appliedFilters.startYear}-${appliedFilters.endYear}`
+                : `${appliedFilters.startYear}`;
+            const title = `Top SKUs ${appliedFilters.reportType} ${weekRange} ${yearRange}`;
+
+            const response = await sendReportToWhatsApp(accessToken, imageBase64, title);
+
+            setSuccessMessage(`${response.message}`);
+            setTimeout(() => setSuccessMessage(null), 5000);
+        } catch (err) {
+            console.error("Error sending to WhatsApp:", err);
+            setError(err.message || "Error al enviar el reporte por WhatsApp");
+        } finally {
+            setSendingWhatsApp(false);
+        }
+    }, [accessToken, appliedFilters]);
 
     /* =========================================================
        Verificar si un objeto es un SKU (tiene total y semanas)
@@ -462,6 +540,12 @@ export default function TopSkusPage() {
                 </Notification>
             )}
 
+            {successMessage && (
+                <Notification color="green" className="mb-4" onClose={() => setSuccessMessage(null)}>
+                    {successMessage}
+                </Notification>
+            )}
+
             {/* ---------------- FILTROS ---------------- */}
             <div className="mb-4 flex-shrink-0">
                 {/* Botón de descarga siempre visible */}
@@ -475,6 +559,28 @@ export default function TopSkusPage() {
                         className="flex-1 md:flex-none"
                     >
                         Descargar Excel
+                    </Button>
+                    <Button
+                        onClick={downloadTableImage}
+                        variant="outline"
+                        color="violet"
+                        leftSection={<RiImageLine />}
+                        loading={downloadingImage}
+                        disabled={!reportData || loading}
+                        className="flex-1 md:flex-none"
+                    >
+                        Descargar Imagen
+                    </Button>
+                    <Button
+                        onClick={sendTableToWhatsApp}
+                        variant="filled"
+                        color="green"
+                        leftSection={<RiWhatsappLine />}
+                        loading={sendingWhatsApp}
+                        disabled={!reportData || loading}
+                        className="flex-1 md:flex-none"
+                    >
+                        Enviar por WhatsApp
                     </Button>
                 </div>
 
@@ -722,7 +828,7 @@ export default function TopSkusPage() {
                         <Loader size="lg" />
                     </div>
                 ) : reportData && Object.keys(reportData).length > 0 ? (
-                    <>
+                    <div id="tableSection" ref={tableSectionRef} className="bg-white p-4 rounded-lg">
                         {showCategories ? (
                             // Estructura con categorías - Múltiples tablas
                             <div className="flex-1 overflow-auto space-y-6">
@@ -745,7 +851,7 @@ export default function TopSkusPage() {
                             // Estructura sin categorías - Tabla única
                             renderSimpleTable(reportData, weeks, grandTotals)
                         )}
-                    </>
+                    </div>
                 ) : (
                     <div className="text-center py-8">
                         No se encontraron datos para el rango seleccionado.

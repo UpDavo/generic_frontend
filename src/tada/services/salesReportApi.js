@@ -10,7 +10,7 @@ export const processSalesReport = async (accessToken, excelFile) => {
     const formData = new FormData();
     formData.append("file", excelFile);
 
-    const response = await fetch(`${API_BASE_URL}/tada/sales-report/process/`, {
+    const response = await fetch(`${API_BASE_URL}/tada/sales-report/process-optimized/`, {
         method: "POST",
         headers: {
             Authorization: `Bearer ${accessToken}`,
@@ -135,4 +135,47 @@ export const downloadFileFromUrl = (url, filename = "resultado.xlsx") => {
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
+};
+
+/**
+ * Envía una imagen por WhatsApp
+ * @param {string} accessToken - Token de autenticación
+ * @param {string} imageBase64 - Imagen en formato base64 (data:image/png;base64,...)
+ * @param {string} title - Título del reporte
+ * @param {string} customMessage - Mensaje adicional (opcional)
+ * @param {boolean} includeTimestamp - Incluir timestamp (default: true)
+ * @returns {Promise<Object>} - Respuesta del servidor con información del envío
+ */
+export const sendReportToWhatsApp = async (
+    accessToken,
+    imageBase64,
+    title,
+    customMessage = "",
+    includeTimestamp = true
+) => {
+    const payload = {
+        image: imageBase64,
+        title: title,
+        include_timestamp: includeTimestamp,
+    };
+
+    if (customMessage) {
+        payload.custom_message = customMessage;
+    }
+
+    const response = await fetch(`${API_BASE_URL}/tada/sales-report/send-whatsapp/`, {
+        method: "POST",
+        headers: {
+            Authorization: `Bearer ${accessToken}`,
+            "Content-Type": "application/json",
+        },
+        body: JSON.stringify(payload),
+    });
+
+    if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.detail || errorData.message || "Error al enviar el reporte por WhatsApp");
+    }
+
+    return await response.json();
 };

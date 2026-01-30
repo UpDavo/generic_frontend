@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import {
     Button,
     Loader,
@@ -17,6 +17,8 @@ import {
     RiRefreshLine,
     RiBarChartBoxLine,
     RiEditLine,
+    RiImageLine,
+    RiWhatsappLine,
 } from "react-icons/ri";
 import {
     BarChart,
@@ -31,6 +33,8 @@ import {
 import { useAuth } from "@/auth/hooks/useAuth";
 import { Unauthorized } from "@/core/components/Unauthorized";
 import { ENV } from "@/config/env";
+import { generateChartImage, generateChartImageBase64, generateComparacionAnualFilename } from "@/tada/services/salesImageGeneratorService";
+import { sendReportToWhatsApp } from "@/tada/services/salesReportApi";
 
 const PERMISSION_PATH = "/dashboard/sales/data-historica/comparacion-anual";
 
@@ -80,6 +84,12 @@ export default function ComparacionAnualPage() {
     const [selectedCity, setSelectedCity] = useState(null);
     const [selectedCityYear, setSelectedCityYear] = useState(null);
     const [tempValue, setTempValue] = useState("");
+
+    /* ------------------- IMAGEN ------------------- */
+    const chartSectionRef = useRef(null);
+    const [downloadingImage, setDownloadingImage] = useState(false);
+    const [sendingWhatsApp, setSendingWhatsApp] = useState(false);
+    const [successMessage, setSuccessMessage] = useState(null);
 
     /* =========================================================
        Traer Reporte
@@ -236,6 +246,86 @@ export default function ComparacionAnualPage() {
         }
     };
 
+    const downloadChartImage = useCallback(async () => {
+        if (!chartSectionRef.current) {
+            setError("No se encontró la sección para capturar");
+            return;
+        }
+
+        setDownloadingImage(true);
+        try {
+            const filename = generateComparacionAnualFilename({
+                startWeek: appliedFilters.startWeek,
+                endWeek: appliedFilters.endWeek,
+                startYear: appliedFilters.startYear,
+                endYear: appliedFilters.endYear,
+                reportType: appliedFilters.reportType,
+            });
+
+            await generateChartImage(chartSectionRef.current, {
+                filename,
+                width: 1800,
+                scale: 2,
+                padding: "60px 80px",
+                sectionId: "chartSection",
+                hideSelectors: [
+                    "button",
+                    ".mantine-Button-root",
+                    "[class*='Button']",
+                ],
+            });
+
+            setSuccessMessage("Imagen descargada correctamente");
+            setTimeout(() => setSuccessMessage(null), 3000);
+        } catch (err) {
+            setError(err.message || "Error al generar la imagen");
+        } finally {
+            setDownloadingImage(false);
+        }
+    }, [appliedFilters]);
+
+    /* =========================================================
+       Enviar imagen por WhatsApp
+    ========================================================= */
+    const sendChartToWhatsApp = useCallback(async () => {
+        if (!chartSectionRef.current) {
+            setError("No se encontró la sección para capturar");
+            return;
+        }
+
+        setSendingWhatsApp(true);
+        setError(null);
+
+        try {
+            const imageBase64 = await generateChartImageBase64(chartSectionRef.current, {
+                sectionId: "chartSection",
+                width: 1800,
+                scale: 2,
+                padding: "60px 80px",
+                hideSelectors: [
+                    "button",
+                    ".mantine-Button-root",
+                    "[class*='Button']",
+                ],
+            });
+
+            const weekRange = `S${appliedFilters.startWeek}-${appliedFilters.endWeek}`;
+            const yearRange = `${appliedFilters.startYear}-${appliedFilters.endYear}`;
+            const reportLabel = appliedFilters.reportType === "hectolitros" ? "Hectolitros" : "Cajas";
+            const title = `Comparación Anual ${reportLabel} ${weekRange} ${yearRange}`;
+
+            const response = await sendReportToWhatsApp(accessToken, imageBase64, title);
+
+            setSuccessMessage(`${response.message}`);
+            setTimeout(() => setSuccessMessage(null), 5000);
+        } catch (err) {
+            console.error("Error sending to WhatsApp:", err);
+            setError(err.message || "Error al enviar el reporte por WhatsApp");
+        } finally {
+            setSendingWhatsApp(false);
+        }
+    }, [accessToken, appliedFilters]);
+
     /* =========================================================
        Obtener años del reporte
     ========================================================= */
@@ -345,6 +435,12 @@ export default function ComparacionAnualPage() {
                 </Notification>
             )}
 
+            {successMessage && (
+                <Notification color="green" className="mb-4" onClose={() => setSuccessMessage(null)}>
+                    {successMessage}
+                </Notification>
+            )}
+
             {/* ---------------- FILTROS ---------------- */}
             <div className="mb-4 flex-shrink-0">
                 {/* Botón de descarga siempre visible */}
@@ -357,6 +453,27 @@ export default function ComparacionAnualPage() {
                         className="flex-1 md:flex-none"
                     >
                         Descargar Excel
+                    </Button>
+                    <Button
+                        onClick={downloadChartImage}
+                        variant="filled"
+                        color="violet"
+                        leftSection={<RiImageLine />}
+                        className="flex-1 md:flex-none"
+                        disabled={downloadingImage || loading || !reportData}
+                    >
+                        {downloadingImage ? <Loader size="xs" color="white" /> : "Descargar Imagen"}
+                    </Button>
+                    <Button
+                        onClick={sendChartToWhatsApp}
+                        variant="filled"
+                        color="green"
+                        leftSection={<RiWhatsappLine />}
+                        loading={sendingWhatsApp}
+                        disabled={loading || !reportData}
+                        className="flex-1 md:flex-none"
+                    >
+                        Enviar por WhatsApp
                     </Button>
                 </div>
 
@@ -513,55 +630,57 @@ export default function ComparacionAnualPage() {
                 </div>
             ) : (
                 <>
-                    {/* ---------------- GRÁFICAS ---------------- */}
+                    {/* ---------------- SECCIÓN PARA CAPTURA DE IMAGEN ---------------- */}
                     {years.length > 0 && (
-                        <div className="mb-4 flex-shrink-0">
-                            <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-                                {/* Gráfica de Totales por Año */}
-                                <div className="bg-white p-4 rounded-lg shadow-md">
-                                    <h3 className="text-lg font-bold mb-4 text-center">
-                                        {reportType === "hectolitros"
-                                            ? "Hectolitros"
-                                            : "Cajas"}{" "}
-                                        {startYear} vs {endYear} MTD
-                                    </h3>
-                                    <ResponsiveContainer width="100%" height={300}>
-                                        <BarChart
-                                            data={getTotalsChartData()}
-                                            margin={{ top: 20, right: 30, left: 20, bottom: 40 }}
-                                        >
-                                            <CartesianGrid strokeDasharray="3 3" />
-                                            <XAxis dataKey="year" />
-                                            <YAxis />
-                                            <Tooltip
-                                                formatter={(value) => value.toFixed(2)}
-                                            />
-                                            <Legend />
-                                            <Bar
-                                                dataKey="value"
-                                                fill="#3b82f6"
-                                                label={{
-                                                    position: "top",
-                                                    formatter: (value) => value.toFixed(0),
-                                                }}
-                                                name={
-                                                    reportType === "hectolitros"
-                                                        ? "Hectolitros"
-                                                        : "Cajas"
-                                                }
-                                            />
-                                        </BarChart>
-                                    </ResponsiveContainer>
-                                </div>
+                        <div id="chartSection" ref={chartSectionRef}>
+                            {/* ---------------- GRÁFICAS ---------------- */}
+                            <div className="mb-4 flex-shrink-0">
+                                <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+                                    {/* Gráfica de Totales por Año */}
+                                    <div className="bg-white p-4 rounded-lg shadow-md">
+                                        <h3 className="text-lg font-bold mb-4 text-center">
+                                            {reportType === "hectolitros"
+                                                ? "Hectolitros"
+                                                : "Cajas"}{" "}
+                                            {startYear} vs {endYear} MTD
+                                        </h3>
+                                        <ResponsiveContainer width="100%" height={300}>
+                                            <BarChart
+                                                data={getTotalsChartData()}
+                                                margin={{ top: 20, right: 30, left: 20, bottom: 40 }}
+                                            >
+                                                <CartesianGrid strokeDasharray="3 3" />
+                                                <XAxis dataKey="year" />
+                                                <YAxis />
+                                                <Tooltip
+                                                    formatter={(value) => value.toFixed(2)}
+                                                />
+                                                <Legend />
+                                                <Bar
+                                                    dataKey="value"
+                                                    fill="#3b82f6"
+                                                    label={{
+                                                        position: "top",
+                                                        formatter: (value) => value.toFixed(0),
+                                                    }}
+                                                    name={
+                                                        reportType === "hectolitros"
+                                                            ? "Hectolitros"
+                                                            : "Cajas"
+                                                    }
+                                                />
+                                            </BarChart>
+                                        </ResponsiveContainer>
+                                    </div>
 
-                                {/* Gráfica de Performance por Ciudad */}
-                                <div className="bg-white p-4 rounded-lg shadow-md">
-                                    <h3 className="text-lg font-bold mb-4 text-center">
-                                        Performance Ciudad {startYear} vs {endYear} MTD
-                                    </h3>
-                                    <ResponsiveContainer width="100%" height={300}>
-                                        <BarChart
-                                            data={getCitiesChartData()}
+                                    {/* Gráfica de Performance por Ciudad */}
+                                    <div className="bg-white p-4 rounded-lg shadow-md">
+                                        <h3 className="text-lg font-bold mb-4 text-center">
+                                            Performance Ciudad {startYear} vs {endYear} MTD
+                                        </h3>
+                                        <ResponsiveContainer width="100%" height={300}>
+                                            <BarChart
+                                                data={getCitiesChartData()}
                                             layout="vertical"
                                             margin={{ top: 20, right: 30, left: 100, bottom: 20 }}
                                         >
@@ -588,10 +707,8 @@ export default function ComparacionAnualPage() {
                                 </div>
                             </div>
                         </div>
-                    )}
 
-                    {/* ---------------- TABLAS DE RESUMEN ---------------- */}
-                    {years.length > 0 && (
+                        {/* ---------------- TABLAS DE RESUMEN ---------------- */}
                         <div className="flex-1 min-h-0 flex flex-col">
                             <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
                                 {/* Tabla de Totales */}
@@ -730,6 +847,7 @@ export default function ComparacionAnualPage() {
                                 </div>
                             </div>
                         </div>
+                    </div>
                     )}
 
                     {years.length === 0 && (

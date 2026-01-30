@@ -105,7 +105,7 @@ export async function downloadVentasHistoricas(
 }
 
 /**
- * Eliminar registros de ventas por rango de fechas
+ * Eliminar registros de ventas por rango de fechas (optimizado con SQL directo)
  * @param {string} token - Token de autenticación
  * @param {string} startDate - Fecha inicial YYYY-MM-DD (requerida)
  * @param {string} endDate - Fecha final YYYY-MM-DD (requerida)
@@ -120,7 +120,7 @@ export async function deleteVentasHistoricasByDateRange(
         throw new Error("Las fechas inicial y final son requeridas");
     }
 
-    const url = new URL(`${ENV.API_URL}/tada/sales-record/delete-by-date/`);
+    const url = new URL(`${ENV.API_URL}/tada/sales-record/delete-by-date-optimized/`);
     url.searchParams.append("start_date", startDate);
     url.searchParams.append("end_date", endDate);
 
