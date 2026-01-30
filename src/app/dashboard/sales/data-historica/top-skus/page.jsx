@@ -20,6 +20,7 @@ import {
 } from "react-icons/ri";
 import { useAuth } from "@/auth/hooks/useAuth";
 import { Unauthorized } from "@/core/components/Unauthorized";
+import { ProcessingOverlay } from "@/core/components/ProcessingOverlay";
 import { ENV } from "@/config/env";
 import {
     generateChartImage,
@@ -78,6 +79,7 @@ export default function TopSkusPage() {
     const [downloading, setDownloading] = useState(false);
     const [downloadingImage, setDownloadingImage] = useState(false);
     const [sendingWhatsApp, setSendingWhatsApp] = useState(false);
+    const [showSuccessOverlay, setShowSuccessOverlay] = useState(false);
     const [successMessage, setSuccessMessage] = useState(null);
 
     /* =========================================================
@@ -274,15 +276,22 @@ export default function TopSkusPage() {
 
             const response = await sendReportToWhatsApp(accessToken, imageBase64, title);
 
-            setSuccessMessage(`${response.message}`);
-            setTimeout(() => setSuccessMessage(null), 5000);
+            // Mostrar overlay de éxito
+            setShowSuccessOverlay(true);
         } catch (err) {
             console.error("Error sending to WhatsApp:", err);
             setError(err.message || "Error al enviar el reporte por WhatsApp");
-        } finally {
             setSendingWhatsApp(false);
         }
     }, [accessToken, appliedFilters]);
+
+    /* =========================================================
+       Cerrar overlay de éxito
+    ========================================================= */
+    const handleSuccessOverlayClose = () => {
+        setShowSuccessOverlay(false);
+        setSendingWhatsApp(false);
+    };
 
     /* =========================================================
        Verificar si un objeto es un SKU (tiene total y semanas)
@@ -858,6 +867,14 @@ export default function TopSkusPage() {
                     </div>
                 )}
             </div>
+
+            <ProcessingOverlay
+                isProcessing={sendingWhatsApp}
+                showSuccess={showSuccessOverlay}
+                successMessage="¡Reporte enviado por WhatsApp exitosamente!"
+                processingMessage="Enviando reporte por WhatsApp..."
+                onSuccessClose={handleSuccessOverlayClose}
+            />
         </div>
     );
 }

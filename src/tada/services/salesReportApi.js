@@ -173,6 +173,11 @@ export const sendReportToWhatsApp = async (
     });
 
     if (!response.ok) {
+        // Error 429: Límite de envíos excedido
+        if (response.status === 429) {
+            throw new Error("Se ha excedido el límite de envío de reportes diarios por WhatsApp");
+        }
+        
         const errorData = await response.json().catch(() => ({}));
         throw new Error(errorData.detail || errorData.message || "Error al enviar el reporte por WhatsApp");
     }

@@ -20,6 +20,7 @@ import {
     RiWhatsappLine,
 } from "react-icons/ri";
 import { Unauthorized } from "@/core/components/Unauthorized";
+import { ProcessingOverlay } from "@/core/components/ProcessingOverlay";
 import {
     getWeeklyHectolitresReport,
     downloadWeeklyHectolitresReport,
@@ -93,6 +94,7 @@ export default function HectolitrosPage() {
     const [downloading, setDownloading] = useState(false);
     const [downloadingImage, setDownloadingImage] = useState(false);
     const [sendingWhatsApp, setSendingWhatsApp] = useState(false);
+    const [showSuccessOverlay, setShowSuccessOverlay] = useState(false);
     const [successMessage, setSuccessMessage] = useState(null);
 
     /* =========================================================
@@ -236,15 +238,22 @@ export default function HectolitrosPage() {
                 title
             );
 
-            setSuccessMessage(`${response.message}`);
-            setTimeout(() => setSuccessMessage(null), 5000);
+            // Mostrar overlay de éxito
+            setShowSuccessOverlay(true);
         } catch (err) {
             console.error("Error sending to WhatsApp:", err);
             setError(err.message || "Error al enviar el reporte por WhatsApp");
-        } finally {
             setSendingWhatsApp(false);
         }
     }, [accessToken, appliedFilters]);
+
+    /* =========================================================
+       Cerrar overlay de éxito
+    ========================================================= */
+    const handleSuccessOverlayClose = () => {
+        setShowSuccessOverlay(false);
+        setSendingWhatsApp(false);
+    };
 
     /* =========================================================
        Obtener las semanas del reporte
@@ -766,6 +775,14 @@ export default function HectolitrosPage() {
                     </div>
                 )}
             </div>
+
+            <ProcessingOverlay
+                isProcessing={sendingWhatsApp}
+                showSuccess={showSuccessOverlay}
+                successMessage="¡Reporte enviado por WhatsApp exitosamente!"
+                processingMessage="Enviando reporte por WhatsApp..."
+                onSuccessClose={handleSuccessOverlayClose}
+            />
         </div>
     );
 }
