@@ -19,6 +19,7 @@ import {
     RiEditLine,
     RiImageLine,
     RiWhatsappLine,
+    RiAddLine,
 } from "react-icons/ri";
 import {
     BarChart,
@@ -36,6 +37,7 @@ import { ProcessingOverlay } from "@/core/components/ProcessingOverlay";
 import { ENV } from "@/config/env";
 import { generateChartImage, generateChartImageBase64, generateComparacionAnualFilename } from "@/tada/services/salesImageGeneratorService";
 import { sendReportToWhatsApp } from "@/tada/services/salesReportApi";
+import { createManualYearlyData, updateManualYearlyData } from "@/tada/services/manualYearlyDataApi";
 
 const PERMISSION_PATH = "/dashboard/sales/data-historica/comparacion-anual";
 
@@ -62,7 +64,7 @@ export default function ComparacionAnualPage() {
 
     /* ------------------- FILTROS APLICADOS ------------------- */
     const [appliedFilters, setAppliedFilters] = useState({
-        startYear: 2024,
+        startYear: currentYear - 1,
         endYear: currentYear,
         startWeek: 1,
         endWeek: 4,
@@ -74,10 +76,6 @@ export default function ComparacionAnualPage() {
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState(null);
 
-    /* ------------------- DATOS MANUALES ------------------- */
-    const [manualData, setManualData] = useState({});
-    const [manualCityData, setManualCityData] = useState({});
-    
     /* ------------------- MODALES ------------------- */
     const [modalYearOpen, setModalYearOpen] = useState(false);
     const [modalCityOpen, setModalCityOpen] = useState(false);
@@ -85,6 +83,9 @@ export default function ComparacionAnualPage() {
     const [selectedCity, setSelectedCity] = useState(null);
     const [selectedCityYear, setSelectedCityYear] = useState(null);
     const [tempValue, setTempValue] = useState("");
+    const [isEditMode, setIsEditMode] = useState(false);
+    const [selectedManualId, setSelectedManualId] = useState(null);
+    const [savingManual, setSavingManual] = useState(false);
 
     /* ------------------- IMAGEN ------------------- */
     const chartSectionRef = useRef(null);
@@ -167,51 +168,107 @@ export default function ComparacionAnualPage() {
                 endWeek: 4,
                 reportType: "hectolitros",
             });
-            setManualData({});
-            setManualCityData({});
         } finally {
             setFiltering(false);
         }
     };
 
-    const openYearModal = (year) => {
+    const openYearModal = (year, isEdit = false, manualId = null, currentValue = "") => {
         setSelectedYear(year);
-        setTempValue(manualData[year] ?? "");
+        setIsEditMode(isEdit);
+        setSelectedManualId(manualId);
+        setTempValue(currentValue);
         setModalYearOpen(true);
     };
 
-    const saveYearValue = () => {
-        if (tempValue !== null && tempValue !== "") {
-            setManualData((prev) => ({
-                ...prev,
-                [selectedYear]: tempValue,
-            }));
+    const saveYearValue = async () => {
+        if (tempValue === null || tempValue === "") return;
+
+        setSavingManual(true);
+        try {
+            if (isEditMode && selectedManualId) {
+                // Actualizar dato existente
+                await updateManualYearlyData(accessToken, selectedManualId, {
+                    value: parseFloat(tempValue),
+                });
+                setSuccessMessage("Dato actualizado correctamente");
+            } else {
+                // Crear nuevo dato
+                await createManualYearlyData(accessToken, {
+                    year: parseInt(selectedYear),
+                    start_week: appliedFilters.startWeek,
+                    end_week: appliedFilters.endWeek,
+                    report_type: appliedFilters.reportType,
+                    city: null,
+                    value: parseFloat(tempValue),
+                });
+                setSuccessMessage("Dato creado correctamente");
+            }
+
+            // Refrescar datos
+            await fetchReport();
+
+            setTimeout(() => setSuccessMessage(null), 3000);
+        } catch (err) {
+            setError(err.message || "Error al guardar el dato");
+        } finally {
+            setSavingManual(false);
+            setModalYearOpen(false);
+            setTempValue("");
+            setSelectedYear(null);
+            setIsEditMode(false);
+            setSelectedManualId(null);
         }
-        setModalYearOpen(false);
-        setTempValue("");
-        setSelectedYear(null);
     };
 
-    const openCityModal = (city, year) => {
+    const openCityModal = (city, year, isEdit = false, manualId = null, currentValue = "") => {
         setSelectedCity(city);
         setSelectedCityYear(year);
-        const key = `${city}_${year}`;
-        setTempValue(manualCityData[key] ?? "");
+        setIsEditMode(isEdit);
+        setSelectedManualId(manualId);
+        setTempValue(currentValue);
         setModalCityOpen(true);
     };
 
-    const saveCityValue = () => {
-        if (tempValue !== null && tempValue !== "") {
-            const key = `${selectedCity}_${selectedCityYear}`;
-            setManualCityData((prev) => ({
-                ...prev,
-                [key]: tempValue,
-            }));
+    const saveCityValue = async () => {
+        if (tempValue === null || tempValue === "") return;
+
+        setSavingManual(true);
+        try {
+            if (isEditMode && selectedManualId) {
+                // Actualizar dato existente
+                await updateManualYearlyData(accessToken, selectedManualId, {
+                    value: parseFloat(tempValue),
+                });
+                setSuccessMessage("Dato actualizado correctamente");
+            } else {
+                // Crear nuevo dato
+                await createManualYearlyData(accessToken, {
+                    year: parseInt(selectedCityYear),
+                    start_week: appliedFilters.startWeek,
+                    end_week: appliedFilters.endWeek,
+                    report_type: appliedFilters.reportType,
+                    city: selectedCity,
+                    value: parseFloat(tempValue),
+                });
+                setSuccessMessage("Dato creado correctamente");
+            }
+
+            // Refrescar datos
+            await fetchReport();
+
+            setTimeout(() => setSuccessMessage(null), 3000);
+        } catch (err) {
+            setError(err.message || "Error al guardar el dato");
+        } finally {
+            setSavingManual(false);
+            setModalCityOpen(false);
+            setTempValue("");
+            setSelectedCity(null);
+            setSelectedCityYear(null);
+            setIsEditMode(false);
+            setSelectedManualId(null);
         }
-        setModalCityOpen(false);
-        setTempValue("");
-        setSelectedCity(null);
-        setSelectedCityYear(null);
     };
 
     const handleDownload = async () => {
@@ -347,15 +404,12 @@ export default function ComparacionAnualPage() {
        Combinar datos reales con datos manuales
     ========================================================= */
     const getCombinedTotals = () => {
-        const combined = { ...reportData?.totals };
-        Object.keys(manualData).forEach((year) => {
-            const value = parseFloat(manualData[year]);
-            const hasRealData = reportData?.totals?.[year] && reportData.totals[year] > 0;
-            
-            // Solo usar datos manuales si no hay datos reales o si los datos reales son 0
-            if (!hasRealData && manualData[year] !== null && manualData[year] !== "" && !isNaN(value)) {
-                combined[year] = value;
-            }
+        if (!reportData?.totals) return {};
+
+        const combined = {};
+        Object.entries(reportData.totals).forEach(([year, data]) => {
+            // El nuevo formato tiene { value, is_manual, id? }
+            combined[year] = typeof data === 'object' ? data.value : data;
         });
         return combined;
     };
@@ -366,10 +420,10 @@ export default function ComparacionAnualPage() {
     const getTotalsChartData = () => {
         const combinedTotals = getCombinedTotals();
         const years = Object.keys(combinedTotals).sort();
-        
+
         return years.map((year) => ({
             year,
-            value: combinedTotals[year],
+            value: combinedTotals[year] || 0,
         }));
     };
 
@@ -377,19 +431,17 @@ export default function ComparacionAnualPage() {
        Combinar datos de ciudades reales con manuales
     ========================================================= */
     const getCombinedCityData = () => {
-        const combined = { ...reportData?.cities };
-        
-        Object.keys(manualCityData).forEach((cityYear) => {
-            const [city, year] = cityYear.split('_');
-            const value = parseFloat(manualCityData[cityYear]);
-            const hasRealData = reportData?.cities?.[city]?.[year] && reportData.cities[city][year] > 0;
-            
-            if (!hasRealData && manualCityData[cityYear] !== null && manualCityData[cityYear] !== "" && !isNaN(value)) {
-                if (!combined[city]) combined[city] = {};
-                combined[city][year] = value;
-            }
+        if (!reportData?.cities) return {};
+
+        const combined = {};
+        Object.entries(reportData.cities).forEach(([city, cityData]) => {
+            combined[city] = {};
+            Object.entries(cityData).forEach(([year, data]) => {
+                // El nuevo formato tiene { value, is_manual, id? }
+                combined[city][year] = typeof data === 'object' ? data.value : data;
+            });
         });
-        
+
         return combined;
     };
 
@@ -399,10 +451,9 @@ export default function ComparacionAnualPage() {
     const getCitiesChartData = () => {
         const combinedCities = getCombinedCityData();
         if (!combinedCities || Object.keys(combinedCities).length === 0) return [];
-        
-        const combinedTotals = getCombinedTotals();
-        const years = Object.keys(combinedTotals).sort();
-        
+
+        const years = getYears();
+
         return Object.entries(combinedCities).map(([city, cityData]) => {
             const dataPoint = { city };
             years.forEach((year) => {
@@ -690,173 +741,170 @@ export default function ComparacionAnualPage() {
                                         <ResponsiveContainer width="100%" height={300}>
                                             <BarChart
                                                 data={getCitiesChartData()}
-                                            layout="vertical"
-                                            margin={{ top: 20, right: 30, left: 100, bottom: 20 }}
-                                        >
-                                            <CartesianGrid strokeDasharray="3 3" />
-                                            <XAxis type="number" />
-                                            <YAxis type="category" dataKey="city" width={90} />
-                                            <Tooltip />
-                                            <Legend />
-                                            {years.map((year, index) => (
-                                                <Bar
-                                                    key={year}
-                                                    dataKey={year}
-                                                    fill={getColorForYear(index)}
-                                                    name={year}
-                                                    label={{
-                                                        position: "right",
-                                                        formatter: (value) =>
-                                                            value > 0 ? value.toFixed(0) : "",
-                                                    }}
-                                                />
-                                            ))}
-                                        </BarChart>
-                                    </ResponsiveContainer>
+                                                layout="vertical"
+                                                margin={{ top: 20, right: 30, left: 100, bottom: 20 }}
+                                            >
+                                                <CartesianGrid strokeDasharray="3 3" />
+                                                <XAxis type="number" />
+                                                <YAxis type="category" dataKey="city" width={90} />
+                                                <Tooltip />
+                                                <Legend />
+                                                {years.map((year, index) => (
+                                                    <Bar
+                                                        key={year}
+                                                        dataKey={year}
+                                                        fill={getColorForYear(index)}
+                                                        name={year}
+                                                        label={{
+                                                            position: "right",
+                                                            formatter: (value) =>
+                                                                value > 0 ? value.toFixed(0) : "",
+                                                        }}
+                                                    />
+                                                ))}
+                                            </BarChart>
+                                        </ResponsiveContainer>
+                                    </div>
                                 </div>
                             </div>
-                        </div>
 
-                        {/* ---------------- TABLAS DE RESUMEN ---------------- */}
-                        <div className="flex-1 min-h-0 flex flex-col">
-                            <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-                                {/* Tabla de Totales */}
-                                <div className="bg-white p-4 rounded-lg shadow-md overflow-auto">
-                                    <h3 className="text-lg font-bold mb-3">
-                                        Totales por Año
-                                    </h3>
-                                    <table className="table w-full">
-                                        <thead className="bg-primary text-white text-md uppercase font-bold">
-                                            <tr>
-                                                <th>Año</th>
-                                                <th>Valor</th>
-                                            </tr>
-                                        </thead>
-                                        <tbody className="bg-white text-black">
-                                            {years.map((year) => {
-                                                const value = combinedTotals[year];
-                                                const realValue = reportData?.totals?.[year];
-                                                const hasNoData = realValue === undefined || realValue === null || realValue === 0;
-                                                const isManual =
-                                                    manualData[year] !== null &&
-                                                    manualData[year] !== "" &&
-                                                    manualData[year] !== undefined;
-                                                return (
-                                                    <tr key={year}>
-                                                        <td className="font-bold">{year}</td>
-                                                        <td>
-                                                            {hasNoData && !isManual ? (
-                                                                <Button
-                                                                    size="xs"
-                                                                    variant="light"
-                                                                    color="blue"
-                                                                    leftSection={<RiEditLine size={14} />}
-                                                                    onClick={() => openYearModal(year)}
-                                                                >
-                                                                    Agregar
-                                                                </Button>
-                                                            ) : (
-                                                                <>
-                                                                    {value.toFixed(2)}
-                                                                    {isManual && (
-                                                                        <>
-                                                                            <span className="ml-2 text-xs text-orange-600 font-semibold">
-                                                                                (Manual)
-                                                                            </span>
+                            {/* ---------------- TABLAS DE RESUMEN ---------------- */}
+                            <div className="flex-1 min-h-0 flex flex-col">
+                                <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+                                    {/* Tabla de Totales */}
+                                    <div className="bg-white p-4 rounded-lg shadow-md overflow-auto">
+                                        <h3 className="text-lg font-bold mb-3">
+                                            Totales por Año
+                                        </h3>
+                                        <table className="table w-full">
+                                            <thead className="bg-primary text-white text-md uppercase font-bold">
+                                                <tr>
+                                                    <th>Año</th>
+                                                    <th>Valor</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody className="bg-white text-black">
+                                                {years.map((year) => {
+                                                    const rawData = reportData?.totals?.[year];
+                                                    const value = combinedTotals[year];
+                                                    const isManual = typeof rawData === 'object' && rawData?.is_manual;
+                                                    const manualId = typeof rawData === 'object' ? rawData?.manual_id : null;
+                                                    const hasNoData = value === undefined || value === null || value === 0;
+
+                                                    return (
+                                                        <tr key={year}>
+                                                            <td className="font-bold">{year}</td>
+                                                            <td>
+                                                                {hasNoData ? (
+                                                                    <Button
+                                                                        size="xs"
+                                                                        variant="light"
+                                                                        color="blue"
+                                                                        leftSection={<RiAddLine size={14} />}
+                                                                        onClick={() => openYearModal(year, false, null, "")}
+                                                                    >
+                                                                        Agregar
+                                                                    </Button>
+                                                                ) : (
+                                                                    <>
+                                                                        {value.toFixed(2)}
+                                                                        {isManual && (
+                                                                            <>
+                                                                                <span className="ml-2 text-xs text-orange-600 font-semibold">
+                                                                                    (Manual)
+                                                                                </span>
+                                                                                <Button
+                                                                                    size="xs"
+                                                                                    variant="subtle"
+                                                                                    color="blue"
+                                                                                    ml="xs"
+                                                                                    onClick={() => openYearModal(year, true, manualId, value)}
+                                                                                >
+                                                                                    <RiEditLine size={14} />
+                                                                                </Button>
+                                                                            </>
+                                                                        )}
+                                                                    </>
+                                                                )}
+                                                            </td>
+                                                        </tr>
+                                                    );
+                                                })}
+                                            </tbody>
+                                        </table>
+                                    </div>
+
+                                    {/* Tabla de Ciudades */}
+                                    <div className="bg-white p-4 rounded-lg shadow-md overflow-auto">
+                                        <h3 className="text-lg font-bold mb-3">
+                                            Desglose por Ciudad
+                                        </h3>
+                                        <table className="table w-full">
+                                            <thead className="bg-primary text-white text-md uppercase font-bold">
+                                                <tr>
+                                                    <th>Ciudad</th>
+                                                    {years.map((year) => (
+                                                        <th key={year}>{year}</th>
+                                                    ))}
+                                                </tr>
+                                            </thead>
+                                            <tbody className="bg-white text-black">
+                                                {Object.entries(combinedCities || {}).map(
+                                                    ([city, cityData]) => (
+                                                        <tr key={city}>
+                                                            <td className="font-bold">{city}</td>
+                                                            {years.map((year) => {
+                                                                const value = cityData[year];
+                                                                const rawCityData = reportData?.cities?.[city]?.[year];
+                                                                const isManual = typeof rawCityData === 'object' && rawCityData?.is_manual;
+                                                                const manualId = typeof rawCityData === 'object' ? rawCityData?.manual_id : null;
+                                                                const hasNoData = value === undefined || value === null || value === 0;
+
+                                                                return (
+                                                                    <td key={year}>
+                                                                        {hasNoData ? (
                                                                             <Button
                                                                                 size="xs"
-                                                                                variant="subtle"
+                                                                                variant="light"
                                                                                 color="blue"
-                                                                                ml="xs"
-                                                                                onClick={() => openYearModal(year)}
+                                                                                leftSection={<RiAddLine size={14} />}
+                                                                                onClick={() => openCityModal(city, year, false, null, "")}
                                                                             >
-                                                                                <RiEditLine size={14} />
+                                                                                Agregar
                                                                             </Button>
-                                                                        </>
-                                                                    )}
-                                                                </>
-                                                            )}
-                                                        </td>
-                                                    </tr>
-                                                );
-                                            })}
-                                        </tbody>
-                                    </table>
-                                </div>
-
-                                {/* Tabla de Ciudades */}
-                                <div className="bg-white p-4 rounded-lg shadow-md overflow-auto">
-                                    <h3 className="text-lg font-bold mb-3">
-                                        Desglose por Ciudad
-                                    </h3>
-                                    <table className="table w-full">
-                                        <thead className="bg-primary text-white text-md uppercase font-bold">
-                                            <tr>
-                                                <th>Ciudad</th>
-                                                {years.map((year) => (
-                                                    <th key={year}>{year}</th>
-                                                ))}
-                                            </tr>
-                                        </thead>
-                                        <tbody className="bg-white text-black">
-                                            {Object.entries(combinedCities || {}).map(
-                                                ([city, cityData]) => (
-                                                    <tr key={city}>
-                                                        <td className="font-bold">{city}</td>
-                                                        {years.map((year) => {
-                                                            const value = cityData[year];
-                                                            const realValue = reportData?.cities?.[city]?.[year];
-                                                            const hasNoData = realValue === undefined || realValue === null || realValue === 0;
-                                                            const key = `${city}_${year}`;
-                                                            const isManual = 
-                                                                manualCityData[key] !== null &&
-                                                                manualCityData[key] !== "" &&
-                                                                manualCityData[key] !== undefined;
-                                                            return (
-                                                                <td key={year}>
-                                                                    {hasNoData && !isManual ? (
-                                                                        <Button
-                                                                            size="xs"
-                                                                            variant="light"
-                                                                            color="blue"
-                                                                            leftSection={<RiEditLine size={14} />}
-                                                                            onClick={() => openCityModal(city, year)}
-                                                                        >
-                                                                            Agregar
-                                                                        </Button>
-                                                                    ) : value ? (
-                                                                        <>
-                                                                            {value.toFixed(2)}
-                                                                            {isManual && (
-                                                                                <>
-                                                                                    <span className="ml-1 text-xs text-orange-600 font-semibold">
-                                                                                        (M)
-                                                                                    </span>
-                                                                                    <Button
-                                                                                        size="xs"
-                                                                                        variant="subtle"
-                                                                                        color="blue"
-                                                                                        ml="xs"
-                                                                                        onClick={() => openCityModal(city, year)}
-                                                                                    >
-                                                                                        <RiEditLine size={14} />
-                                                                                    </Button>
-                                                                                </>
-                                                                            )}
-                                                                        </>
-                                                                    ) : "-"}
-                                                                </td>
-                                                            );
-                                                        })}
-                                                    </tr>
-                                                )
-                                            )}
-                                        </tbody>
-                                    </table>
+                                                                        ) : (
+                                                                            <>
+                                                                                {value.toFixed(2)}
+                                                                                {isManual && (
+                                                                                    <>
+                                                                                        <span className="ml-1 text-xs text-orange-600 font-semibold">
+                                                                                            (M)
+                                                                                        </span>
+                                                                                        <Button
+                                                                                            size="xs"
+                                                                                            variant="subtle"
+                                                                                            color="blue"
+                                                                                            ml="xs"
+                                                                                            onClick={() => openCityModal(city, year, true, manualId, value)}
+                                                                                        >
+                                                                                            <RiEditLine size={14} />
+                                                                                        </Button>
+                                                                                    </>
+                                                                                )}
+                                                                            </>
+                                                                        )}
+                                                                    </td>
+                                                                );
+                                                            })}
+                                                        </tr>
+                                                    )
+                                                )}
+                                            </tbody>
+                                        </table>
+                                    </div>
                                 </div>
                             </div>
                         </div>
-                    </div>
                     )}
 
                     {years.length === 0 && (
@@ -872,11 +920,15 @@ export default function ComparacionAnualPage() {
             <Modal
                 opened={modalYearOpen}
                 onClose={() => {
-                    setModalYearOpen(false);
-                    setTempValue("");
-                    setSelectedYear(null);
+                    if (!savingManual) {
+                        setModalYearOpen(false);
+                        setTempValue("");
+                        setSelectedYear(null);
+                        setIsEditMode(false);
+                        setSelectedManualId(null);
+                    }
                 }}
-                title={`Agregar valor para el año ${selectedYear}`}
+                title={`${isEditMode ? "Editar" : "Agregar"} valor para el año ${selectedYear}`}
                 centered
             >
                 <NumberInput
@@ -887,19 +939,29 @@ export default function ComparacionAnualPage() {
                     min={0}
                     decimalScale={2}
                     description={`Este valor se usará para el año ${selectedYear}`}
+                    disabled={savingManual}
                 />
                 <div className="flex gap-2 mt-4">
-                    <Button onClick={saveYearValue} variant="filled" fullWidth>
-                        Guardar
+                    <Button
+                        onClick={saveYearValue}
+                        variant="filled"
+                        fullWidth
+                        loading={savingManual}
+                        disabled={savingManual || tempValue === "" || tempValue === null}
+                    >
+                        {isEditMode ? "Actualizar" : "Guardar"}
                     </Button>
                     <Button
                         onClick={() => {
                             setModalYearOpen(false);
                             setTempValue("");
                             setSelectedYear(null);
+                            setIsEditMode(false);
+                            setSelectedManualId(null);
                         }}
                         variant="outline"
                         fullWidth
+                        disabled={savingManual}
                     >
                         Cancelar
                     </Button>
@@ -910,12 +972,16 @@ export default function ComparacionAnualPage() {
             <Modal
                 opened={modalCityOpen}
                 onClose={() => {
-                    setModalCityOpen(false);
-                    setTempValue("");
-                    setSelectedCity(null);
-                    setSelectedCityYear(null);
+                    if (!savingManual) {
+                        setModalCityOpen(false);
+                        setTempValue("");
+                        setSelectedCity(null);
+                        setSelectedCityYear(null);
+                        setIsEditMode(false);
+                        setSelectedManualId(null);
+                    }
                 }}
-                title={`Agregar valor para ${selectedCity} - ${selectedCityYear}`}
+                title={`${isEditMode ? "Editar" : "Agregar"} valor para ${selectedCity} - ${selectedCityYear}`}
                 centered
             >
                 <NumberInput
@@ -926,10 +992,17 @@ export default function ComparacionAnualPage() {
                     min={0}
                     decimalScale={2}
                     description={`Este valor se usará para ${selectedCity} en ${selectedCityYear}`}
+                    disabled={savingManual}
                 />
                 <div className="flex gap-2 mt-4">
-                    <Button onClick={saveCityValue} variant="filled" fullWidth>
-                        Guardar
+                    <Button
+                        onClick={saveCityValue}
+                        variant="filled"
+                        fullWidth
+                        loading={savingManual}
+                        disabled={savingManual || tempValue === "" || tempValue === null}
+                    >
+                        {isEditMode ? "Actualizar" : "Guardar"}
                     </Button>
                     <Button
                         onClick={() => {
@@ -937,9 +1010,12 @@ export default function ComparacionAnualPage() {
                             setTempValue("");
                             setSelectedCity(null);
                             setSelectedCityYear(null);
+                            setIsEditMode(false);
+                            setSelectedManualId(null);
                         }}
                         variant="outline"
                         fullWidth
+                        disabled={savingManual}
                     >
                         Cancelar
                     </Button>
