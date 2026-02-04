@@ -165,6 +165,12 @@ export const dashboardRoutes = [
             name: "Top SKUs por Región",
             permission: "/dashboard/sales/data-historica/top-skus",
           },
+          {
+            path: "/dashboard/sales/data-historica/sku-metrics",
+            icon: RiBarChart2Line,
+            name: "Métricas por SKU",
+            permission: "/dashboard/sales/data-historica/sku-metrics",
+          },
         ],
       },
       {

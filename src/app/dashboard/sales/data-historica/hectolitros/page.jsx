@@ -72,19 +72,24 @@ export default function HectolitrosPage() {
     }, [user]);
 
     /* ------------------- FILTROS ------------------- */
-    const currentYear = new Date().getFullYear();
-    const [startYear, setStartYear] = useState(currentYear);
-    const [endYear, setEndYear] = useState(currentYear);
-    const [startWeek, setStartWeek] = useState(1);
-    const [endWeek, setEndWeek] = useState(4);
+    const getMonthStart = () =>
+        new Date(new Date().getFullYear(), new Date().getMonth(), 1)
+            .toISOString()
+            .slice(0, 10);
+
+    const getMonthEnd = () =>
+        new Date(new Date().getFullYear(), new Date().getMonth() + 1, 0)
+            .toISOString()
+            .slice(0, 10);
+    
+    const [startDate, setStartDate] = useState(getMonthStart());
+    const [endDate, setEndDate] = useState(getMonthEnd());
     const [filtering, setFiltering] = useState(false);
 
     /* ------------------- FILTROS APLICADOS ------------------- */
     const [appliedFilters, setAppliedFilters] = useState({
-        startYear: currentYear,
-        endYear: currentYear,
-        startWeek: 1,
-        endWeek: 4,
+        startDate: getMonthStart(),
+        endDate: getMonthEnd(),
     });
 
     /* ------------------- DATOS ------------------- */
@@ -106,10 +111,8 @@ export default function HectolitrosPage() {
         try {
             const data = await getWeeklyHectolitresReport(
                 accessToken,
-                appliedFilters.startYear,
-                appliedFilters.endYear,
-                appliedFilters.startWeek,
-                appliedFilters.endWeek,
+                appliedFilters.startDate,
+                appliedFilters.endDate,
                 "hectolitros"
             );
             setReportData(data);
@@ -133,10 +136,8 @@ export default function HectolitrosPage() {
         setFiltering(true);
         try {
             setAppliedFilters({
-                startYear: startYear,
-                endYear: endYear,
-                startWeek: startWeek,
-                endWeek: endWeek,
+                startDate: startDate,
+                endDate: endDate,
             });
         } finally {
             setFiltering(false);
@@ -146,16 +147,11 @@ export default function HectolitrosPage() {
     const clearFilters = async () => {
         setFiltering(true);
         try {
-            const currentYear = new Date().getFullYear();
-            setStartYear(currentYear);
-            setEndYear(currentYear);
-            setStartWeek(1);
-            setEndWeek(4);
+            setStartDate(getMonthStart());
+            setEndDate(getMonthEnd());
             setAppliedFilters({
-                startYear: currentYear,
-                endYear: currentYear,
-                startWeek: 1,
-                endWeek: 4,
+                startDate: getMonthStart(),
+                endDate: getMonthEnd(),
             });
         } finally {
             setFiltering(false);
@@ -167,10 +163,8 @@ export default function HectolitrosPage() {
         try {
             await downloadWeeklyHectolitresReport(
                 accessToken,
-                appliedFilters.startYear,
-                appliedFilters.endYear,
-                appliedFilters.startWeek,
-                appliedFilters.endWeek,
+                appliedFilters.startDate,
+                appliedFilters.endDate,
                 "hectolitros"
             );
             setError(null);
@@ -371,37 +365,19 @@ export default function HectolitrosPage() {
                             </Accordion.Control>
                             <Accordion.Panel>
                                 <div className="grid grid-cols-1 gap-2">
-                                    <NumberInput
-                                        label="Año Inicial"
-                                        placeholder="Ej: 2026"
-                                        value={startYear}
-                                        onChange={setStartYear}
-                                        min={2020}
-                                        max={2100}
+                                    <TextInput
+                                        label="Fecha Inicial"
+                                        type="date"
+                                        placeholder="YYYY-MM-DD"
+                                        value={startDate}
+                                        onChange={(e) => setStartDate(e.target.value)}
                                     />
-                                    <NumberInput
-                                        label="Año Final"
-                                        placeholder="Ej: 2026"
-                                        value={endYear}
-                                        onChange={setEndYear}
-                                        min={2020}
-                                        max={2100}
-                                    />
-                                    <NumberInput
-                                        label="Semana Inicial"
-                                        placeholder="1-53"
-                                        value={startWeek}
-                                        onChange={setStartWeek}
-                                        min={1}
-                                        max={53}
-                                    />
-                                    <NumberInput
-                                        label="Semana Final"
-                                        placeholder="1-53"
-                                        value={endWeek}
-                                        onChange={setEndWeek}
-                                        min={1}
-                                        max={53}
+                                    <TextInput
+                                        label="Fecha Final"
+                                        type="date"
+                                        placeholder="YYYY-MM-DD"
+                                        value={endDate}
+                                        onChange={(e) => setEndDate(e.target.value)}
                                     />
                                     <div className="grid grid-cols-2 gap-2 mt-2">
                                         <Button
@@ -437,38 +413,20 @@ export default function HectolitrosPage() {
                 </div>
 
                 {/* Filtros normales en desktop */}
-                <div className="hidden md:grid md:grid-cols-6 grid-cols-1 gap-2 items-end">
-                    <NumberInput
-                        label="Año Inicial"
-                        placeholder="Ej: 2026"
-                        value={startYear}
-                        onChange={setStartYear}
-                        min={2020}
-                        max={2100}
+                <div className="hidden md:grid md:grid-cols-4 grid-cols-1 gap-2 items-end">
+                    <TextInput
+                        label="Fecha Inicial"
+                        type="date"
+                        placeholder="YYYY-MM-DD"
+                        value={startDate}
+                        onChange={(e) => setStartDate(e.target.value)}
                     />
-                    <NumberInput
-                        label="Año Final"
-                        placeholder="Ej: 2026"
-                        value={endYear}
-                        onChange={setEndYear}
-                        min={2020}
-                        max={2100}
-                    />
-                    <NumberInput
-                        label="Semana Inicial"
-                        placeholder="1-53"
-                        value={startWeek}
-                        onChange={setStartWeek}
-                        min={1}
-                        max={53}
-                    />
-                    <NumberInput
-                        label="Semana Final"
-                        placeholder="1-53"
-                        value={endWeek}
-                        onChange={setEndWeek}
-                        min={1}
-                        max={53}
+                    <TextInput
+                        label="Fecha Final"
+                        type="date"
+                        placeholder="YYYY-MM-DD"
+                        value={endDate}
+                        onChange={(e) => setEndDate(e.target.value)}
                     />
                     <Button
                         onClick={applyFilters}

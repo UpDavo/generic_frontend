@@ -181,18 +181,14 @@ export async function getSalesCheckStats(token, startDate = "", endDate = "") {
  */
 export async function getWeeklyHectolitresReport(
     token,
-    startYear,
-    endYear,
-    startWeek,
-    endWeek,
+    startDate,
+    endDate,
     reportType = "hectolitros"
 ) {
     const url = new URL(`${ENV.API_URL}/tada/hectolitres-daily-meta/weekly-report/`);
     
-    if (startYear) url.searchParams.append("start_year", startYear);
-    if (endYear) url.searchParams.append("end_year", endYear);
-    if (startWeek) url.searchParams.append("start_week", startWeek);
-    if (endWeek) url.searchParams.append("end_week", endWeek);
+    if (startDate) url.searchParams.append("start_date", startDate);
+    if (endDate) url.searchParams.append("end_date", endDate);
     if (reportType) url.searchParams.append("report_type", reportType);
 
     const response = await fetch(url.toString(), {
@@ -214,27 +210,21 @@ export async function getWeeklyHectolitresReport(
 /**
  * Descargar reporte semanal de hectolitros en Excel
  * @param {string} token - Token de autenticación
- * @param {number} startYear - Año inicial (ej: 2026)
- * @param {number} endYear - Año final (ej: 2026)
- * @param {number} startWeek - Semana inicial (1-53)
- * @param {number} endWeek - Semana final (1-53)
+ * @param {string} startDate - Fecha inicial YYYY-MM-DD
+ * @param {string} endDate - Fecha final YYYY-MM-DD
  * @param {string} reportType - Tipo de reporte: "hectolitros" o "caja" (default: "hectolitros")
  * @returns {Promise<void>} - Descarga el archivo automáticamente
  */
 export async function downloadWeeklyHectolitresReport(
     token,
-    startYear,
-    endYear,
-    startWeek,
-    endWeek,
+    startDate,
+    endDate,
     reportType = "hectolitros"
 ) {
     const url = new URL(`${ENV.API_URL}/tada/hectolitres-daily-meta/weekly-report/download/`);
     
-    if (startYear) url.searchParams.append("start_year", startYear);
-    if (endYear) url.searchParams.append("end_year", endYear);
-    if (startWeek) url.searchParams.append("start_week", startWeek);
-    if (endWeek) url.searchParams.append("end_week", endWeek);
+    if (startDate) url.searchParams.append("start_date", startDate);
+    if (endDate) url.searchParams.append("end_date", endDate);
     if (reportType) url.searchParams.append("report_type", reportType);
 
     const response = await fetch(url.toString(), {
@@ -258,6 +248,104 @@ export async function downloadWeeklyHectolitresReport(
     // Extraer nombre del archivo de los headers o usar uno por defecto
     const contentDisposition = response.headers.get("Content-Disposition");
     let filename = "reporte_hectolitros.xlsx";
+    
+    if (contentDisposition) {
+        const filenameMatch = contentDisposition.match(/filename="?(.+)"?/);
+        if (filenameMatch && filenameMatch[1]) {
+            filename = filenameMatch[1];
+        }
+    }
+    
+    link.download = filename;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    window.URL.revokeObjectURL(downloadUrl);
+}
+
+/**
+ * Obtener reporte de métricas por SKU con agrupación por ciudad y POC
+ * @param {string} token - Token de autenticación
+ * @param {string} skuCode - Código del SKU
+ * @param {string} startDate - Fecha inicial YYYY-MM-DD
+ * @param {string} endDate - Fecha final YYYY-MM-DD
+ * @param {string} reportType - Tipo de reporte: "hectolitros" o "caja" (default: "hectolitros")
+ * @returns {Promise<Object>} - Respuesta con estructura jerárquica de métricas
+ */
+export async function getSkuMetricsReport(
+    token,
+    skuCode,
+    startDate,
+    endDate,
+    reportType = "hectolitros"
+) {
+    const url = new URL(`${ENV.API_URL}/tada/sku-detail/city-poc/weekly-report/`);
+    
+    url.searchParams.append("sku_code", skuCode);
+    if (startDate) url.searchParams.append("start_date", startDate);
+    if (endDate) url.searchParams.append("end_date", endDate);
+    if (reportType) url.searchParams.append("report_type", reportType);
+
+    const response = await fetch(url.toString(), {
+        method: "GET",
+        headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${token}`,
+        },
+    });
+
+    if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.message || "Error al obtener métricas del SKU");
+    }
+
+    return await response.json();
+}
+
+/**
+ * Descargar reporte de métricas por SKU en Excel
+ * @param {string} token - Token de autenticación
+ * @param {string} skuCode - Código del SKU
+ * @param {string} startDate - Fecha inicial YYYY-MM-DD
+ * @param {string} endDate - Fecha final YYYY-MM-DD
+ * @param {string} reportType - Tipo de reporte: "hectolitros" o "caja" (default: "hectolitros")
+ * @returns {Promise<void>} - Descarga el archivo automáticamente
+ */
+export async function downloadSkuMetricsReport(
+    token,
+    skuCode,
+    startDate,
+    endDate,
+    reportType = "hectolitros"
+) {
+    const url = new URL(`${ENV.API_URL}/tada/sku-detail/city-poc/weekly-report/download/`);
+    
+    url.searchParams.append("sku_code", skuCode);
+    if (startDate) url.searchParams.append("start_date", startDate);
+    if (endDate) url.searchParams.append("end_date", endDate);
+    if (reportType) url.searchParams.append("report_type", reportType);
+
+    const response = await fetch(url.toString(), {
+        method: "GET",
+        headers: {
+            Authorization: `Bearer ${token}`,
+        },
+    });
+
+    if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.message || "Error al descargar métricas del SKU");
+    }
+
+    // Crear blob y descargar
+    const blob = await response.blob();
+    const downloadUrl = window.URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.href = downloadUrl;
+    
+    // Extraer nombre del archivo de los headers o usar uno por defecto
+    const contentDisposition = response.headers.get("Content-Disposition");
+    let filename = `sku_metrics_${skuCode}.xlsx`;
     
     if (contentDisposition) {
         const filenameMatch = contentDisposition.match(/filename="?(.+)"?/);

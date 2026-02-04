@@ -1,11 +1,10 @@
 "use client";
 
-import { useState, useEffect, useCallback, useRef } from "react";
+import React, { useState, useEffect, useCallback, useRef } from "react";
 import {
     Button,
     Loader,
     Notification,
-    NumberInput,
     Select,
     Accordion,
     Switch,
@@ -18,11 +17,18 @@ import {
     RiRefreshLine,
     RiImageLine,
     RiWhatsappLine,
+    RiAddLine,
+    RiDeleteBinLine,
 } from "react-icons/ri";
 import { useAuth } from "@/auth/hooks/useAuth";
 import { Unauthorized } from "@/core/components/Unauthorized";
 import { ProcessingOverlay } from "@/core/components/ProcessingOverlay";
 import { ENV } from "@/config/env";
+import { searchProductosApp } from "@/tada/services/ventasProductosAppApi";
+import {
+    getSkuMetricsReport,
+    downloadSkuMetricsReport,
+} from "@/tada/services/ventasHistoricasApi";
 import {
     generateChartImage,
     generateChartImageBase64,
@@ -30,9 +36,12 @@ import {
 } from "@/tada/services/salesImageGeneratorService";
 import { sendReportToWhatsApp } from "@/tada/services/salesReportApi";
 
-const PERMISSION_PATH = "/dashboard/sales/data-historica/top-skus";
+const PERMISSION_PATH = "/dashboard/sales/data-historica/sku-metrics";
 
-export default function TopSkusPage() {
+// Los SKUs ahora se obtienen de la API de productos app mediante búsqueda
+// Los reportes de métricas se obtienen de la API real: /api/sku-detail/city-poc/weekly-report/
+
+export default function SkuMetricsPage() {
     const { accessToken, user } = useAuth();
 
     // Ref para capturar la sección de las tablas
@@ -47,6 +56,42 @@ export default function TopSkusPage() {
         setAuthorized(!!ok);
     }, [user]);
 
+    /* ------------------- BÚSQUEDA DE SKU ------------------- */
+    const handleSearchSku = async () => {
+        if (!skuSearchTerm.trim()) {
+            setSkuSearchResults([]);
+            return;
+        }
+
+        setSearchingSku(true);
+        try {
+            // Llamada real a la API de productos app
+            const results = await searchProductosApp(accessToken, skuSearchTerm);
+            // Filtrar el que ya está seleccionado
+            const filteredResults = selectedSku 
+                ? results.filter(result => result.id !== selectedSku.id)
+                : results;
+            setSkuSearchResults(filteredResults);
+        } catch (err) {
+            console.error(err);
+            setError("Error al buscar productos app");
+        } finally {
+            setSearchingSku(false);
+        }
+    };
+
+    const handleSelectSku = (sku) => {
+        setSelectedSku(sku); // Ahora guardamos el objeto completo
+        setSkuSearchTerm("");
+        setSkuSearchResults([]);
+    };
+
+    const handleClearSku = () => {
+        setSelectedSku(null);
+        setSkuSearchTerm("");
+        setSkuSearchResults([]);
+    };
+
     /* ------------------- FILTROS ------------------- */
     const getMonthStart = () =>
         new Date(new Date().getFullYear(), new Date().getMonth(), 1)
@@ -58,29 +103,30 @@ export default function TopSkusPage() {
             .toISOString()
             .slice(0, 10);
     
+    const [selectedSku, setSelectedSku] = useState(null);
+    const [skuSearchTerm, setSkuSearchTerm] = useState("");
+    const [skuSearchResults, setSkuSearchResults] = useState([]);
+    const [searchingSku, setSearchingSku] = useState(false);
     const [startDate, setStartDate] = useState(getMonthStart());
     const [endDate, setEndDate] = useState(getMonthEnd());
     const [reportType, setReportType] = useState("hectolitros");
-    const [productCategory, setProductCategory] = useState("");
-    const [groupByRegion, setGroupByRegion] = useState(true);
-    const [groupByCity, setGroupByCity] = useState(false);
+    const [groupByCity, setGroupByCity] = useState(true); // Siempre marcado por defecto
     const [groupByPoc, setGroupByPoc] = useState(false);
     const [filtering, setFiltering] = useState(false);
 
     /* ------------------- FILTROS APLICADOS ------------------- */
     const [appliedFilters, setAppliedFilters] = useState({
+        selectedSku: null,
         startDate: getMonthStart(),
         endDate: getMonthEnd(),
         reportType: "hectolitros",
-        productCategory: "",
-        groupByRegion: true,
-        groupByCity: false,
+        groupByCity: true,
         groupByPoc: false,
     });
 
     /* ------------------- DATOS ------------------- */
     const [reportData, setReportData] = useState(null);
-    const [loading, setLoading] = useState(true);
+    const [loading, setLoading] = useState(false);
     const [error, setError] = useState(null);
     const [downloading, setDownloading] = useState(false);
     const [downloadingImage, setDownloadingImage] = useState(false);
@@ -92,34 +138,54 @@ export default function TopSkusPage() {
        Traer Reporte
     ========================================================= */
     const fetchReport = useCallback(async () => {
-        if (!accessToken) return;
+        if (!appliedFilters.selectedSku) {
+            setReportData(null);
+            return;
+        }
+
         setLoading(true);
         try {
-            const url = new URL(`${ENV.API_URL}/tada/top-skus-region/weekly-report/`);
-            url.searchParams.append("start_date", appliedFilters.startDate);
-            url.searchParams.append("end_date", appliedFilters.endDate);
-            url.searchParams.append("report_type", appliedFilters.reportType);
-            if (appliedFilters.productCategory) {
-                url.searchParams.append("product_category", appliedFilters.productCategory);
+            // Llamada real a la API
+            const response = await getSkuMetricsReport(
+                accessToken,
+                appliedFilters.selectedSku.code,
+                appliedFilters.startDate,
+                appliedFilters.endDate,
+                appliedFilters.reportType
+            );
+            
+            // La respuesta viene con la estructura cities, debemos usarla directamente
+            // o transformarla según los filtros de agrupación
+            let processedData = {};
+            
+            if (appliedFilters.groupByCity && response.cities) {
+                if (appliedFilters.groupByPoc) {
+                    // Mostrar ciudades con POCs
+                    processedData = response.cities;
+                } else {
+                    // Mostrar solo ciudades sin POCs
+                    Object.entries(response.cities).forEach(([cityName, cityData]) => {
+                        processedData[cityName] = {
+                            total: cityData.total,
+                            ...Object.keys(cityData)
+                                .filter(key => key.startsWith('w'))
+                                .reduce((acc, key) => ({ ...acc, [key]: cityData[key] }), {})
+                        };
+                    });
+                }
+            } else {
+                // Sin agrupación por ciudad, mostrar solo totales generales
+                processedData = {
+                    'Total General': {
+                        total: response.total,
+                        ...Object.keys(response)
+                            .filter(key => key.startsWith('w'))
+                            .reduce((acc, key) => ({ ...acc, [key]: response[key] }), {})
+                    }
+                };
             }
-            url.searchParams.append("group_by_region", appliedFilters.groupByRegion);
-            url.searchParams.append("group_by_city", appliedFilters.groupByCity);
-            url.searchParams.append("group_by_poc", appliedFilters.groupByPoc);
-
-            const response = await fetch(url.toString(), {
-                method: "GET",
-                headers: {
-                    "Content-Type": "application/json",
-                    Authorization: `Bearer ${accessToken}`,
-                },
-            });
-
-            if (!response.ok) {
-                throw new Error("Error al obtener el reporte");
-            }
-
-            const data = await response.json();
-            setReportData(data);
+            
+            setReportData(processedData);
             setError(null);
         } catch (err) {
             setError(err.message || "Error al cargar el reporte");
@@ -127,7 +193,7 @@ export default function TopSkusPage() {
         } finally {
             setLoading(false);
         }
-    }, [accessToken, appliedFilters]);
+    }, [appliedFilters, accessToken]);
 
     useEffect(() => {
         fetchReport();
@@ -137,14 +203,18 @@ export default function TopSkusPage() {
        Handlers
     ========================================================= */
     const applyFilters = async () => {
+        if (!selectedSku) {
+            setError("Por favor selecciona un SKU para continuar");
+            return;
+        }
+
         setFiltering(true);
         try {
             setAppliedFilters({
+                selectedSku: selectedSku, // Guardamos el objeto completo
                 startDate,
                 endDate,
                 reportType,
-                productCategory,
-                groupByRegion,
                 groupByCity,
                 groupByPoc,
             });
@@ -156,65 +226,43 @@ export default function TopSkusPage() {
     const clearFilters = async () => {
         setFiltering(true);
         try {
+            setSelectedSku(null);
+            setSkuSearchTerm("");
+            setSkuSearchResults([]);
             setStartDate(getMonthStart());
             setEndDate(getMonthEnd());
             setReportType("hectolitros");
-            setProductCategory("");
-            setGroupByRegion(true);
-            setGroupByCity(false);
+            setGroupByCity(true);
             setGroupByPoc(false);
             setAppliedFilters({
+                selectedSku: null,
                 startDate: getMonthStart(),
                 endDate: getMonthEnd(),
                 reportType: "hectolitros",
-                productCategory: "",
-                groupByRegion: true,
-                groupByCity: false,
+                groupByCity: true,
                 groupByPoc: false,
             });
+            setReportData(null);
         } finally {
             setFiltering(false);
         }
     };
 
     const handleDownload = async () => {
+        if (!reportData) return;
+        
         setDownloading(true);
         try {
-            const url = new URL(`${ENV.API_URL}/tada/top-skus-region/weekly-report/download/`);
-            url.searchParams.append("start_year", appliedFilters.startYear);
-            url.searchParams.append("end_year", appliedFilters.endYear);
-            url.searchParams.append("start_week", appliedFilters.startWeek);
-            url.searchParams.append("end_week", appliedFilters.endWeek);
-            url.searchParams.append("report_type", appliedFilters.reportType);
-            if (appliedFilters.productCategory) {
-                url.searchParams.append("retornable", appliedFilters.productCategory);
-            }
-            url.searchParams.append("group_by_region", appliedFilters.groupByRegion);
-            url.searchParams.append("group_by_city", appliedFilters.groupByCity);
-            url.searchParams.append("group_by_poc", appliedFilters.groupByPoc);
-
-            const response = await fetch(url.toString(), {
-                method: "GET",
-                headers: {
-                    Authorization: `Bearer ${accessToken}`,
-                },
-            });
-
-            if (!response.ok) {
-                throw new Error("Error al descargar el archivo");
-            }
-
-            const blob = await response.blob();
-            const downloadUrl = window.URL.createObjectURL(blob);
-            const a = document.createElement("a");
-            a.href = downloadUrl;
-            a.download = `top_skus_${appliedFilters.reportType}_${appliedFilters.startDate}_${appliedFilters.endDate}.xlsx`;
-            document.body.appendChild(a);
-            a.click();
-            window.URL.revokeObjectURL(downloadUrl);
-            document.body.removeChild(a);
+            await downloadSkuMetricsReport(
+                accessToken,
+                appliedFilters.selectedSku.code,
+                appliedFilters.startDate,
+                appliedFilters.endDate,
+                appliedFilters.reportType
+            );
+            setSuccessMessage('Reporte descargado exitosamente');
         } catch (err) {
-            setError(err.message || "Error al descargar el archivo");
+            setError(err.message || 'Error al descargar el reporte');
         } finally {
             setDownloading(false);
         }
@@ -230,7 +278,7 @@ export default function TopSkusPage() {
         setError(null);
 
         try {
-            const filename = generateTopSkusFilename(appliedFilters);
+            const filename = `sku_metrics_${appliedFilters.selectedSku}_${appliedFilters.startDate}_${appliedFilters.endDate}.png`;
             await generateChartImage(tableSectionRef.current, {
                 filename,
                 sectionId: "tableSection",
@@ -266,11 +314,11 @@ export default function TopSkusPage() {
                 hideSelectors: [".md\\:hidden", "[class*='md:hidden']"],
             });
 
-            const title = `Top SKUs ${appliedFilters.reportType} ${appliedFilters.startDate} - ${appliedFilters.endDate}`;
+            const skuLabel = FAKE_SKUS.find(s => s.value === appliedFilters.selectedSku)?.label || appliedFilters.selectedSku;
+            const title = `Métricas SKU: ${skuLabel} - ${appliedFilters.startDate} / ${appliedFilters.endDate}`;
 
             const response = await sendReportToWhatsApp(accessToken, imageBase64, title);
 
-            // Mostrar overlay de éxito
             setShowSuccessOverlay(true);
         } catch (err) {
             console.error("Error sending to WhatsApp:", err);
@@ -288,45 +336,28 @@ export default function TopSkusPage() {
     };
 
     /* =========================================================
-       Verificar si un objeto es un SKU (tiene total y semanas)
+       Verificar si un objeto es un dato de métrica (tiene total y semanas)
     ========================================================= */
-    const isSkuData = (obj) => {
-        return obj && typeof obj === 'object' && 'total' in obj && Object.keys(obj).some(k => k.startsWith('w'));
+    const isMetricData = (obj) => {
+        return obj && typeof obj === 'object' && 'total' in obj && 
+               Object.keys(obj).some(k => k.startsWith('w')) &&
+               !('pocs' in obj); // Si tiene 'pocs', es un nivel jerárquico, no un dato de métrica
     };
 
     /* =========================================================
-       Detectar si tiene categorías con datos
-    ========================================================= */
-    const hasCategories = () => {
-        if (!reportData) return false;
-        
-        const hasRetornable = reportData.retornable && 
-            typeof reportData.retornable === 'object' && 
-            Object.keys(reportData.retornable).length > 0;
-        
-        const hasNoRetornable = reportData.no_retornable && 
-            typeof reportData.no_retornable === 'object' && 
-            Object.keys(reportData.no_retornable).length > 0;
-        
-        return hasRetornable || hasNoRetornable;
-    };
-
-    /* =========================================================
-       Obtener semanas del reporte (recursivo para cualquier jerarquía)
+       Obtener semanas del reporte
     ========================================================= */
     const getWeeks = () => {
         if (!reportData) return [];
         const weeks = new Set();
         
         const extractWeeks = (obj) => {
-            if (isSkuData(obj)) {
-                Object.keys(obj).forEach((key) => {
-                    if (key.startsWith("w")) {
-                        weeks.add(key);
-                    }
+            if (isMetricData(obj)) {
+                Object.keys(obj).forEach(key => {
+                    if (key.startsWith('w')) weeks.add(key);
                 });
-            } else if (typeof obj === 'object' && obj !== null) {
-                Object.values(obj).forEach(extractWeeks);
+            } else if (typeof obj === 'object') {
+                Object.values(obj).forEach(value => extractWeeks(value));
             }
         };
         
@@ -340,7 +371,7 @@ export default function TopSkusPage() {
     };
 
     /* =========================================================
-       Calcular totales generales (recursivo)
+       Calcular totales generales
     ========================================================= */
     const getGrandTotals = () => {
         if (!reportData) return {};
@@ -352,13 +383,13 @@ export default function TopSkusPage() {
         });
         
         const sumTotals = (obj) => {
-            if (isSkuData(obj)) {
-                totals.total += obj.total || 0;
-                weeks.forEach((week) => {
+            if (isMetricData(obj)) {
+                weeks.forEach(week => {
                     totals[week] += obj[week] || 0;
                 });
-            } else if (typeof obj === 'object' && obj !== null) {
-                Object.values(obj).forEach(sumTotals);
+                totals.total += obj.total || 0;
+            } else if (typeof obj === 'object') {
+                Object.values(obj).forEach(value => sumTotals(value));
             }
         };
         
@@ -371,28 +402,63 @@ export default function TopSkusPage() {
     ========================================================= */
     const renderMobileHierarchy = (data, weeks, level = 0) => {
         return Object.entries(data).map(([key, value]) => {
-            // Si es un SKU
-            if (isSkuData(value)) {
+            // Si tiene 'pocs', es una ciudad con POCs
+            if (value && typeof value === 'object' && 'pocs' in value) {
                 return (
-                    <div key={key} className="bg-white p-3 rounded-lg border">
-                        <div className="font-bold text-sm mb-2">{key}</div>
+                    <Accordion key={key} variant="contained">
+                        <Accordion.Item value={key}>
+                            <Accordion.Control>
+                                <div className="font-bold uppercase">{key}</div>
+                            </Accordion.Control>
+                            <Accordion.Panel>
+                                {/* Mostrar totales de la ciudad */}
+                                <div className="bg-purple-50 p-3 rounded-lg border border-purple-200 mb-3">
+                                    <div className="font-bold mb-2 text-purple-900">Totales de {key}</div>
+                                    <div className="grid grid-cols-2 gap-2 text-sm">
+                                        {weeks.map(week => (
+                                            <div key={week} className="flex justify-between">
+                                                <span>{week.replace("w", "W")}:</span>
+                                                <span className="font-semibold">{value[week]?.toFixed(2) || "0.00"}</span>
+                                            </div>
+                                        ))}
+                                        <div className="flex justify-between col-span-2 border-t border-purple-300 pt-2 mt-2 font-bold">
+                                            <span>Total:</span>
+                                            <span className="text-green-600">{value.total?.toFixed(2) || "0.00"}</span>
+                                        </div>
+                                    </div>
+                                </div>
+                                {/* Mostrar POCs */}
+                                <div className="space-y-3">
+                                    {renderMobileHierarchy(value.pocs, weeks, level + 1)}
+                                </div>
+                            </Accordion.Panel>
+                        </Accordion.Item>
+                    </Accordion>
+                );
+            }
+            
+            // Si es un dato de métrica puro (sin pocs)
+            if (isMetricData(value)) {
+                return (
+                    <div key={key} className="bg-blue-50 p-3 rounded-lg border border-blue-200">
+                        <div className="font-bold mb-2 uppercase">{key}</div>
                         <div className="grid grid-cols-2 gap-2 text-sm">
-                            {weeks.map((week) => (
+                            {weeks.map(week => (
                                 <div key={week} className="flex justify-between">
-                                    <span className="font-semibold">{week.replace("w", "W")}:</span>
-                                    <span>{value[week] ? value[week].toFixed(2) : "-"}</span>
+                                    <span>{week.replace("w", "W")}:</span>
+                                    <span className="font-semibold">{value[week]?.toFixed(2) || "0.00"}</span>
                                 </div>
                             ))}
-                            <div className="flex justify-between col-span-2 border-t pt-2 mt-2 font-bold">
+                            <div className="flex justify-between col-span-2 border-t border-blue-300 pt-2 mt-2 font-bold">
                                 <span>Total:</span>
-                                <span>{value.total ? value.total.toFixed(2) : "0.00"}</span>
+                                <span className="text-green-600">{value.total?.toFixed(2) || "0.00"}</span>
                             </div>
                         </div>
                     </div>
                 );
             }
             
-            // Si es un nivel jerárquico
+            // Si es otro nivel jerárquico
             return (
                 <Accordion key={key} variant="contained">
                     <Accordion.Item value={key}>
@@ -417,38 +483,65 @@ export default function TopSkusPage() {
         const entries = Object.entries(data);
         
         return entries.map(([key, value]) => {
-            const fullKey = parentKey ? `${parentKey}-${key}` : key;
+            const uniqueKey = parentKey ? `${parentKey}-${key}` : key;
             
-            // Si es un SKU (tiene total y semanas)
-            if (isSkuData(value)) {
-                const paddingClass = level === 0 ? 'pl-4' : level === 1 ? 'pl-8' : level === 2 ? 'pl-12' : 'pl-16';
+            // Si tiene 'pocs', es una ciudad con POCs
+            if (value && typeof value === 'object' && 'pocs' in value) {
                 return (
-                    <tr key={fullKey}>
-                        <td className={paddingClass}>{key}</td>
-                        {weeks.map((week) => (
+                    <React.Fragment key={uniqueKey}>
+                        {/* Fila de la ciudad */}
+                        <tr className="bg-purple-100 font-bold text-purple-900">
+                            <td className="pl-4 uppercase" style={{ paddingLeft: `${level * 20 + 16}px` }}>
+                                {key}
+                            </td>
+                            {weeks.map(week => (
+                                <td key={week} className="text-center">
+                                    {value[week]?.toFixed(2) || "0.00"}
+                                </td>
+                            ))}
+                            <td className="text-center text-green-600">
+                                {value.total?.toFixed(2) || "0.00"}
+                            </td>
+                        </tr>
+                        {/* Renderizar POCs de esta ciudad */}
+                        {renderHierarchy(value.pocs, weeks, level + 1, uniqueKey)}
+                    </React.Fragment>
+                );
+            }
+            
+            // Si es un dato de métrica (hoja)
+            if (isMetricData(value)) {
+                return (
+                    <tr key={uniqueKey} className="hover:bg-gray-100">
+                        <td className="pl-4" style={{ paddingLeft: `${level * 20 + 16}px` }}>
+                            {key}
+                        </td>
+                        {weeks.map(week => (
                             <td key={week} className="text-center">
-                                {value[week] ? value[week].toFixed(2) : "-"}
+                                {value[week]?.toFixed(2) || "0.00"}
                             </td>
                         ))}
-                        <td className="text-center font-bold">
-                            {value.total ? value.total.toFixed(2) : "0.00"}
+                        <td className="text-center font-bold text-green-600">
+                            {value.total?.toFixed(2) || "0.00"}
                         </td>
                     </tr>
                 );
             }
             
-            // Si es un nivel jerárquico (región, ciudad, POC)
-            const bgClass = level === 0 ? 'bg-blue-50' : level === 1 ? 'bg-blue-100' : 'bg-blue-150';
-            const textPadding = level === 0 ? '' : level === 1 ? 'pl-4' : 'pl-8';
+            // Si es otro nivel jerárquico
             return (
-                <>
-                    <tr key={`header-${fullKey}`} className={`${bgClass} font-bold`}>
-                        <td colSpan={weeks.length + 2} className={`uppercase ${textPadding}`}>
+                <React.Fragment key={uniqueKey}>
+                    <tr className="bg-gray-100 font-bold">
+                        <td className="uppercase" style={{ paddingLeft: `${level * 20 + 16}px` }}>
                             {key}
                         </td>
+                        {weeks.map(week => (
+                            <td key={week}></td>
+                        ))}
+                        <td></td>
                     </tr>
-                    {renderHierarchy(value, weeks, level + 1, fullKey)}
-                </>
+                    {renderHierarchy(value, weeks, level + 1, uniqueKey)}
+                </React.Fragment>
             );
         });
     };
@@ -463,7 +556,7 @@ export default function TopSkusPage() {
                 <table className="table w-full">
                     <thead className="bg-primary text-white text-md uppercase font-bold sticky top-0 z-10">
                         <tr>
-                            <th className="text-left">Jerarquía / SKU</th>
+                            <th className="text-left">Jerarquía / Ubicación</th>
                             {weeks.map((week) => (
                                 <th key={week}>{week.replace("w", "W")}</th>
                             ))}
@@ -533,7 +626,6 @@ export default function TopSkusPage() {
 
     const weeks = getWeeks();
     const grandTotals = getGrandTotals();
-    const showCategories = hasCategories();
 
     return (
         <div className="text-black h-full flex flex-col">
@@ -549,9 +641,10 @@ export default function TopSkusPage() {
                 </Notification>
             )}
 
+            
             {/* ---------------- FILTROS ---------------- */}
             <div className="mb-4 flex-shrink-0">
-                {/* Botón de descarga siempre visible */}
+                {/* Botones de acción siempre visibles */}
                 <div className="flex gap-2 mb-2 flex-wrap">
                     <Button
                         onClick={handleDownload}
@@ -559,6 +652,7 @@ export default function TopSkusPage() {
                         color="teal"
                         leftSection={<RiDownloadCloudLine />}
                         loading={downloading}
+                        disabled={!reportData}
                         className="flex-1 md:flex-none"
                     >
                         Descargar Excel
@@ -587,7 +681,7 @@ export default function TopSkusPage() {
                     </Button>
                 </div>
 
-                {/* Accordion para filtros en mobile, grid normal en desktop */}
+                {/* Accordion para filtros en mobile */}
                 <div className="md:hidden">
                     <Accordion variant="contained">
                         <Accordion.Item value="filters">
@@ -620,35 +714,10 @@ export default function TopSkusPage() {
                                             { value: "caja", label: "Caja" },
                                         ]}
                                     />
-                                    <Select
-                                        label="Tipo de Producto"
-                                        placeholder="Todos"
-                                        value={productCategory}
-                                        onChange={setProductCategory}
-                                        data={[
-                                            { value: "", label: "Todos" },
-                                            { value: "retornable", label: "Retornable" },
-                                            { value: "no_retornable", label: "No Retornable" },
-                                        ]}
-                                        clearable
-                                    />
                                     <div className="space-y-2 mt-3">
-                                        <Switch
-                                            label="Agrupar por Región"
-                                            checked={groupByRegion}
-                                            onChange={(e) => {
-                                                const checked = e.currentTarget.checked;
-                                                setGroupByRegion(checked);
-                                                if (!checked) {
-                                                    setGroupByCity(false);
-                                                    setGroupByPoc(false);
-                                                }
-                                            }}
-                                        />
                                         <Switch
                                             label="Agrupar por Ciudad"
                                             checked={groupByCity}
-                                            disabled={!groupByRegion}
                                             onChange={(e) => {
                                                 const checked = e.currentTarget.checked;
                                                 setGroupByCity(checked);
@@ -669,7 +738,7 @@ export default function TopSkusPage() {
                                             onClick={applyFilters}
                                             variant="filled"
                                             leftSection={<RiSearchLine />}
-                                            disabled={loading || filtering}
+                                            disabled={loading || filtering || !selectedSku}
                                         >
                                             {filtering ? <Loader size="xs" color="white" /> : "Buscar"}
                                         </Button>
@@ -686,7 +755,7 @@ export default function TopSkusPage() {
                                         onClick={fetchReport}
                                         variant="outline"
                                         leftSection={<RiRefreshLine />}
-                                        disabled={loading || filtering}
+                                        disabled={loading || filtering || !appliedFilters.selectedSku}
                                         fullWidth
                                     >
                                         Refrescar
@@ -701,21 +770,8 @@ export default function TopSkusPage() {
                 <div className="hidden md:block space-y-3">
                     <div className="flex gap-4 mb-3">
                         <Switch
-                            label="Agrupar por Región"
-                            checked={groupByRegion}
-                            onChange={(e) => {
-                                const checked = e.currentTarget.checked;
-                                setGroupByRegion(checked);
-                                if (!checked) {
-                                    setGroupByCity(false);
-                                    setGroupByPoc(false);
-                                }
-                            }}
-                        />
-                        <Switch
                             label="Agrupar por Ciudad"
                             checked={groupByCity}
-                            disabled={!groupByRegion}
                             onChange={(e) => {
                                 const checked = e.currentTarget.checked;
                                 setGroupByCity(checked);
@@ -731,62 +787,160 @@ export default function TopSkusPage() {
                             onChange={(e) => setGroupByPoc(e.currentTarget.checked)}
                         />
                     </div>
-                <div className="grid md:grid-cols-6 grid-cols-1 gap-2 items-end">
-                    <TextInput
-                        label="Fecha Inicial"
-                        type="date"
-                        placeholder="YYYY-MM-DD"
-                        value={startDate}
-                        onChange={(e) => setStartDate(e.target.value)}
-                    />
-                    <TextInput
-                        label="Fecha Final"
-                        type="date"
-                        placeholder="YYYY-MM-DD"
-                        value={endDate}
-                        onChange={(e) => setEndDate(e.target.value)}
-                    />
-                    <Select
-                        label="Tipo de Reporte"
-                        placeholder="Selecciona"
-                        value={reportType}
-                        onChange={setReportType}
-                        data={[
-                            { value: "hectolitros", label: "Hectolitros" },
-                            { value: "caja", label: "Caja" },
-                        ]}
-                    />
-                    <Select
-                        label="Tipo de Producto"
-                        placeholder="Todos"
-                        value={productCategory}
-                        onChange={setProductCategory}
-                        data={[
-                            { value: "", label: "Todos" },
-                            { value: "retornable", label: "Retornable" },
-                            { value: "no_retornable", label: "No Retornable" },
-                        ]}
-                        clearable
-                    />
-                    <Button
-                        onClick={applyFilters}
-                        variant="filled"
-                        leftSection={<RiSearchLine />}
-                        disabled={loading || filtering}
-                    >
-                        {filtering ? <Loader size="xs" color="white" /> : "Buscar"}
-                    </Button>
-                    <Button
-                        onClick={clearFilters}
-                        variant="outline"
-                        leftSection={<RiCloseCircleLine />}
-                        disabled={loading || filtering}
-                    >
-                        Limpiar
-                    </Button>
-                </div>
+                    <div className="grid md:grid-cols-5 grid-cols-1 gap-2 items-end">
+                        <TextInput
+                            label="Fecha Inicial"
+                            type="date"
+                            placeholder="YYYY-MM-DD"
+                            value={startDate}
+                            onChange={(e) => setStartDate(e.target.value)}
+                        />
+                        <TextInput
+                            label="Fecha Final"
+                            type="date"
+                            placeholder="YYYY-MM-DD"
+                            value={endDate}
+                            onChange={(e) => setEndDate(e.target.value)}
+                        />
+                        <Select
+                            label="Tipo de Reporte"
+                            placeholder="Selecciona"
+                            value={reportType}
+                            onChange={setReportType}
+                            data={[
+                                { value: "hectolitros", label: "Hectolitros" },
+                                { value: "caja", label: "Caja" },
+                            ]}
+                        />
+                        <Button
+                            onClick={applyFilters}
+                            variant="filled"
+                            leftSection={<RiSearchLine />}
+                            disabled={loading || filtering || !selectedSku}
+                        >
+                            {filtering ? <Loader size="xs" color="white" /> : "Buscar"}
+                        </Button>
+                        <Button
+                            onClick={clearFilters}
+                            variant="outline"
+                            leftSection={<RiCloseCircleLine />}
+                            disabled={loading || filtering}
+                        >
+                            Limpiar
+                        </Button>
+                    </div>
                 </div>
             </div>
+
+
+            {/* ---------------- BUSCADOR DE SKU ---------------- */}
+            <div className="mb-4 flex-shrink-0">
+                <div className="bg-white">
+                    
+                    {/* SKU seleccionado */}
+                    {selectedSku && (
+                        <div className="mb-3 p-3 bg-blue-50 rounded-lg border-2 border-blue-200 flex justify-between items-center">
+                            <div>
+                                <div className="font-semibold text-sm text-blue-900">
+                                    {selectedSku.name}
+                                </div>
+                                <div className="text-xs text-gray-600 mt-1">
+                                    <span className="font-mono bg-white px-2 py-0.5 rounded">
+                                        {selectedSku.code}
+                                    </span>
+                                    {selectedSku.type && (
+                                        <span className="ml-2 text-blue-600">• Tipo: {selectedSku.type}</span>
+                                    )}
+                                </div>
+                            </div>
+                            <Button
+                                size="xs"
+                                color="red"
+                                variant="light"
+                                onClick={handleClearSku}
+                                leftSection={<RiDeleteBinLine />}
+                            >
+                                Limpiar
+                            </Button>
+                        </div>
+                    )}
+
+                    {/* Buscador */}
+                    {!selectedSku && (
+                        <div className="mb-3">
+                            <label className="text-sm font-medium mb-2 block">
+                                Buscar SKU
+                            </label>
+                            <div className="flex gap-2">
+                                <TextInput
+                                    placeholder="Buscar por nombre o código de SKU..."
+                                    value={skuSearchTerm}
+                                    onChange={(e) => setSkuSearchTerm(e.currentTarget.value)}
+                                    onKeyDown={(e) => {
+                                        if (e.key === "Enter") {
+                                            e.preventDefault();
+                                            handleSearchSku();
+                                        }
+                                    }}
+                                    className="flex-1"
+                                    leftSection={<RiSearchLine />}
+                                />
+                                <Button
+                                    onClick={handleSearchSku}
+                                    loading={searchingSku}
+                                    leftSection={<RiSearchLine />}
+                                >
+                                    Buscar
+                                </Button>
+                            </div>
+
+                            {/* Resultados de búsqueda */}
+                            {skuSearchResults.length > 0 && (
+                                <div className="mt-3 border border-gray-200 rounded-md max-h-64 overflow-y-auto">
+                                    {skuSearchResults.map((sku) => (
+                                        <div
+                                            key={sku.id}
+                                            className="p-3 hover:bg-gray-50 border-b border-gray-100 last:border-b-0 flex justify-between items-center cursor-pointer"
+                                            onClick={() => handleSelectSku(sku)}
+                                        >
+                                            <div className="flex-1">
+                                                <div className="font-semibold text-sm">
+                                                    {sku.name}
+                                                </div>
+                                                <div className="text-xs text-gray-600 mt-1">
+                                                    <span className="font-mono bg-gray-100 px-2 py-0.5 rounded">
+                                                        {sku.code}
+                                                    </span>
+                                                    {sku.type && (
+                                                        <span className="ml-2">Tipo: {sku.type}</span>
+                                                    )}
+                                                </div>
+                                            </div>
+                                            <Button
+                                                size="xs"
+                                                onClick={(e) => {
+                                                    e.stopPropagation();
+                                                    handleSelectSku(sku);
+                                                }}
+                                                leftSection={<RiAddLine />}
+                                            >
+                                                Seleccionar
+                                            </Button>
+                                        </div>
+                                    ))}
+                                </div>
+                            )}
+
+                            {searchingSku && (
+                                <div className="mt-3 text-center py-4">
+                                    <Loader size="sm" />
+                                </div>
+                            )}
+                        </div>
+                    )}
+                </div>
+            </div>
+
 
             {/* ---------------- TABLA ---------------- */}
             <div className="flex-1 min-h-0 flex flex-col">
@@ -794,34 +948,24 @@ export default function TopSkusPage() {
                     <div className="flex justify-center items-center py-8">
                         <Loader size="lg" />
                     </div>
+                ) : !appliedFilters.selectedSku ? (
+                    <div className="flex justify-center items-center py-8">
+                        <div className="text-center">
+                            <p className="text-xl text-gray-500 mb-2">
+                                No se ha seleccionado ningún SKU
+                            </p>
+                            <p className="text-sm text-gray-400">
+                                Selecciona un SKU en el buscador de arriba y aplica los filtros
+                            </p>
+                        </div>
+                    </div>
                 ) : reportData && Object.keys(reportData).length > 0 ? (
                     <div id="tableSection" ref={tableSectionRef} className="bg-white rounded-lg">
-                        {showCategories ? (
-                            // Estructura con categorías - Múltiples tablas
-                            <div className="flex-1 overflow-auto space-y-6">
-                                {Object.entries(reportData)
-                                    .filter(([_, categoryData]) => 
-                                        typeof categoryData === 'object' && 
-                                        categoryData !== null && 
-                                        Object.keys(categoryData).length > 0
-                                    )
-                                    .map(([category, categoryData]) => (
-                                        <div key={category}>
-                                            <h2 className="text-xl font-bold mb-3 uppercase bg-purple-100 p-3 rounded-md sticky top-0 z-20">
-                                                {category === "retornable" ? "Retornable" : "No Retornable"}
-                                            </h2>
-                                            {renderSimpleTable(categoryData, weeks, grandTotals)}
-                                        </div>
-                                    ))}
-                            </div>
-                        ) : (
-                            // Estructura sin categorías - Tabla única
-                            renderSimpleTable(reportData, weeks, grandTotals)
-                        )}
+                        {renderSimpleTable(reportData, weeks, grandTotals)}
                     </div>
                 ) : (
                     <div className="text-center py-8">
-                        No se encontraron datos para el rango seleccionado.
+                        No se encontraron datos para el SKU seleccionado en el rango de fechas especificado.
                     </div>
                 )}
             </div>

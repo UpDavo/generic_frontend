@@ -94,6 +94,8 @@ export default function ProductosCompraPage() {
     const [excelFile, setExcelFile] = useState(null);
     const [uploadingExcel, setUploadingExcel] = useState(false);
     const [showSuccessOverlay, setShowSuccessOverlay] = useState(false);
+    const [downloadingTemplate, setDownloadingTemplate] = useState(false);
+    const [downloadingAll, setDownloadingAll] = useState(false);
 
     /* =========================================================
        Traer Productos
@@ -221,20 +223,26 @@ export default function ProductosCompraPage() {
     };
 
     const handleDownloadTemplate = async () => {
+        setDownloadingTemplate(true);
         try {
             await downloadProductosCompraTemplate(accessToken);
         } catch (err) {
             console.error(err);
             setError("Error al descargar la plantilla");
+        } finally {
+            setDownloadingTemplate(false);
         }
     };
 
     const handleDownloadAll = async () => {
+        setDownloadingAll(true);
         try {
             await downloadAllProductosCompra(accessToken);
         } catch (err) {
             console.error(err);
             setError("Error al descargar los productos");
+        } finally {
+            setDownloadingAll(false);
         }
     };
 
@@ -285,6 +293,7 @@ export default function ProductosCompraPage() {
                         variant="filled"
                         color="teal"
                         leftSection={<RiDownloadCloudLine />}
+                        loading={downloadingAll}
                         className="flex-1 md:flex-none"
                     >
                         Descargar Todos
@@ -621,6 +630,7 @@ export default function ProductosCompraPage() {
                         variant="outline"
                         onClick={handleDownloadTemplate}
                         leftSection={<RiDownloadCloudLine />}
+                        loading={downloadingTemplate}
                     >
                         Descargar Plantilla
                     </Button>
