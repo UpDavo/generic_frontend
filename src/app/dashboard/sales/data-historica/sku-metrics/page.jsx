@@ -9,6 +9,8 @@ import {
     Accordion,
     Switch,
     TextInput,
+    Badge,
+    Group,
 } from "@mantine/core";
 import {
     RiSearchLine,
@@ -19,12 +21,12 @@ import {
     RiWhatsappLine,
     RiAddLine,
     RiDeleteBinLine,
+    RiCloseLine,
 } from "react-icons/ri";
 import { useAuth } from "@/auth/hooks/useAuth";
 import { Unauthorized } from "@/core/components/Unauthorized";
 import { ProcessingOverlay } from "@/core/components/ProcessingOverlay";
-import { ENV } from "@/config/env";
-import { searchProductosApp } from "@/tada/services/ventasProductosAppApi";
+import { searchProductosCompra } from "@/tada/services/ventasProductosCompraApi";
 import {
     getSkuMetricsReport,
     downloadSkuMetricsReport,
@@ -66,11 +68,10 @@ export default function SkuMetricsPage() {
         setSearchingSku(true);
         try {
             // Llamada real a la API de productos app
-            const results = await searchProductosApp(accessToken, skuSearchTerm);
-            // Filtrar el que ya está seleccionado
-            const filteredResults = selectedSku 
-                ? results.filter(result => result.id !== selectedSku.id)
-                : results;
+            const results = await searchProductosCompra(accessToken, skuSearchTerm);
+            // Filtrar los que ya están seleccionados
+            const selectedIds = selectedSkus.map(s => s.id);
+            const filteredResults = results.filter(result => !selectedIds.includes(result.id));
             setSkuSearchResults(filteredResults);
         } catch (err) {
             console.error(err);
@@ -81,13 +82,23 @@ export default function SkuMetricsPage() {
     };
 
     const handleSelectSku = (sku) => {
-        setSelectedSku(sku); // Ahora guardamos el objeto completo
+        // Verificar si el SKU ya está seleccionado
+        if (selectedSkus.some(s => s.id === sku.id)) {
+            setError("Este SKU ya está seleccionado");
+            setTimeout(() => setError(null), 3000);
+            return;
+        }
+        setSelectedSkus(prev => [...prev, sku]);
         setSkuSearchTerm("");
         setSkuSearchResults([]);
     };
 
-    const handleClearSku = () => {
-        setSelectedSku(null);
+    const handleRemoveSku = (skuId) => {
+        setSelectedSkus(prev => prev.filter(s => s.id !== skuId));
+    };
+
+    const handleClearAllSkus = () => {
+        setSelectedSkus([]);
         setSkuSearchTerm("");
         setSkuSearchResults([]);
     };
@@ -103,7 +114,7 @@ export default function SkuMetricsPage() {
             .toISOString()
             .slice(0, 10);
     
-    const [selectedSku, setSelectedSku] = useState(null);
+    const [selectedSkus, setSelectedSkus] = useState([]);
     const [skuSearchTerm, setSkuSearchTerm] = useState("");
     const [skuSearchResults, setSkuSearchResults] = useState([]);
     const [searchingSku, setSearchingSku] = useState(false);
@@ -116,7 +127,7 @@ export default function SkuMetricsPage() {
 
     /* ------------------- FILTROS APLICADOS ------------------- */
     const [appliedFilters, setAppliedFilters] = useState({
-        selectedSku: null,
+        selectedSkus: [],
         startDate: getMonthStart(),
         endDate: getMonthEnd(),
         reportType: "hectolitros",
@@ -138,51 +149,79 @@ export default function SkuMetricsPage() {
        Traer Reporte
     ========================================================= */
     const fetchReport = useCallback(async () => {
-        if (!appliedFilters.selectedSku) {
+        if (!appliedFilters.selectedSkus || appliedFilters.selectedSkus.length === 0) {
             setReportData(null);
             return;
         }
 
         setLoading(true);
         try {
-            // Llamada real a la API
+            // Crear string de códigos separados por coma
+            const skuCodes = appliedFilters.selectedSkus.map(sku => sku.code).join(',');
+            
+            // Llamada real a la API con múltiples SKUs
             const response = await getSkuMetricsReport(
                 accessToken,
-                appliedFilters.selectedSku.code,
+                skuCodes,
                 appliedFilters.startDate,
                 appliedFilters.endDate,
                 appliedFilters.reportType
             );
             
-            // La respuesta viene con la estructura cities, debemos usarla directamente
-            // o transformarla según los filtros de agrupación
+            // La respuesta ahora viene con estructura { skus: { "14581": {...}, "20000053": {...} } }
             let processedData = {};
             
-            if (appliedFilters.groupByCity && response.cities) {
-                if (appliedFilters.groupByPoc) {
-                    // Mostrar ciudades con POCs
-                    processedData = response.cities;
-                } else {
-                    // Mostrar solo ciudades sin POCs
-                    Object.entries(response.cities).forEach(([cityName, cityData]) => {
-                        processedData[cityName] = {
-                            total: cityData.total,
-                            ...Object.keys(cityData)
-                                .filter(key => key.startsWith('w'))
-                                .reduce((acc, key) => ({ ...acc, [key]: cityData[key] }), {})
+            if (response.skus) {
+                // Procesar cada SKU
+                Object.entries(response.skus).forEach(([skuCode, skuData]) => {
+                    if (appliedFilters.groupByCity && skuData.cities) {
+                        if (appliedFilters.groupByPoc) {
+                            // Mostrar ciudades con POCs
+                            processedData[skuCode] = {
+                                sku_code: skuData.sku_code,
+                                product_name: skuData.product_name,
+                                cities: skuData.cities,
+                                total: skuData.total,
+                                ...Object.keys(skuData).reduce((acc, key) => {
+                                    if (key.startsWith('w')) acc[key] = skuData[key];
+                                    return acc;
+                                }, {})
+                            };
+                        } else {
+                            // Solo mostrar ciudades (sin POCs)
+                            const citiesWithoutPocs = {};
+                            Object.entries(skuData.cities).forEach(([cityName, cityData]) => {
+                                citiesWithoutPocs[cityName] = {
+                                    total: cityData.total,
+                                    ...Object.keys(cityData)
+                                        .filter(key => key.startsWith('w'))
+                                        .reduce((acc, key) => ({ ...acc, [key]: cityData[key] }), {})
+                                };
+                            });
+                            processedData[skuCode] = {
+                                sku_code: skuData.sku_code,
+                                product_name: skuData.product_name,
+                                cities: citiesWithoutPocs,
+                                total: skuData.total,
+                                ...Object.keys(skuData).reduce((acc, key) => {
+                                    if (key.startsWith('w')) acc[key] = skuData[key];
+                                    return acc;
+                                }, {})
+                            };
+                        }
+                    } else {
+                        // Sin agrupación por ciudad, solo datos generales del SKU
+                        processedData[skuCode] = {
+                            sku_code: skuData.sku_code,
+                            product_name: skuData.product_name,
+                            total: skuData.total,
+                            ...Object.keys(skuData).reduce((acc, key) => {
+                                if (key.startsWith('w')) acc[key] = skuData[key];
+                                return acc;
+                            }, {})
                         };
-                    });
-                }
-            } else {
-                // Sin agrupación por ciudad, mostrar solo totales generales
-                processedData = {
-                    'Total General': {
-                        total: response.total,
-                        ...Object.keys(response)
-                            .filter(key => key.startsWith('w'))
-                            .reduce((acc, key) => ({ ...acc, [key]: response[key] }), {})
                     }
-                };
+                });
             }
             
             setReportData(processedData);
@@ -203,15 +242,15 @@ export default function SkuMetricsPage() {
        Handlers
     ========================================================= */
     const applyFilters = async () => {
-        if (!selectedSku) {
-            setError("Por favor selecciona un SKU para continuar");
+        if (!selectedSkus || selectedSkus.length === 0) {
+            setError("Debes seleccionar al menos un SKU");
             return;
         }
 
         setFiltering(true);
         try {
             setAppliedFilters({
-                selectedSku: selectedSku, // Guardamos el objeto completo
+                selectedSkus: selectedSkus,
                 startDate,
                 endDate,
                 reportType,
@@ -226,7 +265,7 @@ export default function SkuMetricsPage() {
     const clearFilters = async () => {
         setFiltering(true);
         try {
-            setSelectedSku(null);
+            setSelectedSkus([]);
             setSkuSearchTerm("");
             setSkuSearchResults([]);
             setStartDate(getMonthStart());
@@ -235,7 +274,7 @@ export default function SkuMetricsPage() {
             setGroupByCity(true);
             setGroupByPoc(false);
             setAppliedFilters({
-                selectedSku: null,
+                selectedSkus: [],
                 startDate: getMonthStart(),
                 endDate: getMonthEnd(),
                 reportType: "hectolitros",
@@ -253,9 +292,12 @@ export default function SkuMetricsPage() {
         
         setDownloading(true);
         try {
+            // Crear string de códigos separados por coma
+            const skuCodes = appliedFilters.selectedSkus.map(sku => sku.code).join(',');
+            
             await downloadSkuMetricsReport(
                 accessToken,
-                appliedFilters.selectedSku.code,
+                skuCodes,
                 appliedFilters.startDate,
                 appliedFilters.endDate,
                 appliedFilters.reportType
@@ -412,16 +454,16 @@ export default function SkuMetricsPage() {
                             </Accordion.Control>
                             <Accordion.Panel>
                                 {/* Mostrar totales de la ciudad */}
-                                <div className="bg-purple-50 p-3 rounded-lg border border-purple-200 mb-3">
-                                    <div className="font-bold mb-2 text-purple-900">Totales de {key}</div>
+                                <div className="bg-blue-50 p-3 rounded-lg border border-blue-200 mb-3">
+                                    <div className="font-bold mb-2 text-blue-900">Totales de {key}</div>
                                     <div className="grid grid-cols-2 gap-2 text-sm">
                                         {weeks.map(week => (
                                             <div key={week} className="flex justify-between">
-                                                <span>{week.replace("w", "W")}:</span>
-                                                <span className="font-semibold">{value[week]?.toFixed(2) || "0.00"}</span>
+                                                <span className="font-semibold">{week.replace("w", "W")}:</span>
+                                                <span>{value[week]?.toFixed(2) || "0.00"}</span>
                                             </div>
                                         ))}
-                                        <div className="flex justify-between col-span-2 border-t border-purple-300 pt-2 mt-2 font-bold">
+                                        <div className="flex justify-between col-span-2 border-t border-blue-300 pt-2 mt-2 font-bold">
                                             <span>Total:</span>
                                             <span className="text-green-600">{value.total?.toFixed(2) || "0.00"}</span>
                                         </div>
@@ -440,18 +482,18 @@ export default function SkuMetricsPage() {
             // Si es un dato de métrica puro (sin pocs)
             if (isMetricData(value)) {
                 return (
-                    <div key={key} className="bg-blue-50 p-3 rounded-lg border border-blue-200">
-                        <div className="font-bold mb-2 uppercase">{key}</div>
+                    <div key={key} className="bg-white p-3 rounded-lg border">
+                        <div className="font-bold text-sm mb-2">{key}</div>
                         <div className="grid grid-cols-2 gap-2 text-sm">
                             {weeks.map(week => (
                                 <div key={week} className="flex justify-between">
-                                    <span>{week.replace("w", "W")}:</span>
-                                    <span className="font-semibold">{value[week]?.toFixed(2) || "0.00"}</span>
+                                    <span className="font-semibold">{week.replace("w", "W")}:</span>
+                                    <span>{value[week]?.toFixed(2) || "-"}</span>
                                 </div>
                             ))}
-                            <div className="flex justify-between col-span-2 border-t border-blue-300 pt-2 mt-2 font-bold">
+                            <div className="flex justify-between col-span-2 border-t pt-2 mt-2 font-bold">
                                 <span>Total:</span>
-                                <span className="text-green-600">{value.total?.toFixed(2) || "0.00"}</span>
+                                <span>{value.total?.toFixed(2) || "0.00"}</span>
                             </div>
                         </div>
                     </div>
@@ -483,64 +525,55 @@ export default function SkuMetricsPage() {
         const entries = Object.entries(data);
         
         return entries.map(([key, value]) => {
-            const uniqueKey = parentKey ? `${parentKey}-${key}` : key;
+            const fullKey = parentKey ? `${parentKey}-${key}` : key;
             
             // Si tiene 'pocs', es una ciudad con POCs
             if (value && typeof value === 'object' && 'pocs' in value) {
+                const bgClass = level === 0 ? 'bg-blue-50' : level === 1 ? 'bg-blue-100' : 'bg-blue-150';
+                const textPadding = level === 0 ? '' : level === 1 ? 'pl-4' : 'pl-8';
                 return (
-                    <React.Fragment key={uniqueKey}>
+                    <React.Fragment key={fullKey}>
                         {/* Fila de la ciudad */}
-                        <tr className="bg-purple-100 font-bold text-purple-900">
-                            <td className="pl-4 uppercase" style={{ paddingLeft: `${level * 20 + 16}px` }}>
+                        <tr className={`${bgClass} font-bold`}>
+                            <td colSpan={weeks.length + 2} className={`uppercase ${textPadding}`}>
                                 {key}
-                            </td>
-                            {weeks.map(week => (
-                                <td key={week} className="text-center">
-                                    {value[week]?.toFixed(2) || "0.00"}
-                                </td>
-                            ))}
-                            <td className="text-center text-green-600">
-                                {value.total?.toFixed(2) || "0.00"}
                             </td>
                         </tr>
                         {/* Renderizar POCs de esta ciudad */}
-                        {renderHierarchy(value.pocs, weeks, level + 1, uniqueKey)}
+                        {renderHierarchy(value.pocs, weeks, level + 1, fullKey)}
                     </React.Fragment>
                 );
             }
             
             // Si es un dato de métrica (hoja)
             if (isMetricData(value)) {
+                const paddingClass = level === 0 ? 'pl-4' : level === 1 ? 'pl-8' : level === 2 ? 'pl-12' : 'pl-16';
                 return (
-                    <tr key={uniqueKey} className="hover:bg-gray-100">
-                        <td className="pl-4" style={{ paddingLeft: `${level * 20 + 16}px` }}>
-                            {key}
-                        </td>
+                    <tr key={fullKey}>
+                        <td className={paddingClass}>{key}</td>
                         {weeks.map(week => (
                             <td key={week} className="text-center">
-                                {value[week]?.toFixed(2) || "0.00"}
+                                {value[week] ? value[week].toFixed(2) : "-"}
                             </td>
                         ))}
-                        <td className="text-center font-bold text-green-600">
-                            {value.total?.toFixed(2) || "0.00"}
+                        <td className="text-center font-bold">
+                            {value.total ? value.total.toFixed(2) : "0.00"}
                         </td>
                     </tr>
                 );
             }
             
             // Si es otro nivel jerárquico
+            const bgClass = level === 0 ? 'bg-blue-50' : level === 1 ? 'bg-blue-100' : 'bg-blue-150';
+            const textPadding = level === 0 ? '' : level === 1 ? 'pl-4' : 'pl-8';
             return (
-                <React.Fragment key={uniqueKey}>
-                    <tr className="bg-gray-100 font-bold">
-                        <td className="uppercase" style={{ paddingLeft: `${level * 20 + 16}px` }}>
+                <React.Fragment key={fullKey}>
+                    <tr className={`${bgClass} font-bold`}>
+                        <td colSpan={weeks.length + 2} className={`uppercase ${textPadding}`}>
                             {key}
                         </td>
-                        {weeks.map(week => (
-                            <td key={week}></td>
-                        ))}
-                        <td></td>
                     </tr>
-                    {renderHierarchy(value, weeks, level + 1, uniqueKey)}
+                    {renderHierarchy(value, weeks, level + 1, fullKey)}
                 </React.Fragment>
             );
         });
@@ -549,68 +582,149 @@ export default function SkuMetricsPage() {
     /* =========================================================
        Render tabla simple
     ========================================================= */
-    const renderSimpleTable = (data, weeks, grandTotals) => (
-        <>
-            {/* Vista Desktop */}
-            <div className="hidden md:block flex-1 overflow-auto rounded-md">
-                <table className="table w-full">
-                    <thead className="bg-primary text-white text-md uppercase font-bold sticky top-0 z-10">
-                        <tr>
-                            <th className="text-left">Jerarquía / Ubicación</th>
-                            {weeks.map((week) => (
-                                <th key={week}>{week.replace("w", "W")}</th>
-                            ))}
-                            <th>Total</th>
-                        </tr>
-                    </thead>
-                    <tbody className="bg-white text-black">
-                        {renderHierarchy(data, weeks)}
-                    </tbody>
-                    <tfoot className="bg-yellow-100 font-bold text-black sticky bottom-0">
-                        <tr>
-                            <td className="text-center uppercase">Total General</td>
-                            {weeks.map((week) => (
-                                <td key={week} className="text-center text-blue-600">
-                                    {grandTotals[week] ? grandTotals[week].toFixed(2) : "0.00"}
-                                </td>
-                            ))}
-                            <td className="text-center text-green-600">
-                                {grandTotals.total ? grandTotals.total.toFixed(2) : "0.00"}
-                            </td>
-                        </tr>
-                    </tfoot>
-                </table>
-            </div>
+    const renderSimpleTable = (data, weeks, grandTotals) => {
+        // Data ahora es { "14581": { sku_code, product_name, cities, total, w1, ... }, "20000053": {...} }
+        return (
+            <>
+                {Object.entries(data).map(([skuCode, skuData]) => {
+                    const skuMetrics = {};
+                    weeks.forEach(week => {
+                        if (skuData[week] !== undefined) {
+                            skuMetrics[week] = skuData[week];
+                        }
+                    });
 
-            {/* Vista Móvil */}
-            <div className="md:hidden block flex-1 overflow-auto space-y-4">
-                {renderMobileHierarchy(data, weeks)}
+                    return (
+                        <div key={skuCode} className="mb-6 last:mb-0">
+                            {/* Encabezado del SKU */}
+                            <h2 className="text-xl font-bold mb-3 uppercase bg-purple-100 p-3 rounded-md sticky top-0 z-20">
+                                {skuData.product_name} - SKU: {skuData.sku_code}
+                            </h2>
 
-                {/* Total General Mobile */}
-                <div className="bg-yellow-100 p-4 rounded-lg border-2 border-yellow-300">
-                    <div className="font-bold text-lg mb-3 uppercase text-center">
-                        Total General
-                    </div>
-                    <div className="grid grid-cols-2 gap-2 text-sm">
-                        {weeks.map((week) => (
-                            <div key={week} className="flex justify-between">
-                                <span className="font-semibold">{week.replace("w", "W")}:</span>
-                                <span className="text-blue-600 font-bold">
-                                    {grandTotals[week] ? grandTotals[week].toFixed(2) : "0.00"}
-                                </span>
+                            {/* Vista Desktop */}
+                            <div className="hidden md:block flex-1 overflow-auto rounded-md">
+                                <table className="table w-full">
+                                    <thead className="bg-primary text-white text-md uppercase font-bold sticky top-0 z-10">
+                                        <tr>
+                                            <th className="text-left">Jerarquía / Ubicación</th>
+                                            {weeks.map((week) => (
+                                                <th key={week}>{week.replace("w", "W")}</th>
+                                            ))}
+                                            <th>Total</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody className="bg-white text-black">
+                                        {skuData.cities ? renderHierarchy(skuData.cities, weeks) : renderHierarchy({ [skuData.product_name]: skuMetrics }, weeks)}
+                                    </tbody>
+                                    <tfoot className="bg-yellow-100 font-bold text-black sticky bottom-0">
+                                        <tr>
+                                            <td className="text-center uppercase">Total SKU</td>
+                                            {weeks.map((week) => (
+                                                <td key={week} className="text-center text-blue-600">
+                                                    {skuData[week] !== undefined ? skuData[week].toFixed(2) : "0.00"}
+                                                </td>
+                                            ))}
+                                            <td className="text-center text-green-600">
+                                                {skuData.total ? skuData.total.toFixed(2) : "0.00"}
+                                            </td>
+                                        </tr>
+                                    </tfoot>
+                                </table>
                             </div>
-                        ))}
-                        <div className="flex justify-between col-span-2 border-t-2 border-yellow-400 pt-2 mt-2 font-bold text-base">
-                            <span>Total:</span>
-                            <span className="text-green-600">
-                                {grandTotals.total ? grandTotals.total.toFixed(2) : "0.00"}
-                            </span>
+
+                            {/* Vista Móvil */}
+                            <div className="md:hidden block flex-1 overflow-auto space-y-4">
+                                {skuData.cities ? renderMobileHierarchy(skuData.cities, weeks) : renderMobileHierarchy({ [skuData.product_name]: skuMetrics }, weeks)}
+
+                                {/* Total SKU Mobile */}
+                                <div className="bg-yellow-100 p-4 rounded-lg border-2 border-yellow-300">
+                                    <div className="font-bold text-lg mb-3 uppercase text-center">
+                                        Total SKU
+                                    </div>
+                                    <div className="grid grid-cols-2 gap-2 text-sm">
+                                        {weeks.map((week) => (
+                                            <div key={week} className="flex justify-between">
+                                                <span className="font-semibold">{week.replace("w", "W")}:</span>
+                                                <span className="text-blue-600 font-bold">
+                                                    {skuData[week] !== undefined ? skuData[week].toFixed(2) : "0.00"}
+                                                </span>
+                                            </div>
+                                        ))}
+                                        <div className="flex justify-between col-span-2 border-t-2 border-yellow-400 pt-2 mt-2 font-bold text-base">
+                                            <span>Total:</span>
+                                            <span className="text-green-600">
+                                                {skuData.total ? skuData.total.toFixed(2) : "0.00"}
+                                            </span>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    );
+                })}
+
+                {/* Total General para todos los SKUs */}
+                {Object.keys(data).length > 1 && (
+                    <div className="mt-6">
+                        <h2 className="text-xl font-bold mb-3 uppercase bg-green-100 p-3 rounded-md">
+                            Total General ({Object.keys(data).length} SKUs)
+                        </h2>
+
+                        {/* Desktop */}
+                        <div className="hidden md:block flex-1 overflow-auto rounded-md">
+                            <table className="table w-full">
+                                <thead className="bg-primary text-white text-md uppercase font-bold">
+                                    <tr>
+                                        <th className="text-left">Resumen</th>
+                                        {weeks.map((week) => (
+                                            <th key={week}>{week.replace("w", "W")}</th>
+                                        ))}
+                                        <th>Total</th>
+                                    </tr>
+                                </thead>
+                                <tbody className="bg-white text-black">
+                                    <tr className="font-bold">
+                                        <td className="text-center uppercase">Total General</td>
+                                        {weeks.map((week) => (
+                                            <td key={week} className="text-center text-blue-600">
+                                                {grandTotals[week] ? grandTotals[week].toFixed(2) : "0.00"}
+                                            </td>
+                                        ))}
+                                        <td className="text-center text-green-600">
+                                            {grandTotals.total ? grandTotals.total.toFixed(2) : "0.00"}
+                                        </td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+
+                        {/* Mobile */}
+                        <div className="md:hidden bg-yellow-100 p-4 rounded-lg border-2 border-yellow-300">
+                            <div className="font-bold text-lg mb-3 uppercase text-center">
+                                Total General
+                            </div>
+                            <div className="grid grid-cols-2 gap-2 text-sm">
+                                {weeks.map((week) => (
+                                    <div key={week} className="flex justify-between">
+                                        <span className="font-semibold">{week.replace("w", "W")}:</span>
+                                        <span className="text-blue-600 font-bold">
+                                            {grandTotals[week] ? grandTotals[week].toFixed(2) : "0.00"}
+                                        </span>
+                                    </div>
+                                ))}
+                                <div className="flex justify-between col-span-2 border-t-2 border-yellow-400 pt-2 mt-2 font-bold text-base">
+                                    <span>Total:</span>
+                                    <span className="text-green-600">
+                                        {grandTotals.total ? grandTotals.total.toFixed(2) : "0.00"}
+                                    </span>
+                                </div>
+                            </div>
                         </div>
                     </div>
-                </div>
-            </div>
-        </>
-    );
+                )}
+            </>
+        );
+    };
 
     /* =========================================================
        Render
@@ -738,7 +852,7 @@ export default function SkuMetricsPage() {
                                             onClick={applyFilters}
                                             variant="filled"
                                             leftSection={<RiSearchLine />}
-                                            disabled={loading || filtering || !selectedSku}
+                                            disabled={loading || filtering || selectedSkus.length === 0}
                                         >
                                             {filtering ? <Loader size="xs" color="white" /> : "Buscar"}
                                         </Button>
@@ -755,7 +869,7 @@ export default function SkuMetricsPage() {
                                         onClick={fetchReport}
                                         variant="outline"
                                         leftSection={<RiRefreshLine />}
-                                        disabled={loading || filtering || !appliedFilters.selectedSku}
+                                        disabled={loading || filtering || !appliedFilters.selectedSkus || appliedFilters.selectedSkus.length === 0}
                                         fullWidth
                                     >
                                         Refrescar
@@ -816,7 +930,7 @@ export default function SkuMetricsPage() {
                             onClick={applyFilters}
                             variant="filled"
                             leftSection={<RiSearchLine />}
-                            disabled={loading || filtering || !selectedSku}
+                            disabled={loading || filtering || selectedSkus.length === 0}
                         >
                             {filtering ? <Loader size="xs" color="white" /> : "Buscar"}
                         </Button>
@@ -837,77 +951,88 @@ export default function SkuMetricsPage() {
             <div className="mb-4 flex-shrink-0">
                 <div className="bg-white">
                     
-                    {/* SKU seleccionado */}
-                    {selectedSku && (
-                        <div className="mb-3 p-3 bg-blue-50 rounded-lg border-2 border-blue-200 flex justify-between items-center">
-                            <div>
-                                <div className="font-semibold text-sm text-blue-900">
-                                    {selectedSku.name}
-                                </div>
-                                <div className="text-xs text-gray-600 mt-1">
-                                    <span className="font-mono bg-white px-2 py-0.5 rounded">
-                                        {selectedSku.code}
-                                    </span>
-                                    {selectedSku.type && (
-                                        <span className="ml-2 text-blue-600">• Tipo: {selectedSku.type}</span>
-                                    )}
-                                </div>
+                    {/* SKUs seleccionados como badges */}
+                    {selectedSkus.length > 0 && (
+                        <div className="mb-3 p-3 bg-blue-50 rounded-lg border-2 border-blue-200">
+                            <div className="flex justify-between items-center mb-2">
+                                <span className="text-sm font-semibold text-blue-900">
+                                    SKUs Seleccionados ({selectedSkus.length})
+                                </span>
+                                <Button
+                                    size="xs"
+                                    color="red"
+                                    variant="light"
+                                    onClick={handleClearAllSkus}
+                                    leftSection={<RiDeleteBinLine />}
+                                >
+                                    Limpiar Todos
+                                </Button>
                             </div>
-                            <Button
-                                size="xs"
-                                color="red"
-                                variant="light"
-                                onClick={handleClearSku}
-                                leftSection={<RiDeleteBinLine />}
-                            >
-                                Limpiar
-                            </Button>
+                            <Group gap="xs">
+                                {selectedSkus.map((sku) => (
+                                    <Badge
+                                        key={sku.id}
+                                        size="lg"
+                                        variant="filled"
+                                        color="blue"
+                                        rightSection={
+                                            <RiCloseLine
+                                                className="cursor-pointer"
+                                                onClick={() => handleRemoveSku(sku.id)}
+                                                size={16}
+                                            />
+                                        }
+                                        style={{ paddingRight: 4 }}
+                                    >
+                                        {sku.code} - {sku.name}
+                                    </Badge>
+                                ))}
+                            </Group>
                         </div>
                     )}
 
                     {/* Buscador */}
-                    {!selectedSku && (
-                        <div className="mb-3">
-                            <label className="text-sm font-medium mb-2 block">
-                                Buscar SKU
-                            </label>
-                            <div className="flex gap-2">
-                                <TextInput
-                                    placeholder="Buscar por nombre o código de SKU..."
-                                    value={skuSearchTerm}
-                                    onChange={(e) => setSkuSearchTerm(e.currentTarget.value)}
-                                    onKeyDown={(e) => {
-                                        if (e.key === "Enter") {
-                                            e.preventDefault();
-                                            handleSearchSku();
-                                        }
-                                    }}
-                                    className="flex-1"
-                                    leftSection={<RiSearchLine />}
-                                />
-                                <Button
-                                    onClick={handleSearchSku}
-                                    loading={searchingSku}
-                                    leftSection={<RiSearchLine />}
-                                >
-                                    Buscar
-                                </Button>
-                            </div>
+                    <div className="mb-3">
+                        <label className="text-sm font-medium mb-2 block">
+                            Buscar SKU {selectedSkus.length > 0 && `(${selectedSkus.length} seleccionados)`}
+                        </label>
+                        <div className="flex gap-2">
+                            <TextInput
+                                placeholder="Buscar por nombre o código de SKU..."
+                                value={skuSearchTerm}
+                                onChange={(e) => setSkuSearchTerm(e.currentTarget.value)}
+                                onKeyDown={(e) => {
+                                    if (e.key === "Enter") {
+                                        e.preventDefault();
+                                        handleSearchSku();
+                                    }
+                                }}
+                                className="flex-1"
+                                leftSection={<RiSearchLine />}
+                            />
+                            <Button
+                                onClick={handleSearchSku}
+                                loading={searchingSku}
+                                leftSection={<RiSearchLine />}
+                            >
+                                Buscar
+                            </Button>
+                        </div>
 
-                            {/* Resultados de búsqueda */}
-                            {skuSearchResults.length > 0 && (
-                                <div className="mt-3 border border-gray-200 rounded-md max-h-64 overflow-y-auto">
-                                    {skuSearchResults.map((sku) => (
-                                        <div
-                                            key={sku.id}
-                                            className="p-3 hover:bg-gray-50 border-b border-gray-100 last:border-b-0 flex justify-between items-center cursor-pointer"
-                                            onClick={() => handleSelectSku(sku)}
-                                        >
-                                            <div className="flex-1">
-                                                <div className="font-semibold text-sm">
-                                                    {sku.name}
-                                                </div>
-                                                <div className="text-xs text-gray-600 mt-1">
+                        {/* Resultados de búsqueda */}
+                        {skuSearchResults.length > 0 && (
+                            <div className="mt-3 border border-gray-200 rounded-md max-h-64 overflow-y-auto">
+                                {skuSearchResults.map((sku) => (
+                                    <div
+                                        key={sku.id}
+                                        className="p-3 hover:bg-gray-50 border-b border-gray-100 last:border-b-0 flex justify-between items-center cursor-pointer"
+                                        onClick={() => handleSelectSku(sku)}
+                                    >
+                                        <div className="flex-1">
+                                            <div className="font-semibold text-sm">
+                                                {sku.name}
+                                            </div>
+                                            <div className="text-xs text-gray-600 mt-1">
                                                     <span className="font-mono bg-gray-100 px-2 py-0.5 rounded">
                                                         {sku.code}
                                                     </span>
@@ -937,7 +1062,6 @@ export default function SkuMetricsPage() {
                                 </div>
                             )}
                         </div>
-                    )}
                 </div>
             </div>
 
@@ -948,24 +1072,24 @@ export default function SkuMetricsPage() {
                     <div className="flex justify-center items-center py-8">
                         <Loader size="lg" />
                     </div>
-                ) : !appliedFilters.selectedSku ? (
+                ) : !appliedFilters.selectedSkus || appliedFilters.selectedSkus.length === 0 ? (
                     <div className="flex justify-center items-center py-8">
                         <div className="text-center">
                             <p className="text-xl text-gray-500 mb-2">
-                                No se ha seleccionado ningún SKU
+                                No se han seleccionado SKUs
                             </p>
                             <p className="text-sm text-gray-400">
-                                Selecciona un SKU en el buscador de arriba y aplica los filtros
+                                Selecciona uno o más SKUs en el buscador de arriba y aplica los filtros
                             </p>
                         </div>
                     </div>
                 ) : reportData && Object.keys(reportData).length > 0 ? (
-                    <div id="tableSection" ref={tableSectionRef} className="bg-white rounded-lg">
+                    <div id="tableSection" ref={tableSectionRef} className="bg-white mb-4 rounded-lg">
                         {renderSimpleTable(reportData, weeks, grandTotals)}
                     </div>
                 ) : (
                     <div className="text-center py-8">
-                        No se encontraron datos para el SKU seleccionado en el rango de fechas especificado.
+                        No se encontraron datos para los SKUs seleccionados en el rango de fechas especificado.
                     </div>
                 )}
             </div>

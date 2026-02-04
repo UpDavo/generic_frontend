@@ -795,7 +795,7 @@ export default function TopSkusPage() {
                         <Loader size="lg" />
                     </div>
                 ) : reportData && Object.keys(reportData).length > 0 ? (
-                    <div id="tableSection" ref={tableSectionRef} className="bg-white rounded-lg">
+                    <div id="tableSection" ref={tableSectionRef} className="bg-white mb-4 rounded-lg">
                         {showCategories ? (
                             // Estructura con categorías - Múltiples tablas
                             <div className="flex-1 overflow-auto space-y-6">
