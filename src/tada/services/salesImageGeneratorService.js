@@ -720,12 +720,29 @@ export const generateChartImageBase64 = async (element, options = {}) => {
  * @returns {string} - Nombre del archivo
  */
 export const generateHectolitrosFilename = (filters) => {
-    const { startWeek, endWeek, startYear, endYear } = filters;
+    const {
+        startWeek,
+        endWeek,
+        startYear,
+        endYear,
+        startDate,
+        endDate,
+    } = filters || {};
+
+    if (!startWeek || !endWeek || !startYear || !endYear) {
+        if (startDate && endDate) {
+            const safeStart = String(startDate).replace(/-/g, "");
+            const safeEnd = String(endDate).replace(/-/g, "");
+            return `hectolitros_${safeStart}_${safeEnd}`;
+        }
+        return "hectolitros";
+    }
+
     const weekRange = `S${startWeek}-${endWeek}`;
-    const yearRange = startYear !== endYear 
-        ? `${startYear}-${endYear}` 
+    const yearRange = startYear !== endYear
+        ? `${startYear}-${endYear}`
         : `${startYear}`;
-    
+
     return `hectolitros_${weekRange}_${yearRange}`;
 };
 

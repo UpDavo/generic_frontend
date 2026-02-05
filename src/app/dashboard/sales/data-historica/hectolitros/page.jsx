@@ -186,20 +186,39 @@ export default function HectolitrosPage() {
         setError(null);
 
         try {
-            // Calcular número de semanas para ajustar el ancho
-            const numWeeks = appliedFilters.endWeek - appliedFilters.startWeek + 1;
-            const numYears = appliedFilters.endYear - appliedFilters.startYear + 1;
-            const totalWeeks = numWeeks * numYears;
-            
+            const weekKeys = reportData
+                ? Object.keys(reportData).filter((key) => key.startsWith("w")).sort()
+                : [];
+            const weekNumbers = weekKeys
+                .map((key) => parseInt(key.replace("w", ""), 10))
+                .filter((num) => !Number.isNaN(num));
+            const startWeek = weekNumbers.length ? Math.min(...weekNumbers) : null;
+            const endWeek = weekNumbers.length ? Math.max(...weekNumbers) : null;
+            const startYear = appliedFilters.startDate
+                ? new Date(appliedFilters.startDate).getFullYear()
+                : null;
+            const endYear = appliedFilters.endDate
+                ? new Date(appliedFilters.endDate).getFullYear()
+                : null;
+
+            // Calcular número de semanas según datos reales del reporte
+            const totalWeeks = Math.max(weekKeys.length, 1);
+
             // Ajustar ancho basado en el número de semanas (mínimo 1600, máximo 3200)
             const baseWidth = 1600;
             const extraWidthPerWeek = totalWeeks > 4 ? (totalWeeks - 4) * 150 : 0;
             const dynamicWidth = Math.min(baseWidth + extraWidthPerWeek, 3200);
-            
+
             // Ajustar escala de fuente si hay muchas semanas
             const fontScale = totalWeeks > 8 ? 0.8 : totalWeeks > 4 ? 0.9 : 1;
 
-            const filename = generateHectolitrosFilename(appliedFilters);
+            const filename = generateHectolitrosFilename({
+                ...appliedFilters,
+                startWeek,
+                endWeek,
+                startYear,
+                endYear,
+            });
             await generateChartImage(chartSectionRef.current, {
                 filename,
                 sectionId: "chartSection",
@@ -215,7 +234,7 @@ export default function HectolitrosPage() {
         } finally {
             setDownloadingImage(false);
         }
-    }, [appliedFilters]);
+    }, [appliedFilters, reportData]);
 
     /* =========================================================
        Enviar imagen por WhatsApp
@@ -227,16 +246,16 @@ export default function HectolitrosPage() {
         setError(null);
 
         try {
-            // Calcular número de semanas para ajustar el ancho
-            const numWeeks = appliedFilters.endWeek - appliedFilters.startWeek + 1;
-            const numYears = appliedFilters.endYear - appliedFilters.startYear + 1;
-            const totalWeeks = numWeeks * numYears;
-            
+            const weekKeys = reportData
+                ? Object.keys(reportData).filter((key) => key.startsWith("w")).sort()
+                : [];
+            const totalWeeks = Math.max(weekKeys.length, 1);
+
             // Ajustar ancho basado en el número de semanas (mínimo 1600, máximo 3200)
             const baseWidth = 1600;
             const extraWidthPerWeek = totalWeeks > 4 ? (totalWeeks - 4) * 150 : 0;
             const dynamicWidth = Math.min(baseWidth + extraWidthPerWeek, 3200);
-            
+
             // Ajustar escala de fuente si hay muchas semanas
             const fontScale = totalWeeks > 8 ? 0.8 : totalWeeks > 4 ? 0.9 : 1;
 
@@ -249,12 +268,10 @@ export default function HectolitrosPage() {
                 fontScale,
             });
 
-            // Generar título del reporte
-            const weekRange = `S${appliedFilters.startWeek}-${appliedFilters.endWeek}`;
-            const yearRange = appliedFilters.startYear !== appliedFilters.endYear
-                ? `${appliedFilters.startYear}-${appliedFilters.endYear}`
-                : `${appliedFilters.startYear}`;
-            const title = `Reporte Hectolitros ${weekRange} ${yearRange}`;
+            // Generar título del reporte basado en fechas
+            const start = appliedFilters.startDate || "";
+            const end = appliedFilters.endDate || "";
+            const title = `Reporte Hectolitros ${start} - ${end}`;
 
             // Enviar por WhatsApp
             const response = await sendReportToWhatsApp(
@@ -270,7 +287,7 @@ export default function HectolitrosPage() {
             setError(err.message || "Error al enviar el reporte por WhatsApp");
             setSendingWhatsApp(false);
         }
-    }, [accessToken, appliedFilters]);
+    }, [accessToken, appliedFilters, reportData]);
 
     /* =========================================================
        Cerrar overlay de éxito
