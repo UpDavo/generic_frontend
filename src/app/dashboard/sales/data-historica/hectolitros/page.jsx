@@ -9,6 +9,7 @@ import {
     NumberInput,
     Select,
     Accordion,
+    Modal,
 } from "@mantine/core";
 import {
     RiSearchLine,
@@ -81,7 +82,7 @@ export default function HectolitrosPage() {
         new Date(new Date().getFullYear(), new Date().getMonth() + 1, 0)
             .toISOString()
             .slice(0, 10);
-    
+
     const [startDate, setStartDate] = useState(getMonthStart());
     const [endDate, setEndDate] = useState(getMonthEnd());
     const [filtering, setFiltering] = useState(false);
@@ -101,6 +102,8 @@ export default function HectolitrosPage() {
     const [sendingWhatsApp, setSendingWhatsApp] = useState(false);
     const [showSuccessOverlay, setShowSuccessOverlay] = useState(false);
     const [successMessage, setSuccessMessage] = useState(null);
+    const [showDateModal, setShowDateModal] = useState(false);
+    const [selectedDateForReport, setSelectedDateForReport] = useState(null);
 
     /* =========================================================
        Traer Reporte
@@ -237,13 +240,21 @@ export default function HectolitrosPage() {
     }, [appliedFilters, reportData]);
 
     /* =========================================================
-       Enviar imagen por WhatsApp
+       Abrir modal para seleccionar fecha
     ========================================================= */
-    const sendChartToWhatsApp = useCallback(async () => {
+    const openDateSelectionModal = () => {
+        setShowDateModal(true);
+    };
+
+    /* =========================================================
+       Enviar imagen por WhatsApp con fecha seleccionada
+    ========================================================= */
+    const sendChartToWhatsApp = useCallback(async (selectedDate) => {
         if (!chartSectionRef.current) return;
 
         setSendingWhatsApp(true);
         setError(null);
+        setShowDateModal(false);
 
         try {
             const weekKeys = reportData
@@ -268,10 +279,54 @@ export default function HectolitrosPage() {
                 fontScale,
             });
 
-            // Generar título del reporte basado en fechas
-            const start = appliedFilters.startDate || "";
-            const end = appliedFilters.endDate || "";
-            const title = `Reporte Hectolitros ${start} - ${end}`;
+            // Obtener información del día seleccionado
+            const selectedDateObj = new Date(selectedDate + 'T00:00:00');
+            const selectedDateString = selectedDate; // YYYY-MM-DD
+            const selectedDayOfWeek = selectedDateObj.getDay(); // 0=dom, 1=lun, 2=mar, etc.
+
+            // Mapear día de la semana a nuestro formato
+            const dayMap = ["dom", "lun", "mar", "mie", "jue", "vie", "sab"];
+            const selectedDiaKey = dayMap[selectedDayOfWeek];
+
+            let lastDate = selectedDateString;
+            let lastDayName = DIAS_NOMBRES[selectedDiaKey] || "";
+            let metaValue = 0;
+            let actualValue = 0;
+            let previousValue = 0;
+
+            // Buscar los datos del día seleccionado en el reporte
+            for (const weekKey of weekKeys) {
+                const weekData = reportData[weekKey];
+                if (weekData[selectedDiaKey] && weekData[selectedDiaKey].fecha === selectedDateString) {
+                    const diaData = weekData[selectedDiaKey];
+                    metaValue = parseFloat(diaData.ht_meta) || 0;
+                    actualValue = parseFloat(diaData.ht) || 0;
+
+                    // Buscar el mismo día de la semana anterior
+                    const currentWeekIndex = weekKeys.indexOf(weekKey);
+                    if (currentWeekIndex > 0) {
+                        const previousWeekKey = weekKeys[currentWeekIndex - 1];
+                        const previousWeekData = reportData[previousWeekKey];
+                        if (previousWeekData && previousWeekData[selectedDiaKey]) {
+                            previousValue = parseFloat(previousWeekData[selectedDiaKey].ht) || 0;
+                        }
+                    }
+                    break;
+                }
+            }
+
+            // Formatear fecha
+            const [year, month, day] = lastDate.split('-');
+            const monthNames = ["Enero", "Febrero", "Marzo", "Abril", "Mayo", "Junio",
+                "Julio", "Agosto", "Septiembre", "Octubre", "Noviembre", "Diciembre"];
+            const monthName = monthNames[parseInt(month) - 1] || month;
+
+            // Calcular porcentajes
+            const cumplimientoPercent = metaValue > 0 ? ((actualValue / metaValue) * 100).toFixed(2) : 0;
+            const variacionHistoricoPercent = previousValue > 0 ? (((actualValue - previousValue) / previousValue) * 100).toFixed(2) : 0;
+
+            // Construir mensaje
+            const title = `Corte día ${day} de ${monthName}\n\nCumplimiento:\nMeta ${metaValue.toFixed(2)} vs actual ${actualValue.toFixed(2)}\nCumplimiento ${cumplimientoPercent}%\n\nHistórico:\nSemana Anterior ${previousValue.toFixed(2)} vs actual ${actualValue.toFixed(2)}\nVariación ${variacionHistoricoPercent}%`;
 
             // Enviar por WhatsApp
             const response = await sendReportToWhatsApp(
@@ -287,7 +342,7 @@ export default function HectolitrosPage() {
             setError(err.message || "Error al enviar el reporte por WhatsApp");
             setSendingWhatsApp(false);
         }
-    }, [accessToken, appliedFilters, reportData]);
+    }, [accessToken, reportData]);
 
     /* =========================================================
        Cerrar overlay de éxito
@@ -295,6 +350,33 @@ export default function HectolitrosPage() {
     const handleSuccessOverlayClose = () => {
         setShowSuccessOverlay(false);
         setSendingWhatsApp(false);
+    };
+
+    /* =========================================================
+       Obtener todas las fechas disponibles en el reporte
+    ========================================================= */
+    const getAvailableDates = () => {
+        if (!reportData) return [];
+        const dates = [];
+        const weekKeys = Object.keys(reportData).filter((key) => key.startsWith("w")).sort();
+        
+        weekKeys.forEach((weekKey) => {
+            const weekData = reportData[weekKey];
+            DIAS_SEMANA.forEach((dia) => {
+                if (weekData[dia] && weekData[dia].fecha) {
+                    const ht = parseFloat(weekData[dia].ht) || 0;
+                    // Solo agregar fechas con ventas mayores a 0
+                    if (ht > 0) {
+                        dates.push({
+                            fecha: weekData[dia].fecha,
+                            dia: DIAS_NOMBRES[dia],
+                        });
+                    }
+                }
+            });
+        });
+        
+        return dates.sort((a, b) => b.fecha.localeCompare(a.fecha)); // Ordenar de más reciente a más antigua
     };
 
     /* =========================================================
@@ -311,7 +393,7 @@ export default function HectolitrosPage() {
     const getChartData = () => {
         if (!reportData) return [];
         const chartData = [];
-        
+
         getWeekKeys().forEach((weekKey) => {
             const weekData = reportData[weekKey];
             DIAS_SEMANA.forEach((dia) => {
@@ -327,7 +409,7 @@ export default function HectolitrosPage() {
                 }
             });
         });
-        
+
         return chartData;
     };
 
@@ -344,7 +426,7 @@ export default function HectolitrosPage() {
     if (!authorized) return <Unauthorized />;
 
     return (
-        <div className="text-black h-full flex flex-col">
+        <div className="text-black flex flex-col overflow-auto h-full">
             {error && (
                 <Notification color="red" className="mb-4" onClose={() => setError(null)}>
                     {error}
@@ -488,7 +570,7 @@ export default function HectolitrosPage() {
                                         Descargar Imagen
                                     </Button>
                                     <Button
-                                        onClick={sendChartToWhatsApp}
+                                        onClick={openDateSelectionModal}
                                         variant="filled"
                                         color="green"
                                         leftSection={<RiWhatsappLine />}
@@ -497,7 +579,7 @@ export default function HectolitrosPage() {
                                         Enviar por WhatsApp
                                     </Button>
                                 </div>
-                                
+
                                 {/* Contenedor para capturar imagen con métricas y gráfica */}
                                 <div ref={chartSectionRef} style={{ backgroundColor: '#ffffff', padding: '32px', borderRadius: '8px' }}>
                                     {/* Métricas resumen dentro de la captura */}
@@ -512,7 +594,7 @@ export default function HectolitrosPage() {
                                                 </div>
                                             </div>
                                             <div style={{ flex: 1, backgroundColor: '#f0fdf4', padding: '16px', borderRadius: '8px', borderLeft: '4px solid #22c55e' }}>
-                                                <div style={{ fontSize: '14px',backgroundColor: '#f0fdf4', color: '#6b7280', textTransform: 'uppercase', marginBottom: '4px' }}>
+                                                <div style={{ fontSize: '14px', backgroundColor: '#f0fdf4', color: '#6b7280', textTransform: 'uppercase', marginBottom: '4px' }}>
                                                     Meta de Hectolitros
                                                 </div>
                                                 <div style={{ fontSize: '24px', fontWeight: 'bold', backgroundColor: '#f0fdf4', color: '#16a34a' }}>
@@ -529,38 +611,38 @@ export default function HectolitrosPage() {
                                             </div>
                                         </div>
                                     )}
-                                    
+
                                     <ResponsiveContainer width="100%" height={400}>
                                         <ComposedChart
                                             data={getChartData()}
                                             margin={{ top: 20, right: 30, left: 20, bottom: 60 }}
                                         >
                                             <CartesianGrid strokeDasharray="3 3" stroke="#e0e0e0" />
-                                            <XAxis 
-                                                dataKey="label" 
+                                            <XAxis
+                                                dataKey="label"
                                                 angle={-45}
                                                 textAnchor="end"
                                                 height={100}
                                                 interval={0}
                                                 tick={{ fontSize: 11 }}
                                             />
-                                            <YAxis 
+                                            <YAxis
                                                 yAxisId="left"
                                                 label={{ value: 'Hectolitros', angle: -90, position: 'insideLeft' }}
                                             />
-                                            <YAxis 
-                                                yAxisId="right" 
+                                            <YAxis
+                                                yAxisId="right"
                                                 orientation="right"
                                                 label={{ value: 'Cumplimiento %', angle: 90, position: 'insideRight' }}
                                             />
-                                            <Tooltip 
+                                            <Tooltip
                                                 contentStyle={{ backgroundColor: '#fff', border: '1px solid #ccc' }}
                                                 formatter={(value, name) => {
                                                     if (name === 'cumplimiento') return [value + '%', 'Cumplimiento'];
                                                     return [value.toFixed(2), name === 'meta' ? 'Meta' : 'Vendidos'];
                                                 }}
                                             />
-                                            <Legend 
+                                            <Legend
                                                 wrapperStyle={{ paddingTop: '10px' }}
                                                 formatter={(value) => {
                                                     if (value === 'meta') return 'Meta';
@@ -569,24 +651,24 @@ export default function HectolitrosPage() {
                                                     return value;
                                                 }}
                                             />
-                                            <Bar 
+                                            <Bar
                                                 yAxisId="left"
-                                                dataKey="meta" 
-                                                fill="#d946ef" 
+                                                dataKey="meta"
+                                                fill="#d946ef"
                                                 opacity={0.7}
                                                 name="meta"
                                             />
-                                            <Bar 
+                                            <Bar
                                                 yAxisId="left"
-                                                dataKey="vendidos" 
-                                                fill="#9333ea" 
+                                                dataKey="vendidos"
+                                                fill="#9333ea"
                                                 name="vendidos"
                                             />
-                                            <Line 
+                                            <Line
                                                 yAxisId="right"
-                                                type="monotone" 
-                                                dataKey="cumplimiento" 
-                                                stroke="#000000" 
+                                                type="monotone"
+                                                dataKey="cumplimiento"
+                                                stroke="#000000"
                                                 strokeWidth={2}
                                                 dot={{ fill: '#000000', r: 4 }}
                                                 name="cumplimiento"
@@ -608,6 +690,17 @@ export default function HectolitrosPage() {
                                                 </tr>
                                             </thead>
                                             <tbody>
+                                                <tr className="bg-gray-50">
+                                                    <td className="border border-gray-300 px-4 py-2 font-bold text-center whitespace-nowrap">Fecha</td>
+                                                    {getChartData().map((item, idx) => {
+                                                        const [year, month, day] = item.fecha.split('-');
+                                                        return (
+                                                            <td key={idx} className="border border-gray-300 px-2 py-1 text-center text-xs">
+                                                                {day}/{month}
+                                                            </td>
+                                                        );
+                                                    })}
+                                                </tr>
                                                 <tr className="bg-purple-50">
                                                     <td className="border border-gray-300 px-4 py-2 font-bold text-center whitespace-nowrap">Meta</td>
                                                     {getChartData().map((item, idx) => (
@@ -675,7 +768,7 @@ export default function HectolitrosPage() {
             )} */}
 
             {/* ---------------- TABLA ---------------- */}
-            <div className="flex-1 min-h-0 flex flex-col">
+            <div className="flex flex-col">
                 {loading ? (
                     <div className="flex justify-center items-center py-8">
                         <Loader size="lg" />
@@ -683,7 +776,7 @@ export default function HectolitrosPage() {
                 ) : reportData && getWeekKeys().length > 0 ? (
                     <>
                         {/* Vista Desktop - Tabla Única */}
-                        <div className="hidden md:block flex-1 overflow-auto rounded-md">
+                        <div className="hidden md:block rounded-md">
                             <table className="table w-full">
                                 <thead className="bg-primary text-white text-md uppercase font-bold sticky top-0 z-10">
                                     <tr>
@@ -699,16 +792,16 @@ export default function HectolitrosPage() {
                                     {getWeekKeys().map((weekKey) => {
                                         const weekData = reportData[weekKey];
                                         const weekNumber = weekKey.replace("w", "");
-                                        
+
                                         return DIAS_SEMANA.map((dia, index) => {
                                             const diaData = weekData[dia];
                                             if (!diaData) return null;
-                                            
+
                                             return (
                                                 <tr key={`${weekKey}-${dia}`} className="hover:bg-gray-100">
                                                     {index === 0 ? (
-                                                        <td 
-                                                            rowSpan={DIAS_SEMANA.filter(d => weekData[d]).length} 
+                                                        <td
+                                                            rowSpan={DIAS_SEMANA.filter(d => weekData[d]).length}
                                                             className="font-bold text-center bg-gray-50"
                                                         >
                                                             W{weekNumber}
@@ -750,7 +843,7 @@ export default function HectolitrosPage() {
                         </div>
 
                         {/* Vista Móvil */}
-                        <div className="md:hidden block flex-1 overflow-auto space-y-6">
+                        <div className="md:hidden block space-y-6">
                             {getWeekKeys().map((weekKey) => {
                                 const weekData = reportData[weekKey];
                                 return (
@@ -811,8 +904,37 @@ export default function HectolitrosPage() {
                     <div className="text-center py-8">
                         No se encontraron datos para el rango seleccionado.
                     </div>
-                )}
-            </div>
+                )}            </div>
+
+            {/* Modal de selección de fecha */}
+            <Modal
+                opened={showDateModal}
+                onClose={() => setShowDateModal(false)}
+                title="Selecciona el día del reporte"
+                centered
+                size="lg"
+            >
+                <div className="space-y-2">
+                    <p className="text-sm text-gray-600 mb-4">
+                        Selecciona la fecha para la cual deseas enviar el reporte por WhatsApp:
+                    </p>
+                    <div className="max-h-96 overflow-y-auto space-y-2">
+                        {getAvailableDates().map((item, idx) => (
+                            <Button
+                                key={idx}
+                                onClick={() => sendChartToWhatsApp(item.fecha)}
+                                variant="light"
+                                fullWidth
+                                className="justify-start"
+                            >
+                                <div className="flex justify-between w-full">
+                                    <span>{item.fecha}</span>
+                                </div>
+                            </Button>
+                        ))}
+                    </div>
+                </div>
+            </Modal>
 
             <ProcessingOverlay
                 isProcessing={sendingWhatsApp}

@@ -8,18 +8,14 @@ import {
     NumberInput,
     Select,
     Accordion,
-    Modal,
 } from "@mantine/core";
 import {
     RiSearchLine,
     RiCloseCircleLine,
     RiDownloadCloudLine,
     RiRefreshLine,
-    RiBarChartBoxLine,
-    RiEditLine,
     RiImageLine,
     RiWhatsappLine,
-    RiAddLine,
 } from "react-icons/ri";
 import {
     BarChart,
@@ -37,7 +33,6 @@ import { ProcessingOverlay } from "@/core/components/ProcessingOverlay";
 import { ENV } from "@/config/env";
 import { generateChartImage, generateChartImageBase64, generateComparacionAnualFilename } from "@/tada/services/salesImageGeneratorService";
 import { sendReportToWhatsApp } from "@/tada/services/salesReportApi";
-import { createManualYearlyData, updateManualYearlyData } from "@/tada/services/manualYearlyDataApi";
 
 const PERMISSION_PATH = "/dashboard/sales/data-historica/comparacion-anual";
 
@@ -54,11 +49,34 @@ export default function ComparacionAnualPage() {
     }, [user]);
 
     /* ------------------- FILTROS ------------------- */
+    // Función para calcular el número de semana del año
+    const getWeekNumber = (date) => {
+        const d = new Date(Date.UTC(date.getFullYear(), date.getMonth(), date.getDate()));
+        const dayNum = d.getUTCDay() || 7;
+        d.setUTCDate(d.getUTCDate() + 4 - dayNum);
+        const yearStart = new Date(Date.UTC(d.getUTCFullYear(), 0, 1));
+        return Math.ceil((((d - yearStart) / 86400000) + 1) / 7);
+    };
+
+    // Obtener semanas del mes actual
+    const getCurrentMonthWeeks = () => {
+        const now = new Date();
+        const firstDayOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
+        const lastDayOfMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0);
+        
+        return {
+            startWeek: getWeekNumber(firstDayOfMonth),
+            endWeek: getWeekNumber(lastDayOfMonth)
+        };
+    };
+
     const currentYear = new Date().getFullYear();
-    const [startYear, setStartYear] = useState(2024);
+    const currentMonthWeeks = getCurrentMonthWeeks();
+    
+    const [startYear, setStartYear] = useState(currentYear - 1);
     const [endYear, setEndYear] = useState(currentYear);
-    const [startWeek, setStartWeek] = useState(1);
-    const [endWeek, setEndWeek] = useState(4);
+    const [startWeek, setStartWeek] = useState(currentMonthWeeks.startWeek);
+    const [endWeek, setEndWeek] = useState(currentMonthWeeks.endWeek);
     const [reportType, setReportType] = useState("hectolitros");
     const [filtering, setFiltering] = useState(false);
 
@@ -66,8 +84,8 @@ export default function ComparacionAnualPage() {
     const [appliedFilters, setAppliedFilters] = useState({
         startYear: currentYear - 1,
         endYear: currentYear,
-        startWeek: 1,
-        endWeek: 4,
+        startWeek: currentMonthWeeks.startWeek,
+        endWeek: currentMonthWeeks.endWeek,
         reportType: "hectolitros",
     });
 
@@ -75,17 +93,6 @@ export default function ComparacionAnualPage() {
     const [reportData, setReportData] = useState(null);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState(null);
-
-    /* ------------------- MODALES ------------------- */
-    const [modalYearOpen, setModalYearOpen] = useState(false);
-    const [modalCityOpen, setModalCityOpen] = useState(false);
-    const [selectedYear, setSelectedYear] = useState(null);
-    const [selectedCity, setSelectedCity] = useState(null);
-    const [selectedCityYear, setSelectedCityYear] = useState(null);
-    const [tempValue, setTempValue] = useState("");
-    const [isEditMode, setIsEditMode] = useState(false);
-    const [selectedManualId, setSelectedManualId] = useState(null);
-    const [savingManual, setSavingManual] = useState(false);
 
     /* ------------------- IMAGEN ------------------- */
     const chartSectionRef = useRef(null);
@@ -156,118 +163,23 @@ export default function ComparacionAnualPage() {
     const clearFilters = async () => {
         setFiltering(true);
         try {
-            setStartYear(2024);
+            const currentYear = new Date().getFullYear();
+            const monthWeeks = getCurrentMonthWeeks();
+            
+            setStartYear(currentYear - 1);
             setEndYear(currentYear);
-            setStartWeek(1);
-            setEndWeek(4);
+            setStartWeek(monthWeeks.startWeek);
+            setEndWeek(monthWeeks.endWeek);
             setReportType("hectolitros");
             setAppliedFilters({
-                startYear: 2024,
+                startYear: currentYear - 1,
                 endYear: currentYear,
-                startWeek: 1,
-                endWeek: 4,
+                startWeek: monthWeeks.startWeek,
+                endWeek: monthWeeks.endWeek,
                 reportType: "hectolitros",
             });
         } finally {
             setFiltering(false);
-        }
-    };
-
-    const openYearModal = (year, isEdit = false, manualId = null, currentValue = "") => {
-        setSelectedYear(year);
-        setIsEditMode(isEdit);
-        setSelectedManualId(manualId);
-        setTempValue(currentValue);
-        setModalYearOpen(true);
-    };
-
-    const saveYearValue = async () => {
-        if (tempValue === null || tempValue === "") return;
-
-        setSavingManual(true);
-        try {
-            if (isEditMode && selectedManualId) {
-                // Actualizar dato existente
-                await updateManualYearlyData(accessToken, selectedManualId, {
-                    value: parseFloat(tempValue),
-                });
-                setSuccessMessage("Dato actualizado correctamente");
-            } else {
-                // Crear nuevo dato
-                await createManualYearlyData(accessToken, {
-                    year: parseInt(selectedYear),
-                    start_week: appliedFilters.startWeek,
-                    end_week: appliedFilters.endWeek,
-                    report_type: appliedFilters.reportType,
-                    city: null,
-                    value: parseFloat(tempValue),
-                });
-                setSuccessMessage("Dato creado correctamente");
-            }
-
-            // Refrescar datos
-            await fetchReport();
-
-            setTimeout(() => setSuccessMessage(null), 3000);
-        } catch (err) {
-            setError(err.message || "Error al guardar el dato");
-        } finally {
-            setSavingManual(false);
-            setModalYearOpen(false);
-            setTempValue("");
-            setSelectedYear(null);
-            setIsEditMode(false);
-            setSelectedManualId(null);
-        }
-    };
-
-    const openCityModal = (city, year, isEdit = false, manualId = null, currentValue = "") => {
-        setSelectedCity(city);
-        setSelectedCityYear(year);
-        setIsEditMode(isEdit);
-        setSelectedManualId(manualId);
-        setTempValue(currentValue);
-        setModalCityOpen(true);
-    };
-
-    const saveCityValue = async () => {
-        if (tempValue === null || tempValue === "") return;
-
-        setSavingManual(true);
-        try {
-            if (isEditMode && selectedManualId) {
-                // Actualizar dato existente
-                await updateManualYearlyData(accessToken, selectedManualId, {
-                    value: parseFloat(tempValue),
-                });
-                setSuccessMessage("Dato actualizado correctamente");
-            } else {
-                // Crear nuevo dato
-                await createManualYearlyData(accessToken, {
-                    year: parseInt(selectedCityYear),
-                    start_week: appliedFilters.startWeek,
-                    end_week: appliedFilters.endWeek,
-                    report_type: appliedFilters.reportType,
-                    city: selectedCity,
-                    value: parseFloat(tempValue),
-                });
-                setSuccessMessage("Dato creado correctamente");
-            }
-
-            // Refrescar datos
-            await fetchReport();
-
-            setTimeout(() => setSuccessMessage(null), 3000);
-        } catch (err) {
-            setError(err.message || "Error al guardar el dato");
-        } finally {
-            setSavingManual(false);
-            setModalCityOpen(false);
-            setTempValue("");
-            setSelectedCity(null);
-            setSelectedCityYear(null);
-            setIsEditMode(false);
-            setSelectedManualId(null);
         }
     };
 
@@ -314,10 +226,10 @@ export default function ComparacionAnualPage() {
         setDownloadingImage(true);
         try {
             const filename = generateComparacionAnualFilename({
-                startWeek: appliedFilters.startWeek,
-                endWeek: appliedFilters.endWeek,
                 startYear: appliedFilters.startYear,
                 endYear: appliedFilters.endYear,
+                startWeek: appliedFilters.startWeek,
+                endWeek: appliedFilters.endWeek,
                 reportType: appliedFilters.reportType,
             });
 
@@ -368,10 +280,26 @@ export default function ComparacionAnualPage() {
                 ],
             });
 
-            const weekRange = `S${appliedFilters.startWeek}-${appliedFilters.endWeek}`;
-            const yearRange = `${appliedFilters.startYear}-${appliedFilters.endYear}`;
+            // Formatear fechas para el mensaje
             const reportLabel = appliedFilters.reportType === "hectolitros" ? "Hectolitros" : "Cajas";
-            const title = `Comparación Anual ${reportLabel} ${weekRange} ${yearRange}`;
+
+            // Obtener años y totales directamente
+            const years = reportData?.totals ? Object.keys(reportData.totals).sort() : [];
+            const combinedTotals = reportData?.totals || {};
+
+            let comparisonText = "";
+            if (years.length >= 2) {
+                const sortedYears = [...years].sort();
+                const firstYear = sortedYears[0];
+                const lastYear = sortedYears[sortedYears.length - 1];
+                const firstYearValue = combinedTotals[firstYear] || 0;
+                const lastYearValue = combinedTotals[lastYear] || 0;
+                const variacion = firstYearValue > 0 ? (((lastYearValue - firstYearValue) / firstYearValue) * 100).toFixed(2) : 0;
+
+                comparisonText = `\n\nComparación Año sobre Año:\n${firstYear}: ${firstYearValue.toFixed(2)}\n${lastYear}: ${lastYearValue.toFixed(2)}\nVariación: ${variacion}%`;
+            }
+
+            const title = `Comparación Anual - ${reportLabel}\nSemanas ${appliedFilters.startWeek}-${appliedFilters.endWeek}: ${appliedFilters.startYear} vs ${appliedFilters.endYear}${comparisonText}`;
 
             const response = await sendReportToWhatsApp(accessToken, imageBase64, title);
 
@@ -382,7 +310,7 @@ export default function ComparacionAnualPage() {
             setError(err.message || "Error al enviar el reporte por WhatsApp");
             setSendingWhatsApp(false);
         }
-    }, [accessToken, appliedFilters]);
+    }, [accessToken, appliedFilters, reportData]);
 
     /* =========================================================
        Cerrar overlay de éxito
@@ -401,17 +329,11 @@ export default function ComparacionAnualPage() {
     };
 
     /* =========================================================
-       Combinar datos reales con datos manuales
+       Obtener totales del reporte
     ========================================================= */
     const getCombinedTotals = () => {
         if (!reportData?.totals) return {};
-
-        const combined = {};
-        Object.entries(reportData.totals).forEach(([year, data]) => {
-            // El nuevo formato tiene { value, is_manual, id? }
-            combined[year] = typeof data === 'object' ? data.value : data;
-        });
-        return combined;
+        return reportData.totals;
     };
 
     /* =========================================================
@@ -421,28 +343,21 @@ export default function ComparacionAnualPage() {
         const combinedTotals = getCombinedTotals();
         const years = Object.keys(combinedTotals).sort();
 
-        return years.map((year) => ({
-            year,
-            value: combinedTotals[year] || 0,
-        }));
+        // Crear un solo objeto con todos los años como propiedades
+        const chartData = { name: "Total" };
+        years.forEach((year) => {
+            chartData[year] = combinedTotals[year] || 0;
+        });
+
+        return [chartData];
     };
 
     /* =========================================================
-       Combinar datos de ciudades reales con manuales
+       Obtener datos de ciudades del reporte
     ========================================================= */
     const getCombinedCityData = () => {
         if (!reportData?.cities) return {};
-
-        const combined = {};
-        Object.entries(reportData.cities).forEach(([city, cityData]) => {
-            combined[city] = {};
-            Object.entries(cityData).forEach(([year, data]) => {
-                // El nuevo formato tiene { value, is_manual, id? }
-                combined[city][year] = typeof data === 'object' ? data.value : data;
-            });
-        });
-
-        return combined;
+        return reportData.cities;
     };
 
     /* =========================================================
@@ -453,14 +368,21 @@ export default function ComparacionAnualPage() {
         if (!combinedCities || Object.keys(combinedCities).length === 0) return [];
 
         const years = getYears();
+        const currentYear = appliedFilters.endYear.toString();
 
-        return Object.entries(combinedCities).map(([city, cityData]) => {
+        // Crear array de ciudades con sus datos
+        const citiesArray = Object.entries(combinedCities).map(([city, cityData]) => {
             const dataPoint = { city };
             years.forEach((year) => {
                 dataPoint[year] = cityData[year] || 0;
             });
             return dataPoint;
         });
+
+        // Ordenar por el año actual de mayor a menor
+        citiesArray.sort((a, b) => (b[currentYear] || 0) - (a[currentYear] || 0));
+
+        return citiesArray;
     };
 
     /* =========================================================
@@ -690,11 +612,10 @@ export default function ComparacionAnualPage() {
                 </div>
             ) : (
                 <>
-                    {/* ---------------- SECCIÓN PARA CAPTURA DE IMAGEN ---------------- */}
+                    {/* ---------------- SECCIÓN PARA CAPTURA DE IMAGEN (SOLO GRÁFICAS) ---------------- */}
                     {years.length > 0 && (
-                        <div id="chartSection" ref={chartSectionRef}>
-                            {/* ---------------- GRÁFICAS ---------------- */}
-                            <div className="mb-4 flex-shrink-0">
+                        <>
+                            <div id="chartSection" ref={chartSectionRef} className="mb-4 flex-shrink-0">
                                 <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
                                     {/* Gráfica de Totales por Año */}
                                     <div className="bg-white p-4 rounded-lg shadow-md">
@@ -702,33 +623,32 @@ export default function ComparacionAnualPage() {
                                             {reportType === "hectolitros"
                                                 ? "Hectolitros"
                                                 : "Cajas"}{" "}
-                                            {startYear} vs {endYear} MTD
+                                            Comparación Anual MTD
                                         </h3>
-                                        <ResponsiveContainer width="100%" height={300}>
+                                        <ResponsiveContainer width="100%" height={450}>
                                             <BarChart
                                                 data={getTotalsChartData()}
                                                 margin={{ top: 20, right: 30, left: 20, bottom: 40 }}
                                             >
                                                 <CartesianGrid strokeDasharray="3 3" />
-                                                <XAxis dataKey="year" />
+                                                <XAxis dataKey="name" />
                                                 <YAxis />
                                                 <Tooltip
                                                     formatter={(value) => value.toFixed(2)}
                                                 />
                                                 <Legend />
-                                                <Bar
-                                                    dataKey="value"
-                                                    fill="#3b82f6"
-                                                    label={{
-                                                        position: "top",
-                                                        formatter: (value) => value.toFixed(0),
-                                                    }}
-                                                    name={
-                                                        reportType === "hectolitros"
-                                                            ? "Hectolitros"
-                                                            : "Cajas"
-                                                    }
-                                                />
+                                                {years.map((year, index) => (
+                                                    <Bar
+                                                        key={year}
+                                                        dataKey={year}
+                                                        fill={getColorForYear(index)}
+                                                        name={year}
+                                                        label={{
+                                                            position: "top",
+                                                            formatter: (value) => value.toFixed(0),
+                                                        }}
+                                                    />
+                                                ))}
                                             </BarChart>
                                         </ResponsiveContainer>
                                     </div>
@@ -736,9 +656,9 @@ export default function ComparacionAnualPage() {
                                     {/* Gráfica de Performance por Ciudad */}
                                     <div className="bg-white p-4 rounded-lg shadow-md">
                                         <h3 className="text-lg font-bold mb-4 text-center">
-                                            Performance Ciudad {startYear} vs {endYear} MTD
+                                            Performance por Ciudad - Comparación Anual MTD
                                         </h3>
-                                        <ResponsiveContainer width="100%" height={300}>
+                                        <ResponsiveContainer width="100%" height={450}>
                                             <BarChart
                                                 data={getCitiesChartData()}
                                                 layout="vertical"
@@ -768,7 +688,7 @@ export default function ComparacionAnualPage() {
                                 </div>
                             </div>
 
-                            {/* ---------------- TABLAS DE RESUMEN ---------------- */}
+                            {/* ---------------- TABLAS DE RESUMEN (NO SE CAPTURA EN IMAGEN) ---------------- */}
                             <div className="flex-1 min-h-0 flex flex-col">
                                 <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
                                     {/* Tabla de Totales */}
@@ -785,47 +705,13 @@ export default function ComparacionAnualPage() {
                                             </thead>
                                             <tbody className="bg-white text-black">
                                                 {years.map((year) => {
-                                                    const rawData = reportData?.totals?.[year];
                                                     const value = combinedTotals[year];
-                                                    const isManual = typeof rawData === 'object' && rawData?.is_manual;
-                                                    const manualId = typeof rawData === 'object' ? rawData?.manual_id : null;
-                                                    const hasNoData = value === undefined || value === null || value === 0;
 
                                                     return (
                                                         <tr key={year}>
                                                             <td className="font-bold">{year}</td>
                                                             <td>
-                                                                {hasNoData ? (
-                                                                    <Button
-                                                                        size="xs"
-                                                                        variant="light"
-                                                                        color="blue"
-                                                                        leftSection={<RiAddLine size={14} />}
-                                                                        onClick={() => openYearModal(year, false, null, "")}
-                                                                    >
-                                                                        Agregar
-                                                                    </Button>
-                                                                ) : (
-                                                                    <>
-                                                                        {value.toFixed(2)}
-                                                                        {isManual && (
-                                                                            <>
-                                                                                <span className="ml-2 text-xs text-orange-600 font-semibold">
-                                                                                    (Manual)
-                                                                                </span>
-                                                                                <Button
-                                                                                    size="xs"
-                                                                                    variant="subtle"
-                                                                                    color="blue"
-                                                                                    ml="xs"
-                                                                                    onClick={() => openYearModal(year, true, manualId, value)}
-                                                                                >
-                                                                                    <RiEditLine size={14} />
-                                                                                </Button>
-                                                                            </>
-                                                                        )}
-                                                                    </>
-                                                                )}
+                                                                {value !== undefined && value !== null ? value.toFixed(2) : "0.00"}
                                                             </td>
                                                         </tr>
                                                     );
@@ -849,62 +735,35 @@ export default function ComparacionAnualPage() {
                                                 </tr>
                                             </thead>
                                             <tbody className="bg-white text-black">
-                                                {Object.entries(combinedCities || {}).map(
-                                                    ([city, cityData]) => (
-                                                        <tr key={city}>
-                                                            <td className="font-bold">{city}</td>
-                                                            {years.map((year) => {
-                                                                const value = cityData[year];
-                                                                const rawCityData = reportData?.cities?.[city]?.[year];
-                                                                const isManual = typeof rawCityData === 'object' && rawCityData?.is_manual;
-                                                                const manualId = typeof rawCityData === 'object' ? rawCityData?.manual_id : null;
-                                                                const hasNoData = value === undefined || value === null || value === 0;
+                                                {Object.entries(combinedCities || {})
+                                                    .sort(([, cityDataA], [, cityDataB]) => {
+                                                        const currentYear = appliedFilters.endYear.toString();
+                                                        const valueA = cityDataA[currentYear] || 0;
+                                                        const valueB = cityDataB[currentYear] || 0;
+                                                        return valueB - valueA; // De mayor a menor
+                                                    })
+                                                    .map(
+                                                        ([city, cityData]) => (
+                                                            <tr key={city}>
+                                                                <td className="font-bold">{city}</td>
+                                                                {years.map((year) => {
+                                                                    const value = cityData[year];
 
-                                                                return (
-                                                                    <td key={year}>
-                                                                        {hasNoData ? (
-                                                                            <Button
-                                                                                size="xs"
-                                                                                variant="light"
-                                                                                color="blue"
-                                                                                leftSection={<RiAddLine size={14} />}
-                                                                                onClick={() => openCityModal(city, year, false, null, "")}
-                                                                            >
-                                                                                Agregar
-                                                                            </Button>
-                                                                        ) : (
-                                                                            <>
-                                                                                {value.toFixed(2)}
-                                                                                {isManual && (
-                                                                                    <>
-                                                                                        <span className="ml-1 text-xs text-orange-600 font-semibold">
-                                                                                            (M)
-                                                                                        </span>
-                                                                                        <Button
-                                                                                            size="xs"
-                                                                                            variant="subtle"
-                                                                                            color="blue"
-                                                                                            ml="xs"
-                                                                                            onClick={() => openCityModal(city, year, true, manualId, value)}
-                                                                                        >
-                                                                                            <RiEditLine size={14} />
-                                                                                        </Button>
-                                                                                    </>
-                                                                                )}
-                                                                            </>
-                                                                        )}
-                                                                    </td>
-                                                                );
-                                                            })}
-                                                        </tr>
-                                                    )
-                                                )}
+                                                                    return (
+                                                                        <td key={year}>
+                                                                            {value !== undefined && value !== null ? value.toFixed(2) : "0.00"}
+                                                                        </td>
+                                                                    );
+                                                                })}
+                                                            </tr>
+                                                        )
+                                                    )}
                                             </tbody>
                                         </table>
                                     </div>
                                 </div>
                             </div>
-                        </div>
+                        </>
                     )}
 
                     {years.length === 0 && (
@@ -914,113 +773,6 @@ export default function ComparacionAnualPage() {
                     )}
                 </>
             )}
-
-            {/* ---------------- MODALES ---------------- */}
-            {/* Modal para agregar valor por año */}
-            <Modal
-                opened={modalYearOpen}
-                onClose={() => {
-                    if (!savingManual) {
-                        setModalYearOpen(false);
-                        setTempValue("");
-                        setSelectedYear(null);
-                        setIsEditMode(false);
-                        setSelectedManualId(null);
-                    }
-                }}
-                title={`${isEditMode ? "Editar" : "Agregar"} valor para el año ${selectedYear}`}
-                centered
-            >
-                <NumberInput
-                    label={"Valor"}
-                    placeholder="Ingresa el valor"
-                    value={tempValue}
-                    onChange={setTempValue}
-                    min={0}
-                    decimalScale={2}
-                    description={`Este valor se usará para el año ${selectedYear}`}
-                    disabled={savingManual}
-                />
-                <div className="flex gap-2 mt-4">
-                    <Button
-                        onClick={saveYearValue}
-                        variant="filled"
-                        fullWidth
-                        loading={savingManual}
-                        disabled={savingManual || tempValue === "" || tempValue === null}
-                    >
-                        {isEditMode ? "Actualizar" : "Guardar"}
-                    </Button>
-                    <Button
-                        onClick={() => {
-                            setModalYearOpen(false);
-                            setTempValue("");
-                            setSelectedYear(null);
-                            setIsEditMode(false);
-                            setSelectedManualId(null);
-                        }}
-                        variant="outline"
-                        fullWidth
-                        disabled={savingManual}
-                    >
-                        Cancelar
-                    </Button>
-                </div>
-            </Modal>
-
-            {/* Modal para agregar valor por ciudad */}
-            <Modal
-                opened={modalCityOpen}
-                onClose={() => {
-                    if (!savingManual) {
-                        setModalCityOpen(false);
-                        setTempValue("");
-                        setSelectedCity(null);
-                        setSelectedCityYear(null);
-                        setIsEditMode(false);
-                        setSelectedManualId(null);
-                    }
-                }}
-                title={`${isEditMode ? "Editar" : "Agregar"} valor para ${selectedCity} - ${selectedCityYear}`}
-                centered
-            >
-                <NumberInput
-                    label={"Valor"}
-                    placeholder="Ingresa el valor"
-                    value={tempValue}
-                    onChange={setTempValue}
-                    min={0}
-                    decimalScale={2}
-                    description={`Este valor se usará para ${selectedCity} en ${selectedCityYear}`}
-                    disabled={savingManual}
-                />
-                <div className="flex gap-2 mt-4">
-                    <Button
-                        onClick={saveCityValue}
-                        variant="filled"
-                        fullWidth
-                        loading={savingManual}
-                        disabled={savingManual || tempValue === "" || tempValue === null}
-                    >
-                        {isEditMode ? "Actualizar" : "Guardar"}
-                    </Button>
-                    <Button
-                        onClick={() => {
-                            setModalCityOpen(false);
-                            setTempValue("");
-                            setSelectedCity(null);
-                            setSelectedCityYear(null);
-                            setIsEditMode(false);
-                            setSelectedManualId(null);
-                        }}
-                        variant="outline"
-                        fullWidth
-                        disabled={savingManual}
-                    >
-                        Cancelar
-                    </Button>
-                </div>
-            </Modal>
 
             <ProcessingOverlay
                 isProcessing={sendingWhatsApp}
