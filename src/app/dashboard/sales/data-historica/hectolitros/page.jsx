@@ -326,7 +326,7 @@ export default function HectolitrosPage() {
             const variacionHistoricoPercent = previousValue > 0 ? (((actualValue - previousValue) / previousValue) * 100).toFixed(2) : 0;
 
             // Construir mensaje
-            const title = `Corte día ${day} de ${monthName}\n\nCumplimiento:\nMeta ${metaValue.toFixed(2)} vs actual ${actualValue.toFixed(2)}\nCumplimiento ${cumplimientoPercent}%\n\nHistórico:\nSemana Anterior ${previousValue.toFixed(2)} vs actual ${actualValue.toFixed(2)}\nVariación ${variacionHistoricoPercent}%`;
+            const title = `Corte día ${day} de ${monthName} ${cumplimientoPercent}%\n\nCumplimiento:\nMeta ${metaValue.toFixed(2)} vs actual ${actualValue.toFixed(2)}\n\nHistórico:\nSemana Anterior ${previousValue.toFixed(2)} vs actual ${actualValue.toFixed(2)}\nVariación ${variacionHistoricoPercent}%`;
 
             // Enviar por WhatsApp
             const response = await sendReportToWhatsApp(

@@ -299,7 +299,10 @@ export default function ComparacionAnualPage() {
                 comparisonText = `\n\nComparación Año sobre Año:\n${firstYear}: ${firstYearValue.toFixed(2)}\n${lastYear}: ${lastYearValue.toFixed(2)}\nVariación: ${variacion}%`;
             }
 
-            const title = `Comparación Anual - ${reportLabel}\nSemanas ${appliedFilters.startWeek}-${appliedFilters.endWeek}: ${appliedFilters.startYear} vs ${appliedFilters.endYear}${comparisonText}`;
+            const weekRange = appliedFilters.startWeek === appliedFilters.endWeek 
+                ? `W${appliedFilters.startWeek}` 
+                : `W${appliedFilters.startWeek}-W${appliedFilters.endWeek}`;
+            const title = `Comparación Anual - ${reportLabel}\n${weekRange} ${appliedFilters.startYear} vs ${weekRange} ${appliedFilters.endYear}${comparisonText}`;
 
             const response = await sendReportToWhatsApp(accessToken, imageBase64, title);
 
