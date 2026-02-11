@@ -791,19 +791,19 @@ export const generateTopSkusFilename = (filters) => {
 /**
  * Genera el nombre del archivo para reportes de Comparación Anual
  * @param {Object} filters - Filtros aplicados
- * @param {number} filters.startWeek - Semana inicial
- * @param {number} filters.endWeek - Semana final
- * @param {number} filters.startYear - Año inicial
- * @param {number} filters.endYear - Año final
+ * @param {number} filters.startDay - Día inicial
+ * @param {number} filters.endDay - Día final
+ * @param {string} filters.startMonth - Mes inicial (YYYY-MM)
+ * @param {string} filters.endMonth - Mes final (YYYY-MM)
  * @param {string} filters.reportType - Tipo de reporte (hectolitros, caja)
  * @returns {string} - Nombre del archivo
  */
 export const generateComparacionAnualFilename = (filters) => {
-    const { startWeek, endWeek, startYear, endYear, reportType } = filters;
-    const weekRange = `S${startWeek}-${endWeek}`;
-    const yearRange = startYear !== endYear 
-        ? `${startYear}-${endYear}` 
-        : `${startYear}`;
+    const { startDay, endDay, startMonth, endMonth, reportType } = filters;
+    const dayRange = `D${startDay}-${endDay}`;
+    const monthRange = startMonth !== endMonth 
+        ? `${startMonth}_${endMonth}` 
+        : `${startMonth}`;
     
-    return `comparacion_anual_${reportType}_${weekRange}_${yearRange}`;
+    return `comparacion_anual_${reportType}_${dayRange}_${monthRange}`;
 };

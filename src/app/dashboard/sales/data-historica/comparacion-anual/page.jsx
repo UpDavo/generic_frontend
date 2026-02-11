@@ -6,6 +6,7 @@ import {
     Loader,
     Notification,
     NumberInput,
+    TextInput,
     Select,
     Accordion,
 } from "@mantine/core";
@@ -49,43 +50,35 @@ export default function ComparacionAnualPage() {
     }, [user]);
 
     /* ------------------- FILTROS ------------------- */
-    // Función para calcular el número de semana del año
-    const getWeekNumber = (date) => {
-        const d = new Date(Date.UTC(date.getFullYear(), date.getMonth(), date.getDate()));
-        const dayNum = d.getUTCDay() || 7;
-        d.setUTCDate(d.getUTCDate() + 4 - dayNum);
-        const yearStart = new Date(Date.UTC(d.getUTCFullYear(), 0, 1));
-        return Math.ceil((((d - yearStart) / 86400000) + 1) / 7);
-    };
-
-    // Obtener semanas del mes actual
-    const getCurrentMonthWeeks = () => {
+    // Obtener mes actual y anterior en formato YYYY-MM
+    const getCurrentMonthFormatted = () => {
         const now = new Date();
-        const firstDayOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
-        const lastDayOfMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0);
-        
-        return {
-            startWeek: getWeekNumber(firstDayOfMonth),
-            endWeek: getWeekNumber(lastDayOfMonth)
-        };
+        return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
     };
 
-    const currentYear = new Date().getFullYear();
-    const currentMonthWeeks = getCurrentMonthWeeks();
+    const getLastYearMonthFormatted = () => {
+        const now = new Date();
+        const lastYear = new Date(now.getFullYear() - 1, now.getMonth());
+        return `${lastYear.getFullYear()}-${String(lastYear.getMonth() + 1).padStart(2, '0')}`;
+    };
+
+    const getCurrentDay = () => {
+        return new Date().getDate();
+    };
     
-    const [startYear, setStartYear] = useState(currentYear - 1);
-    const [endYear, setEndYear] = useState(currentYear);
-    const [startWeek, setStartWeek] = useState(currentMonthWeeks.startWeek);
-    const [endWeek, setEndWeek] = useState(currentMonthWeeks.endWeek);
+    const [startMonth, setStartMonth] = useState(getLastYearMonthFormatted());
+    const [endMonth, setEndMonth] = useState(getCurrentMonthFormatted());
+    const [startDay, setStartDay] = useState(1);
+    const [endDay, setEndDay] = useState(getCurrentDay());
     const [reportType, setReportType] = useState("hectolitros");
     const [filtering, setFiltering] = useState(false);
 
     /* ------------------- FILTROS APLICADOS ------------------- */
     const [appliedFilters, setAppliedFilters] = useState({
-        startYear: currentYear - 1,
-        endYear: currentYear,
-        startWeek: currentMonthWeeks.startWeek,
-        endWeek: currentMonthWeeks.endWeek,
+        startMonth: getLastYearMonthFormatted(),
+        endMonth: getCurrentMonthFormatted(),
+        startDay: 1,
+        endDay: getCurrentDay(),
         reportType: "hectolitros",
     });
 
@@ -109,10 +102,10 @@ export default function ComparacionAnualPage() {
         setLoading(true);
         try {
             const url = new URL(`${ENV.API_URL}/tada/hectolitres/yearly-comparison/`);
-            url.searchParams.append("start_year", appliedFilters.startYear);
-            url.searchParams.append("end_year", appliedFilters.endYear);
-            url.searchParams.append("start_week", appliedFilters.startWeek);
-            url.searchParams.append("end_week", appliedFilters.endWeek);
+            url.searchParams.append("start_month", appliedFilters.startMonth);
+            url.searchParams.append("end_month", appliedFilters.endMonth);
+            url.searchParams.append("start_day", appliedFilters.startDay);
+            url.searchParams.append("end_day", appliedFilters.endDay);
             url.searchParams.append("report_type", appliedFilters.reportType);
 
             const response = await fetch(url.toString(), {
@@ -149,10 +142,10 @@ export default function ComparacionAnualPage() {
         setFiltering(true);
         try {
             setAppliedFilters({
-                startYear,
-                endYear,
-                startWeek,
-                endWeek,
+                startMonth,
+                endMonth,
+                startDay,
+                endDay,
                 reportType,
             });
         } finally {
@@ -163,19 +156,20 @@ export default function ComparacionAnualPage() {
     const clearFilters = async () => {
         setFiltering(true);
         try {
-            const currentYear = new Date().getFullYear();
-            const monthWeeks = getCurrentMonthWeeks();
+            const lastYearMonth = getLastYearMonthFormatted();
+            const currentMonth = getCurrentMonthFormatted();
+            const currentDay = getCurrentDay();
             
-            setStartYear(currentYear - 1);
-            setEndYear(currentYear);
-            setStartWeek(monthWeeks.startWeek);
-            setEndWeek(monthWeeks.endWeek);
+            setStartMonth(lastYearMonth);
+            setEndMonth(currentMonth);
+            setStartDay(1);
+            setEndDay(currentDay);
             setReportType("hectolitros");
             setAppliedFilters({
-                startYear: currentYear - 1,
-                endYear: currentYear,
-                startWeek: monthWeeks.startWeek,
-                endWeek: monthWeeks.endWeek,
+                startMonth: lastYearMonth,
+                endMonth: currentMonth,
+                startDay: 1,
+                endDay: currentDay,
                 reportType: "hectolitros",
             });
         } finally {
@@ -186,10 +180,10 @@ export default function ComparacionAnualPage() {
     const handleDownload = async () => {
         try {
             const url = new URL(`${ENV.API_URL}/tada/hectolitres/yearly-comparison/download/`);
-            url.searchParams.append("start_year", appliedFilters.startYear);
-            url.searchParams.append("end_year", appliedFilters.endYear);
-            url.searchParams.append("start_week", appliedFilters.startWeek);
-            url.searchParams.append("end_week", appliedFilters.endWeek);
+            url.searchParams.append("start_month", appliedFilters.startMonth);
+            url.searchParams.append("end_month", appliedFilters.endMonth);
+            url.searchParams.append("start_day", appliedFilters.startDay);
+            url.searchParams.append("end_day", appliedFilters.endDay);
             url.searchParams.append("report_type", appliedFilters.reportType);
 
             const response = await fetch(url.toString(), {
@@ -207,7 +201,7 @@ export default function ComparacionAnualPage() {
             const downloadUrl = window.URL.createObjectURL(blob);
             const a = document.createElement("a");
             a.href = downloadUrl;
-            a.download = `comparacion_anual_${appliedFilters.reportType}_${appliedFilters.startYear}_${appliedFilters.endYear}.xlsx`;
+            a.download = `comparacion_anual_${appliedFilters.reportType}_${appliedFilters.startMonth}_${appliedFilters.endMonth}.xlsx`;
             document.body.appendChild(a);
             a.click();
             window.URL.revokeObjectURL(downloadUrl);
@@ -226,10 +220,10 @@ export default function ComparacionAnualPage() {
         setDownloadingImage(true);
         try {
             const filename = generateComparacionAnualFilename({
-                startYear: appliedFilters.startYear,
-                endYear: appliedFilters.endYear,
-                startWeek: appliedFilters.startWeek,
-                endWeek: appliedFilters.endWeek,
+                startMonth: appliedFilters.startMonth,
+                endMonth: appliedFilters.endMonth,
+                startDay: appliedFilters.startDay,
+                endDay: appliedFilters.endDay,
                 reportType: appliedFilters.reportType,
             });
 
@@ -299,10 +293,10 @@ export default function ComparacionAnualPage() {
                 comparisonText = `\n\nComparación Año sobre Año:\n${firstYear}: ${firstYearValue.toFixed(2)}\n${lastYear}: ${lastYearValue.toFixed(2)}\nVariación: ${variacion}%`;
             }
 
-            const weekRange = appliedFilters.startWeek === appliedFilters.endWeek 
-                ? `W${appliedFilters.startWeek}` 
-                : `W${appliedFilters.startWeek}-W${appliedFilters.endWeek}`;
-            const title = `Comparación Anual - ${reportLabel}\n${weekRange} ${appliedFilters.startYear} vs ${weekRange} ${appliedFilters.endYear}${comparisonText}`;
+            const dayRange = appliedFilters.startDay === appliedFilters.endDay 
+                ? `D${appliedFilters.startDay}` 
+                : `D${appliedFilters.startDay}-D${appliedFilters.endDay}`;
+            const title = `Comparación Anual - ${reportLabel}\n${dayRange} ${appliedFilters.startMonth} vs ${dayRange} ${appliedFilters.endMonth}${comparisonText}`;
 
             const response = await sendReportToWhatsApp(accessToken, imageBase64, title);
 
@@ -371,7 +365,7 @@ export default function ComparacionAnualPage() {
         if (!combinedCities || Object.keys(combinedCities).length === 0) return [];
 
         const years = getYears();
-        const currentYear = appliedFilters.endYear.toString();
+        const currentYear = appliedFilters.endMonth.split('-')[0]; // Extraer año del formato YYYY-MM
 
         // Crear array de ciudades con sus datos
         const citiesArray = Object.entries(combinedCities).map(([city, cityData]) => {
@@ -471,37 +465,35 @@ export default function ComparacionAnualPage() {
                             </Accordion.Control>
                             <Accordion.Panel>
                                 <div className="grid grid-cols-1 gap-2">
-                                    <NumberInput
-                                        label="Año Inicial"
-                                        placeholder="Ej: 2024"
-                                        value={startYear}
-                                        onChange={setStartYear}
-                                        min={2020}
-                                        max={2100}
+                                    <TextInput
+                                        label="Mes Inicial"
+                                        type="month"
+                                        placeholder="YYYY-MM"
+                                        value={startMonth}
+                                        onChange={(e) => setStartMonth(e.target.value)}
+                                    />
+                                    <TextInput
+                                        label="Mes Final"
+                                        type="month"
+                                        placeholder="YYYY-MM"
+                                        value={endMonth}
+                                        onChange={(e) => setEndMonth(e.target.value)}
                                     />
                                     <NumberInput
-                                        label="Año Final"
-                                        placeholder="Ej: 2026"
-                                        value={endYear}
-                                        onChange={setEndYear}
-                                        min={2020}
-                                        max={2100}
-                                    />
-                                    <NumberInput
-                                        label="Semana Inicial"
-                                        placeholder="1-53"
-                                        value={startWeek}
-                                        onChange={setStartWeek}
+                                        label="Día Inicial"
+                                        placeholder="1-31"
+                                        value={startDay}
+                                        onChange={setStartDay}
                                         min={1}
-                                        max={53}
+                                        max={31}
                                     />
                                     <NumberInput
-                                        label="Semana Final"
-                                        placeholder="1-53"
-                                        value={endWeek}
-                                        onChange={setEndWeek}
+                                        label="Día Final"
+                                        placeholder="1-31"
+                                        value={endDay}
+                                        onChange={setEndDay}
                                         min={1}
-                                        max={53}
+                                        max={31}
                                     />
                                     <Select
                                         label="Tipo de Reporte"
@@ -548,37 +540,35 @@ export default function ComparacionAnualPage() {
 
                 {/* Filtros normales en desktop */}
                 <div className="hidden md:grid md:grid-cols-7 grid-cols-1 gap-2 items-end">
-                    <NumberInput
-                        label="Año Inicial"
-                        placeholder="Ej: 2024"
-                        value={startYear}
-                        onChange={setStartYear}
-                        min={2020}
-                        max={2100}
+                    <TextInput
+                        label="Mes Inicial"
+                        type="month"
+                        placeholder="YYYY-MM"
+                        value={startMonth}
+                        onChange={(e) => setStartMonth(e.target.value)}
+                    />
+                    <TextInput
+                        label="Mes Final"
+                        type="month"
+                        placeholder="YYYY-MM"
+                        value={endMonth}
+                        onChange={(e) => setEndMonth(e.target.value)}
                     />
                     <NumberInput
-                        label="Año Final"
-                        placeholder="Ej: 2026"
-                        value={endYear}
-                        onChange={setEndYear}
-                        min={2020}
-                        max={2100}
-                    />
-                    <NumberInput
-                        label="Semana Inicial"
-                        placeholder="1-53"
-                        value={startWeek}
-                        onChange={setStartWeek}
+                        label="Día Inicial"
+                        placeholder="1-31"
+                        value={startDay}
+                        onChange={setStartDay}
                         min={1}
-                        max={53}
+                        max={31}
                     />
                     <NumberInput
-                        label="Semana Final"
-                        placeholder="1-53"
-                        value={endWeek}
-                        onChange={setEndWeek}
+                        label="Día Final"
+                        placeholder="1-31"
+                        value={endDay}
+                        onChange={setEndDay}
                         min={1}
-                        max={53}
+                        max={31}
                     />
                     <Select
                         label="Tipo de Reporte"
@@ -740,7 +730,7 @@ export default function ComparacionAnualPage() {
                                             <tbody className="bg-white text-black">
                                                 {Object.entries(combinedCities || {})
                                                     .sort(([, cityDataA], [, cityDataB]) => {
-                                                        const currentYear = appliedFilters.endYear.toString();
+                                                        const currentYear = appliedFilters.endMonth.split('-')[0];
                                                         const valueA = cityDataA[currentYear] || 0;
                                                         const valueB = cityDataB[currentYear] || 0;
                                                         return valueB - valueA; // De mayor a menor

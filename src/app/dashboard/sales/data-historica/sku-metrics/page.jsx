@@ -26,10 +26,10 @@ import {
 import { useAuth } from "@/auth/hooks/useAuth";
 import { Unauthorized } from "@/core/components/Unauthorized";
 import { ProcessingOverlay } from "@/core/components/ProcessingOverlay";
-import { searchProductosCompra } from "@/tada/services/ventasProductosCompraApi";
 import {
     getSkuMetricsReport,
     downloadSkuMetricsReport,
+    searchHomologatedProducts,
 } from "@/tada/services/ventasHistoricasApi";
 import {
     generateChartImage,
@@ -67,24 +67,24 @@ export default function SkuMetricsPage() {
 
         setSearchingSku(true);
         try {
-            // Llamada real a la API de productos app
-            const results = await searchProductosCompra(accessToken, skuSearchTerm);
+            // Llamada a la API de productos homologados
+            const results = await searchHomologatedProducts(accessToken, skuSearchTerm);
             // Filtrar los que ya están seleccionados
-            const selectedIds = selectedSkus.map(s => s.id);
-            const filteredResults = results.filter(result => !selectedIds.includes(result.id));
+            const selectedNames = selectedSkus.map(s => s.name);
+            const filteredResults = results.filter(result => !selectedNames.includes(result.name));
             setSkuSearchResults(filteredResults);
         } catch (err) {
             console.error(err);
-            setError("Error al buscar productos app");
+            setError("Error al buscar productos homologados");
         } finally {
             setSearchingSku(false);
         }
     };
 
     const handleSelectSku = (sku) => {
-        // Verificar si el SKU ya está seleccionado
-        if (selectedSkus.some(s => s.id === sku.id)) {
-            setError("Este SKU ya está seleccionado");
+        // Verificar si el producto ya está seleccionado
+        if (selectedSkus.some(s => s.name === sku.name)) {
+            setError("Este producto ya está seleccionado");
             setTimeout(() => setError(null), 3000);
             return;
         }
@@ -93,8 +93,8 @@ export default function SkuMetricsPage() {
         setSkuSearchResults([]);
     };
 
-    const handleRemoveSku = (skuId) => {
-        setSelectedSkus(prev => prev.filter(s => s.id !== skuId));
+    const handleRemoveSku = (skuName) => {
+        setSelectedSkus(prev => prev.filter(s => s.name !== skuName));
     };
 
     const handleClearAllSkus = () => {
@@ -156,8 +156,10 @@ export default function SkuMetricsPage() {
 
         setLoading(true);
         try {
-            // Crear string de códigos separados por coma
-            const skuCodes = appliedFilters.selectedSkus.map(sku => sku.code).join(',');
+            // Crear string de códigos separados por coma (incluye todos los códigos de productos homologados)
+            const skuCodes = appliedFilters.selectedSkus
+                .flatMap(sku => sku.codes)
+                .join(',');
             
             // Llamada real a la API con múltiples SKUs
             const response = await getSkuMetricsReport(
@@ -168,18 +170,20 @@ export default function SkuMetricsPage() {
                 appliedFilters.reportType
             );
             
-            // La respuesta ahora viene con estructura { skus: { "14581": {...}, "20000053": {...} } }
+            // La respuesta ahora viene con estructura { skus: { "PILSENER BOTELLA 330 NR": {...} } }
+            // donde la clave es el nombre del producto (homologado o no)
             let processedData = {};
             
             if (response.skus) {
                 // Procesar cada SKU
-                Object.entries(response.skus).forEach(([skuCode, skuData]) => {
+                Object.entries(response.skus).forEach(([productName, skuData]) => {
                     if (appliedFilters.groupByCity && skuData.cities) {
                         if (appliedFilters.groupByPoc) {
                             // Mostrar ciudades con POCs
-                            processedData[skuCode] = {
-                                sku_code: skuData.sku_code,
+                            processedData[productName] = {
+                                sku_codes: skuData.sku_codes,
                                 product_name: skuData.product_name,
+                                homologated: skuData.homologated,
                                 cities: skuData.cities,
                                 total: skuData.total,
                                 ...Object.keys(skuData).reduce((acc, key) => {
@@ -198,9 +202,10 @@ export default function SkuMetricsPage() {
                                         .reduce((acc, key) => ({ ...acc, [key]: cityData[key] }), {})
                                 };
                             });
-                            processedData[skuCode] = {
-                                sku_code: skuData.sku_code,
+                            processedData[productName] = {
+                                sku_codes: skuData.sku_codes,
                                 product_name: skuData.product_name,
+                                homologated: skuData.homologated,
                                 cities: citiesWithoutPocs,
                                 total: skuData.total,
                                 ...Object.keys(skuData).reduce((acc, key) => {
@@ -211,9 +216,10 @@ export default function SkuMetricsPage() {
                         }
                     } else {
                         // Sin agrupación por ciudad, solo datos generales del SKU
-                        processedData[skuCode] = {
-                            sku_code: skuData.sku_code,
+                        processedData[productName] = {
+                            sku_codes: skuData.sku_codes,
                             product_name: skuData.product_name,
+                            homologated: skuData.homologated,
                             total: skuData.total,
                             ...Object.keys(skuData).reduce((acc, key) => {
                                 if (key.startsWith('w')) acc[key] = skuData[key];
@@ -292,8 +298,10 @@ export default function SkuMetricsPage() {
         
         setDownloading(true);
         try {
-            // Crear string de códigos separados por coma
-            const skuCodes = appliedFilters.selectedSkus.map(sku => sku.code).join(',');
+            // Crear string de códigos separados por coma (incluye todos los códigos de productos homologados)
+            const skuCodes = appliedFilters.selectedSkus
+                .flatMap(sku => sku.codes)
+                .join(',');
             
             await downloadSkuMetricsReport(
                 accessToken,
@@ -583,10 +591,10 @@ export default function SkuMetricsPage() {
        Render tabla simple
     ========================================================= */
     const renderSimpleTable = (data, weeks, grandTotals) => {
-        // Data ahora es { "14581": { sku_code, product_name, cities, total, w1, ... }, "20000053": {...} }
+        // Data ahora es { "PILSENER BOTELLA 330 NR": { sku_codes, product_name, homologated, cities, total, w1, ... } }
         return (
             <>
-                {Object.entries(data).map(([skuCode, skuData]) => {
+                {Object.entries(data).map(([productName, skuData]) => {
                     const skuMetrics = {};
                     weeks.forEach(week => {
                         if (skuData[week] !== undefined) {
@@ -595,11 +603,27 @@ export default function SkuMetricsPage() {
                     });
 
                     return (
-                        <div key={skuCode} className="mb-6 last:mb-0">
+                        <div key={productName} className="mb-6 last:mb-0">
                             {/* Encabezado del SKU */}
-                            <h2 className="text-xl font-bold mb-3 uppercase bg-purple-100 p-3 rounded-md sticky top-0 z-20">
-                                {skuData.product_name} - SKU: {skuData.sku_code}
-                            </h2>
+                            <div className="flex items-center gap-3 mb-3 p-3 rounded-md bg-purple-100 sticky top-0 z-20">
+                                <h2 className="text-xl font-bold uppercase">
+                                    {skuData.product_name || productName}
+                                </h2>
+                                {skuData.homologated !== undefined && (
+                                    <Badge
+                                        size="lg"
+                                        variant="filled"
+                                        color={skuData.homologated ? "green" : "gray"}
+                                    >
+                                        {skuData.homologated ? "✓ Homologado" : "No Homologado"}
+                                    </Badge>
+                                )}
+                                {skuData.sku_codes && skuData.sku_codes.length > 0 && (
+                                    <span className="text-sm text-gray-700 font-normal bg-white px-3 py-1 rounded-full">
+                                        Códigos: {skuData.sku_codes.join(", ")}
+                                    </span>
+                                )}
+                            </div>
 
                             {/* Vista Desktop */}
                             <div className="hidden md:block flex-1 overflow-auto rounded-md">
@@ -971,20 +995,20 @@ export default function SkuMetricsPage() {
                             <Group gap="xs">
                                 {selectedSkus.map((sku) => (
                                     <Badge
-                                        key={sku.id}
+                                        key={sku.name}
                                         size="lg"
                                         variant="filled"
-                                        color="blue"
+                                        color={sku.homologated ? "green" : "blue"}
                                         rightSection={
                                             <RiCloseLine
                                                 className="cursor-pointer"
-                                                onClick={() => handleRemoveSku(sku.id)}
+                                                onClick={() => handleRemoveSku(sku.name)}
                                                 size={16}
                                             />
                                         }
                                         style={{ paddingRight: 4 }}
                                     >
-                                        {sku.code} - {sku.name}
+                                        {sku.name} {sku.homologated && "✓"}
                                     </Badge>
                                 ))}
                             </Group>
@@ -1022,39 +1046,49 @@ export default function SkuMetricsPage() {
                         {/* Resultados de búsqueda */}
                         {skuSearchResults.length > 0 && (
                             <div className="mt-3 border border-gray-200 rounded-md max-h-64 overflow-y-auto">
-                                {skuSearchResults.map((sku) => (
+                                {skuSearchResults.map((sku, index) => (
                                     <div
-                                        key={sku.id}
+                                        key={`${sku.name}-${index}`}
                                         className="p-3 hover:bg-gray-50 border-b border-gray-100 last:border-b-0 flex justify-between items-center cursor-pointer"
                                         onClick={() => handleSelectSku(sku)}
                                     >
                                         <div className="flex-1">
-                                            <div className="font-semibold text-sm">
-                                                {sku.name}
+                                            <div className="flex items-center gap-2">
+                                                <div className="font-semibold text-sm">
+                                                    {sku.name}
+                                                </div>
+                                                <Badge
+                                                    size="sm"
+                                                    variant="filled"
+                                                    color={sku.homologated ? "green" : "gray"}
+                                                >
+                                                    {sku.homologated ? "Homologado" : "No Homologado"}
+                                                </Badge>
                                             </div>
                                             <div className="text-xs text-gray-600 mt-1">
-                                                    <span className="font-mono bg-gray-100 px-2 py-0.5 rounded">
-                                                        {sku.code}
-                                                    </span>
-                                                    {sku.type && (
-                                                        <span className="ml-2">Tipo: {sku.type}</span>
-                                                    )}
-                                                </div>
+                                                <span className="font-mono bg-gray-100 px-2 py-0.5 rounded">
+                                                    {sku.codes.join(", ")}
+                                                </span>
+                                                <span className="ml-2 text-gray-500">
+                                                    ({sku.codes.length} código{sku.codes.length > 1 ? "s" : ""})
+                                                </span>
                                             </div>
-                                            <Button
-                                                size="xs"
-                                                onClick={(e) => {
-                                                    e.stopPropagation();
-                                                    handleSelectSku(sku);
-                                                }}
-                                                leftSection={<RiAddLine />}
-                                            >
-                                                Seleccionar
-                                            </Button>
                                         </div>
-                                    ))}
-                                </div>
-                            )}
+                                        <Button
+                                            size="xs"
+                                            color={sku.homologated ? "green" : "blue"}
+                                            onClick={(e) => {
+                                                e.stopPropagation();
+                                                handleSelectSku(sku);
+                                            }}
+                                            leftSection={<RiAddLine />}
+                                        >
+                                            Seleccionar
+                                        </Button>
+                                    </div>
+                                ))}
+                            </div>
+                        )}
 
                             {searchingSku && (
                                 <div className="mt-3 text-center py-4">

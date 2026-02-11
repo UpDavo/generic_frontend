@@ -266,7 +266,7 @@ export async function downloadWeeklyHectolitresReport(
 /**
  * Obtener reporte de métricas por SKU con agrupación por ciudad y POC
  * @param {string} token - Token de autenticación
- * @param {string} skuCode - Código del SKU
+ * @param {string} skuCodes - Códigos de SKU separados por coma (ej: "8399,8398,20031")
  * @param {string} startDate - Fecha inicial YYYY-MM-DD
  * @param {string} endDate - Fecha final YYYY-MM-DD
  * @param {string} reportType - Tipo de reporte: "hectolitros" o "caja" (default: "hectolitros")
@@ -274,14 +274,14 @@ export async function downloadWeeklyHectolitresReport(
  */
 export async function getSkuMetricsReport(
     token,
-    skuCode,
+    skuCodes,
     startDate,
     endDate,
     reportType = "hectolitros"
 ) {
     const url = new URL(`${ENV.API_URL}/tada/sku-detail/city-poc/weekly-report/`);
     
-    url.searchParams.append("sku_code", skuCode);
+    url.searchParams.append("sku_code", skuCodes);
     if (startDate) url.searchParams.append("start_date", startDate);
     if (endDate) url.searchParams.append("end_date", endDate);
     if (reportType) url.searchParams.append("report_type", reportType);
@@ -305,7 +305,7 @@ export async function getSkuMetricsReport(
 /**
  * Descargar reporte de métricas por SKU en Excel
  * @param {string} token - Token de autenticación
- * @param {string} skuCode - Código del SKU
+ * @param {string} skuCodes - Códigos de SKU separados por coma (ej: "8399,8398,20031")
  * @param {string} startDate - Fecha inicial YYYY-MM-DD
  * @param {string} endDate - Fecha final YYYY-MM-DD
  * @param {string} reportType - Tipo de reporte: "hectolitros" o "caja" (default: "hectolitros")
@@ -313,14 +313,14 @@ export async function getSkuMetricsReport(
  */
 export async function downloadSkuMetricsReport(
     token,
-    skuCode,
+    skuCodes,
     startDate,
     endDate,
     reportType = "hectolitros"
 ) {
     const url = new URL(`${ENV.API_URL}/tada/sku-detail/city-poc/weekly-report/download/`);
     
-    url.searchParams.append("sku_code", skuCode);
+    url.searchParams.append("sku_code", skuCodes);
     if (startDate) url.searchParams.append("start_date", startDate);
     if (endDate) url.searchParams.append("end_date", endDate);
     if (reportType) url.searchParams.append("report_type", reportType);
@@ -345,7 +345,7 @@ export async function downloadSkuMetricsReport(
     
     // Extraer nombre del archivo de los headers o usar uno por defecto
     const contentDisposition = response.headers.get("Content-Disposition");
-    let filename = `sku_metrics_${skuCode}.xlsx`;
+    let filename = `sku_metrics.xlsx`;
     
     if (contentDisposition) {
         const filenameMatch = contentDisposition.match(/filename="?(.+)"?/);
@@ -359,4 +359,31 @@ export async function downloadSkuMetricsReport(
     link.click();
     document.body.removeChild(link);
     window.URL.revokeObjectURL(downloadUrl);
+}
+
+/**
+ * Buscar productos homologados
+ * @param {string} token - Token de autenticación
+ * @param {string} search - Término de búsqueda
+ * @returns {Promise<Array>} - Array de productos con ids, codes, name y homologated
+ */
+export async function searchHomologatedProducts(token, search) {
+    const url = new URL(`${ENV.API_URL}/tada/ventas-productos-compra/search-homologated/`);
+    
+    if (search) url.searchParams.append("search", search);
+
+    const response = await fetch(url.toString(), {
+        method: "GET",
+        headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${token}`,
+        },
+    });
+
+    if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.message || "Error al buscar productos homologados");
+    }
+
+    return await response.json();
 }

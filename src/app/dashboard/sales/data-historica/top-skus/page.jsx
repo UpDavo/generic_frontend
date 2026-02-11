@@ -342,8 +342,9 @@ export default function TopSkusPage() {
     /* =========================================================
        Calcular totales generales (recursivo)
     ========================================================= */
-    const getGrandTotals = () => {
-        if (!reportData) return {};
+    const getGrandTotals = (data = null) => {
+        const dataToUse = data || reportData;
+        if (!dataToUse) return {};
         const weeks = getWeeks();
         const totals = { total: 0 };
         
@@ -362,7 +363,7 @@ export default function TopSkusPage() {
             }
         };
         
-        sumTotals(reportData);
+        sumTotals(dataToUse);
         return totals;
     };
 
@@ -805,14 +806,18 @@ export default function TopSkusPage() {
                                         categoryData !== null && 
                                         Object.keys(categoryData).length > 0
                                     )
-                                    .map(([category, categoryData]) => (
-                                        <div key={category}>
-                                            <h2 className="text-xl font-bold mb-3 uppercase bg-purple-100 p-3 rounded-md sticky top-0 z-20">
-                                                {category === "retornable" ? "Retornable" : "No Retornable"}
-                                            </h2>
-                                            {renderSimpleTable(categoryData, weeks, grandTotals)}
-                                        </div>
-                                    ))}
+                                    .map(([category, categoryData]) => {
+                                        // Calcular totales específicos para esta categoría
+                                        const categoryTotals = getGrandTotals(categoryData);
+                                        return (
+                                            <div key={category}>
+                                                <h2 className="text-xl font-bold mb-3 uppercase bg-purple-100 p-3 rounded-md sticky top-0 z-20">
+                                                    {category === "retornable" ? "Retornable" : "No Retornable"}
+                                                </h2>
+                                                {renderSimpleTable(categoryData, weeks, categoryTotals)}
+                                            </div>
+                                        );
+                                    })}
                             </div>
                         ) : (
                             // Estructura sin categorías - Tabla única
