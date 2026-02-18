@@ -501,7 +501,7 @@ export default function VentaHectoPocPage() {
 
         const fromAbbr = DAY_ABBREV[fromDay.dayName] || fromDay.dayName.slice(0, 2);
         const toAbbr = DAY_ABBREV[toDay.dayName] || toDay.dayName.slice(0, 2);
-        const label = rangeFromDate === rangeToDate ? `Vta ${fromAbbr}` : `Vta ${fromAbbr}${toAbbr}`;
+        const label = rangeFromDate === rangeToDate ? `Prom ${fromAbbr}` : `Prom ${fromAbbr}${toAbbr}`;
 
         setDayRanges((prev) => [
             ...prev,
@@ -525,7 +525,18 @@ export default function VentaHectoPocPage() {
     };
 
     /**
-     * Suma los valores de un POC en un rango de fechas.
+     * Calcula el número de días en un rango de fechas.
+     */
+    const countDaysInRange = (fromDate, toDate) => {
+        const from = new Date(fromDate);
+        const to = new Date(toDate);
+        const diffTime = Math.abs(to - from);
+        return Math.floor(diffTime / (1000 * 60 * 60 * 24)) + 1;
+    };
+
+    /**
+     * Calcula el promedio de valores de un POC en un rango de fechas.
+     * (Suma de valores / cantidad de días en el rango)
      */
     const getPocRangeTotal = (pocData, fromDate, toDate, rType) => {
         let total = 0;
@@ -540,7 +551,8 @@ export default function VentaHectoPocPage() {
                 total += info[rType] || 0;
             }
         });
-        return total;
+        const numDays = countDaysInRange(fromDate, toDate);
+        return numDays > 0 ? total / numDays : 0;
     };
 
     /**
