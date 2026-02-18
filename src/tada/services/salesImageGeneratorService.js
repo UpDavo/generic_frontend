@@ -271,6 +271,16 @@ export const generateChartImage = async (element, options = {}) => {
 
                 /* Ocultar elementos móviles */
                 .md\\:hidden { display: none !important; }
+
+                /* Mini bar chart */
+                [data-barchart="container"] {
+                    display: flex !important;
+                    align-items: flex-end !important;
+                    background-color: transparent !important;
+                }
+                [data-barchart="bar"] {
+                    background-color: #3b82f6 !important;
+                }
             `;
 
             clonedDoc.head.appendChild(style);
@@ -278,6 +288,8 @@ export const generateChartImage = async (element, options = {}) => {
             // Forzar estilos inline en todos los elementos
             const allElements = clonedDoc.querySelectorAll("*");
             allElements.forEach((el) => {
+                // Saltar elementos del mini bar chart
+                if (el.dataset && el.dataset.barchart) return;
                 el.style.color = "#000000";
                 if (el.tagName !== "SVG" && el.tagName !== "svg" && 
                     !el.closest("svg") && el.tagName !== "path" && el.tagName !== "rect") {
@@ -634,12 +646,24 @@ export const generateChartImageBase64 = async (element, options = {}) => {
 
                 /* Ocultar elementos móviles */
                 .md\\:hidden { display: none !important; }
+
+                /* Mini bar chart */
+                [data-barchart="container"] {
+                    display: flex !important;
+                    align-items: flex-end !important;
+                    background-color: transparent !important;
+                }
+                [data-barchart="bar"] {
+                    background-color: #3b82f6 !important;
+                }
             `;
             clonedDoc.head.appendChild(style);
 
             // Forzar estilos inline en todos los elementos
             const allElements = clonedDoc.querySelectorAll("*");
             allElements.forEach((el) => {
+                // Saltar elementos del mini bar chart
+                if (el.dataset && el.dataset.barchart) return;
                 el.style.color = "#000000";
                 if (el.tagName !== "SVG" && el.tagName !== "svg" && 
                     !el.closest("svg") && el.tagName !== "path" && el.tagName !== "rect") {

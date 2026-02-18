@@ -171,6 +171,12 @@ export const dashboardRoutes = [
             name: "Métricas por SKU",
             permission: "/dashboard/sales/data-historica/sku-metrics",
           },
+          {
+            path: "/dashboard/sales/data-historica/venta-hecto-poc",
+            icon: RiStore2Line,
+            name: "Venta Hecto por POC",
+            permission: "/dashboard/sales/data-historica/venta-hecto-poc",
+          },
         ],
       },
       {
