@@ -7,7 +7,7 @@ import {
   updateWebhookLog,
 } from "@/tada/services/webhookApi";
 import { useAuth } from "@/auth/hooks/useAuth";
-import { getUsersByRole } from "@/auth/services/userApi";
+import { listPocs } from "@/tada/services/pocsCrudApi";
 import {
   Notification,
   Pagination,
@@ -140,7 +140,7 @@ export default function WebhooksPage() {
     comment: "",
     repurchased: false,
   });
-  const [storeUsers, setStoreUsers] = useState([]);
+  const [pocOptions, setPocOptions] = useState([]);
   const [loadingStores, setLoadingStores] = useState(false);
 
   /* ------------------- MODAL DE PREVIEW ------------------- */
@@ -190,28 +190,28 @@ export default function WebhooksPage() {
      Cargar usuarios del rol Store
   ========================================================= */
   useEffect(() => {
-    const fetchStoreUsers = async () => {
+    const fetchPocs = async () => {
       if (!accessToken) return;
       setLoadingStores(true);
       try {
-        const data = await getUsersByRole("Store", accessToken);
-        console.log("Usuarios Store obtenidos:", data);
-        // Transformar a formato para Select de Mantine
-        const usersOptions = data.users.map((user) => ({
-          value: user.name,
-          label: user.name,
+        const data = await listPocs(accessToken, 1, null, null, null, null, null, 1000);
+        const capitalize = (str) =>
+          str ? str.toLowerCase().replace(/\b\w/g, (c) => c.toUpperCase()) : str;
+        const options = (data.results || []).map((poc) => ({
+          value: poc.name,
+          label: capitalize(poc.name),
         }));
-        setStoreUsers(usersOptions);
+        setPocOptions(options);
       } catch (err) {
-        console.error("Error al cargar usuarios Store:", err);
-        setStoreUsers([]);
+        console.error("Error al cargar POCs:", err);
+        setPocOptions([]);
       } finally {
         setLoadingStores(false);
       }
     };
 
     if (authorized && accessToken) {
-      fetchStoreUsers();
+      fetchPocs();
     }
   }, [authorized, accessToken]);
 
@@ -574,7 +574,7 @@ export default function WebhooksPage() {
             onChange={(value) =>
               setFormData({ ...formData, poc: value || "" })
             }
-            data={storeUsers}
+            data={pocOptions}
             searchable
             clearable
             disabled={loadingStores}
