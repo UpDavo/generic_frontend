@@ -195,12 +195,17 @@ export default function WebhooksPage() {
       setLoadingStores(true);
       try {
         const data = await listPocs(accessToken, 1, null, null, null, null, null, 1000);
-        const capitalize = (str) =>
-          str ? str.toLowerCase().replace(/\b\w/g, (c) => c.toUpperCase()) : str;
-        const options = (data.results || []).map((poc) => ({
-          value: poc.name,
-          label: capitalize(poc.name),
-        }));
+        const seen = new Set();
+        const options = (data.results || [])
+          .filter((poc) => {
+            if (seen.has(poc.name)) return false;
+            seen.add(poc.name);
+            return true;
+          })
+          .map((poc) => ({
+            value: poc.name,
+            label: poc.name ? poc.name.toUpperCase() : poc.name,
+          }));
         setPocOptions(options);
       } catch (err) {
         console.error("Error al cargar POCs:", err);
