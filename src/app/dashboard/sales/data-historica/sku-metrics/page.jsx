@@ -22,6 +22,7 @@ import {
     RiAddLine,
     RiDeleteBinLine,
     RiCloseLine,
+    RiBarChartBoxLine,
 } from "react-icons/ri";
 import { useAuth } from "@/auth/hooks/useAuth";
 import { Unauthorized } from "@/core/components/Unauthorized";
@@ -37,8 +38,37 @@ import {
     generateTopSkusFilename,
 } from "@/tada/services/salesImageGeneratorService";
 import { sendReportToWhatsApp } from "@/tada/services/salesReportApi";
+import {
+    BarChart,
+    Bar,
+    XAxis,
+    YAxis,
+    CartesianGrid,
+    Tooltip,
+    Legend,
+    LabelList,
+    ResponsiveContainer,
+} from "recharts";
 
 const PERMISSION_PATH = "/dashboard/sales/data-historica/sku-metrics";
+
+// Colores para el modo sin agrupación de ciudad
+const SKU_COLORS = [
+    "#3b82f6", "#f59e0b", "#10b981", "#ef4444",
+    "#8b5cf6", "#ec4899", "#06b6d4", "#f97316",
+];
+
+// Sets de tonos por ciudad: [oscuro → claro] para cada SKU dentro de la ciudad
+const CITY_COLOR_SETS = [
+    ["#1e3a8a", "#2563eb", "#60a5fa", "#bfdbfe"], // azules
+    ["#14532d", "#16a34a", "#4ade80", "#bbf7d0"], // verdes
+    ["#7c2d12", "#b91c1c", "#f87171", "#fecaca"], // rojos
+    ["#713f12", "#b45309", "#fbbf24", "#fde68a"], // ámbar
+    ["#4a044e", "#7e22ce", "#c084fc", "#e9d5ff"], // púrpuras
+    ["#0c4a6e", "#0369a1", "#38bdf8", "#bae6fd"], // cielo
+    ["#042f2e", "#0f766e", "#2dd4bf", "#99f6e4"], // teal
+    ["#1c1917", "#57534e", "#a8a29e", "#e7e5e4"], // piedra
+];
 
 // Los SKUs ahora se obtienen de la API de productos app mediante búsqueda
 // Los reportes de métricas se obtienen de la API real: /api/sku-detail/city-poc/weekly-report/
@@ -48,6 +78,8 @@ export default function SkuMetricsPage() {
 
     // Ref para capturar la sección de las tablas
     const tableSectionRef = useRef(null);
+    // Ref para capturar la gráfica comparativa
+    const chartSectionRef = useRef(null);
 
     /* ------------------- AUTORIZACIÓN ------------------- */
     const [authorized, setAuthorized] = useState(null);
@@ -169,6 +201,8 @@ export default function SkuMetricsPage() {
                 appliedFilters.endDate,
                 appliedFilters.reportType
             );
+
+            console.log(response)
             
             // La respuesta ahora viene con estructura { skus: { "PILSENER BOTELLA 330 NR": {...} } }
             // donde la clave es el nombre del producto (homologado o no)
@@ -446,6 +480,114 @@ export default function SkuMetricsPage() {
         sumTotals(reportData);
         return totals;
     };
+
+    /* =========================================================
+       Helpers para gráfica comparativa unificada
+       - Sin ciudad: una barra por SKU
+       - Con ciudad: una barra por "SKU | Ciudad"
+       - Con ciudad + POC: una barra por "SKU | Ciudad | POC"
+       Barras ordenadas de mayor a menor por total
+    ========================================================= */
+    // Retorna [{ key, color }] con barras agrupadas por ciudad (tonos del mismo color)
+    // y ordenadas de mayor a menor dentro de cada ciudad
+    const getChartSeriesWithColors = () => {
+        if (!reportData) return [];
+
+        if (!appliedFilters.groupByCity) {
+            // Sin ciudad: un color plano por SKU, ordenado por total
+            const totalsMap = {};
+            Object.entries(reportData).forEach(([productName, skuData]) => {
+                totalsMap[productName] = (totalsMap[productName] || 0) + (skuData.total || 0);
+            });
+            return Object.entries(totalsMap)
+                .sort((a, b) => b[1] - a[1])
+                .map(([key], idx) => ({ key, color: SKU_COLORS[idx % SKU_COLORS.length] }));
+        }
+
+        // Con ciudad: agrupar SKUs por ciudad, cada ciudad con su set de tonos
+        const citySkuTotals = {}; // { cityName: { seriesKey: total } }
+        Object.entries(reportData).forEach(([productName, skuData]) => {
+            if (!skuData.cities) return;
+            Object.entries(skuData.cities).forEach(([cityName, cityData]) => {
+                if (!citySkuTotals[cityName]) citySkuTotals[cityName] = {};
+                // La gráfica siempre agrupa a nivel ciudad (el POC solo se muestra en la tabla)
+                const key = `${productName} | ${cityName}`;
+                citySkuTotals[cityName][key] = (citySkuTotals[cityName][key] || 0) + (cityData.total || 0);
+            });
+        });
+
+        // Ordenar ciudades por su total combinado descendente
+        const cityGroups = Object.entries(citySkuTotals)
+            .map(([cityName, skus]) => ({
+                cityName,
+                total: Object.values(skus).reduce((a, b) => a + b, 0),
+                skus: Object.entries(skus).sort((a, b) => b[1] - a[1]).map(([k]) => k),
+            }))
+            .sort((a, b) => b.total - a.total);
+
+        // Asignar tonos del mismo color a cada ciudad, con espaciador entre grupos
+        const result = [];
+        cityGroups.forEach(({ cityName, skus }, cityIdx) => {
+            if (cityIdx > 0) {
+                result.push({ key: `__spacer_${cityIdx}__`, color: "transparent", spacer: true });
+            }
+            const colorSet = CITY_COLOR_SETS[cityIdx % CITY_COLOR_SETS.length];
+            skus.forEach((key, skuIdx) => {
+                result.push({ key, color: colorSet[skuIdx % colorSet.length], city: cityName });
+            });
+        });
+        return result;
+    };
+
+    const getChartSeries = () => getChartSeriesWithColors().map(({ key }) => key);
+
+    const getChartData = () => {
+        if (!reportData) return [];
+        return getWeeks().map((week) => {
+            const entry = { week: week.replace("w", "W") };
+            Object.entries(reportData).forEach(([productName, skuData]) => {
+                if (appliedFilters.groupByCity && skuData.cities) {
+                    Object.entries(skuData.cities).forEach(([cityName, cityData]) => {
+                        // La gráfica siempre agrupa a nivel ciudad (el POC solo se muestra en la tabla)
+                        const key = `${productName} | ${cityName}`;
+                        entry[key] = cityData[week] || 0;
+                    });
+                } else {
+                    entry[productName] = skuData[week] || 0;
+                }
+            });
+            return entry;
+        });
+    };
+
+    /* =========================================================
+       Descargar imagen de la gráfica
+    ========================================================= */
+    const downloadChartImage = useCallback(async () => {
+        if (!chartSectionRef.current) return;
+        setDownloadingImage(true);
+        setError(null);
+        try {
+            const skuNames = appliedFilters.selectedSkus
+                .map((s) => s.name)
+                .join("_")
+                .substring(0, 40);
+            const filename = `sku_grafica_${skuNames}_${appliedFilters.startDate}_${appliedFilters.endDate}.png`;
+            await generateChartImage(chartSectionRef.current, {
+                filename,
+                sectionId: "chartSection",
+                width: 1600,
+                scale: 2,
+                padding: "40px 60px",
+            });
+            setSuccessMessage("Imagen de la gráfica descargada exitosamente");
+        } catch (err) {
+            console.error("Error downloading chart image:", err);
+            setError("Error al descargar la imagen de la gráfica.");
+        } finally {
+            setDownloadingImage(false);
+        }
+    }, [appliedFilters]);
 
     /* =========================================================
        Renderizar jerarquía móvil recursivamente
@@ -753,6 +895,59 @@ export default function SkuMetricsPage() {
     /* =========================================================
        Render
     ========================================================= */
+    /* =========================================================
+       Tooltip personalizado agrupado por ciudad
+    ========================================================= */
+    const renderCustomTooltip = ({ active, payload, label }) => {
+        if (!active || !payload || !payload.length) return null;
+        const real = payload.filter((e) => !String(e.dataKey).startsWith("__spacer"));
+        if (!real.length) return null;
+
+        if (!appliedFilters.groupByCity) {
+            return (
+                <div className="bg-white border border-gray-200 rounded-lg p-3 shadow-lg min-w-[180px]">
+                    <p className="font-bold mb-2 text-gray-800">{label}</p>
+                    {real.map((entry) => (
+                        <div key={entry.dataKey} className="flex justify-between gap-4 text-sm">
+                            <span style={{ color: entry.fill }}>● {entry.name}</span>
+                            <span className="font-bold">{Number(entry.value).toFixed(2)}</span>
+                        </div>
+                    ))}
+                </div>
+            );
+        }
+
+        // Agrupar por ciudad (segunda parte del key "SKU | CIUDAD")
+        const cityMap = {};
+        real.forEach((entry) => {
+            const parts = String(entry.name).split(" | ");
+            const city = parts[1] || parts[0];
+            if (!cityMap[city]) cityMap[city] = [];
+            cityMap[city].push(entry);
+        });
+
+        return (
+            <div className="bg-white border border-gray-200 rounded-lg p-3 shadow-lg min-w-[210px]">
+                <p className="font-bold mb-2 text-gray-800">{label}</p>
+                {Object.entries(cityMap).map(([city, entries], idx) => (
+                    <div key={city}>
+                        {idx > 0 && <div className="border-t border-dashed border-gray-300 my-2" />}
+                        <p className="text-xs font-semibold text-gray-500 uppercase mb-1">{city}</p>
+                        {entries.map((entry) => {
+                            const skuName = String(entry.name).split(" | ")[0];
+                            return (
+                                <div key={entry.dataKey} className="flex justify-between gap-4 text-sm">
+                                    <span style={{ color: entry.fill }}>● {skuName}</span>
+                                    <span className="font-bold">{Number(entry.value).toFixed(2)}</span>
+                                </div>
+                            );
+                        })}
+                    </div>
+                ))}
+            </div>
+        );
+    };
+
     if (authorized === null) {
         return (
             <div className="flex justify-center items-center mt-64">
@@ -804,7 +999,18 @@ export default function SkuMetricsPage() {
                         disabled={!reportData || loading}
                         className="flex-1 md:flex-none"
                     >
-                        Descargar Imagen
+                        Descargar Tabla
+                    </Button>
+                    <Button
+                        onClick={downloadChartImage}
+                        variant="outline"
+                        color="indigo"
+                        leftSection={<RiBarChartBoxLine />}
+                        loading={downloadingImage}
+                        disabled={!reportData || loading}
+                        className="flex-1 md:flex-none"
+                    >
+                        Descargar Gráfica
                     </Button>
                     <Button
                         onClick={sendTableToWhatsApp}
@@ -1099,6 +1305,72 @@ export default function SkuMetricsPage() {
                 </div>
             </div>
 
+
+            {/* ---------------- GRÁFICA COMPARATIVA UNIFICADA ---------------- */}
+            {reportData && Object.keys(reportData).length > 0 && weeks.length > 0 && (
+                <div
+                    id="chartSection"
+                    ref={chartSectionRef}
+                    className="bg-white mb-4 rounded-lg p-4 border border-gray-200"
+                >
+                    <h2 className="text-lg font-bold mb-1 uppercase text-center text-gray-800">
+                        Comparativo de SKUs —{" "}
+                        {appliedFilters.reportType === "hectolitros" ? "Hectolitros" : "Cajas"}
+                    </h2>
+                    <p className="text-xs text-center text-gray-500 mb-4">
+                        {appliedFilters.groupByCity
+                            ? appliedFilters.groupByPoc
+                                ? "Agrupado por SKU | Ciudad | POC · ordenado de mayor a menor"
+                                : "Agrupado por SKU | Ciudad · ordenado de mayor a menor"
+                            : "Comparativo por SKU · ordenado de mayor a menor"}
+                    </p>
+                    <ResponsiveContainer width="100%" height={420}>
+                        <BarChart
+                            data={getChartData()}
+                            margin={{ top: 24, right: 20, left: 20, bottom: 10 }}
+                        >
+                            <CartesianGrid strokeDasharray="3 3" />
+                            <XAxis dataKey="week" />
+                            <YAxis />
+                            <Tooltip content={renderCustomTooltip} />
+                            <Legend
+                                layout="vertical"
+                                verticalAlign="middle"
+                                align="right"
+                                formatter={(value) => value.startsWith("__spacer") ? null : value}
+                                wrapperStyle={{ paddingLeft: 16, maxWidth: 220, fontSize: 12 }}
+                            />
+                            {getChartSeriesWithColors().map(({ key, color, spacer }) =>
+                                spacer ? (
+                                    <Bar
+                                        key={key}
+                                        dataKey={key}
+                                        barSize={10}
+                                        fill="transparent"
+                                        legendType="none"
+                                        isAnimationActive={false}
+                                        shape={() => <g />}
+                                    />
+                                ) : (
+                                    <Bar
+                                        key={key}
+                                        dataKey={key}
+                                        name={key}
+                                        fill={color}
+                                    >
+                                        <LabelList
+                                            dataKey={key}
+                                            position="top"
+                                            formatter={(v) => v > 0 ? v.toFixed(2) : ""}
+                                            style={{ fontSize: 10, fill: "#374151" }}
+                                        />
+                                    </Bar>
+                                )
+                            )}
+                        </BarChart>
+                    </ResponsiveContainer>
+                </div>
+            )}
 
             {/* ---------------- TABLA ---------------- */}
             <div className="flex-1 min-h-0 flex flex-col">

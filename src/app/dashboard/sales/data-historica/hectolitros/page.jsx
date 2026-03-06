@@ -190,7 +190,7 @@ export default function HectolitrosPage() {
 
         try {
             const weekKeys = reportData
-                ? Object.keys(reportData).filter((key) => key.startsWith("w")).sort()
+                ? Object.keys(reportData).filter((key) => key.startsWith("w")).sort((a, b) => parseInt(a.replace("w", ""), 10) - parseInt(b.replace("w", ""), 10))
                 : [];
             const weekNumbers = weekKeys
                 .map((key) => parseInt(key.replace("w", ""), 10))
@@ -258,7 +258,7 @@ export default function HectolitrosPage() {
 
         try {
             const weekKeys = reportData
-                ? Object.keys(reportData).filter((key) => key.startsWith("w")).sort()
+                ? Object.keys(reportData).filter((key) => key.startsWith("w")).sort((a, b) => parseInt(a.replace("w", ""), 10) - parseInt(b.replace("w", ""), 10))
                 : [];
             const totalWeeks = Math.max(weekKeys.length, 1);
 
@@ -358,7 +358,7 @@ export default function HectolitrosPage() {
     const getAvailableDates = () => {
         if (!reportData) return [];
         const dates = [];
-        const weekKeys = Object.keys(reportData).filter((key) => key.startsWith("w")).sort();
+        const weekKeys = Object.keys(reportData).filter((key) => key.startsWith("w")).sort((a, b) => parseInt(a.replace("w", ""), 10) - parseInt(b.replace("w", ""), 10));
         
         weekKeys.forEach((weekKey) => {
             const weekData = reportData[weekKey];
@@ -384,7 +384,9 @@ export default function HectolitrosPage() {
     ========================================================= */
     const getWeekKeys = () => {
         if (!reportData) return [];
-        return Object.keys(reportData).filter((key) => key.startsWith("w")).sort();
+        return Object.keys(reportData)
+            .filter((key) => key.startsWith("w"))
+            .sort((a, b) => parseInt(a.replace("w", ""), 10) - parseInt(b.replace("w", ""), 10));
     };
 
     /* =========================================================
@@ -396,17 +398,19 @@ export default function HectolitrosPage() {
 
         getWeekKeys().forEach((weekKey) => {
             const weekData = reportData[weekKey];
-            DIAS_SEMANA.forEach((dia) => {
-                const diaData = weekData[dia];
-                if (diaData) {
-                    chartData.push({
-                        label: `${weekKey.replace("w", "W")} - ${DIAS_NOMBRES[dia].substring(0, 3)}`,
-                        fecha: diaData.fecha,
-                        meta: parseFloat(diaData.ht_meta) || 0,
-                        vendidos: parseFloat(diaData.ht) || 0,
-                        cumplimiento: parseFloat(diaData.cumplimiento?.replace('%', '')) || 0,
-                    });
-                }
+            const weekEntries = DIAS_SEMANA
+                .filter((dia) => weekData[dia])
+                .map((dia) => ({ dia, diaData: weekData[dia] }))
+                .sort((a, b) => a.diaData.fecha.localeCompare(b.diaData.fecha));
+
+            weekEntries.forEach(({ dia, diaData }) => {
+                chartData.push({
+                    label: `${weekKey.replace("w", "W")} - ${DIAS_NOMBRES[dia].substring(0, 3)}`,
+                    fecha: diaData.fecha,
+                    meta: parseFloat(diaData.ht_meta) || 0,
+                    vendidos: parseFloat(diaData.ht) || 0,
+                    cumplimiento: parseFloat(diaData.cumplimiento?.replace('%', '')) || 0,
+                });
             });
         });
 
