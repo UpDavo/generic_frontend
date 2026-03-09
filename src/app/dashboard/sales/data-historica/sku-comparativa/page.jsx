@@ -759,6 +759,7 @@ export default function SkuComparativaPage() {
                                     </thead>
                                     <tbody className="bg-white text-black">
                                         {displayRows.map(({ key, label, skuVal, legByProd, totalLegVal }) => {
+                                            const d = skuVal - totalLegVal;
                                             const p =
                                                 totalLegVal !== 0
                                                     ? ((skuVal - totalLegVal) / totalLegVal) * 100
