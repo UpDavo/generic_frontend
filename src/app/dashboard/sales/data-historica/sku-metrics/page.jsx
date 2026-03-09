@@ -1002,17 +1002,6 @@ export default function SkuMetricsPage() {
                         Descargar Tabla
                     </Button>
                     <Button
-                        onClick={downloadChartImage}
-                        variant="outline"
-                        color="indigo"
-                        leftSection={<RiBarChartBoxLine />}
-                        loading={downloadingImage}
-                        disabled={!reportData || loading}
-                        className="flex-1 md:flex-none"
-                    >
-                        Descargar Gráfica
-                    </Button>
-                    <Button
                         onClick={sendTableToWhatsApp}
                         variant="filled"
                         color="green"
@@ -1305,72 +1294,6 @@ export default function SkuMetricsPage() {
                 </div>
             </div>
 
-
-            {/* ---------------- GRÁFICA COMPARATIVA UNIFICADA ---------------- */}
-            {reportData && Object.keys(reportData).length > 0 && weeks.length > 0 && (
-                <div
-                    id="chartSection"
-                    ref={chartSectionRef}
-                    className="bg-white mb-4 rounded-lg p-4 border border-gray-200"
-                >
-                    <h2 className="text-lg font-bold mb-1 uppercase text-center text-gray-800">
-                        Comparativo de SKUs —{" "}
-                        {appliedFilters.reportType === "hectolitros" ? "Hectolitros" : "Cajas"}
-                    </h2>
-                    <p className="text-xs text-center text-gray-500 mb-4">
-                        {appliedFilters.groupByCity
-                            ? appliedFilters.groupByPoc
-                                ? "Agrupado por SKU | Ciudad | POC · ordenado de mayor a menor"
-                                : "Agrupado por SKU | Ciudad · ordenado de mayor a menor"
-                            : "Comparativo por SKU · ordenado de mayor a menor"}
-                    </p>
-                    <ResponsiveContainer width="100%" height={420}>
-                        <BarChart
-                            data={getChartData()}
-                            margin={{ top: 24, right: 20, left: 20, bottom: 10 }}
-                        >
-                            <CartesianGrid strokeDasharray="3 3" />
-                            <XAxis dataKey="week" />
-                            <YAxis />
-                            <Tooltip content={renderCustomTooltip} />
-                            <Legend
-                                layout="vertical"
-                                verticalAlign="middle"
-                                align="right"
-                                formatter={(value) => value.startsWith("__spacer") ? null : value}
-                                wrapperStyle={{ paddingLeft: 16, maxWidth: 220, fontSize: 12 }}
-                            />
-                            {getChartSeriesWithColors().map(({ key, color, spacer }) =>
-                                spacer ? (
-                                    <Bar
-                                        key={key}
-                                        dataKey={key}
-                                        barSize={10}
-                                        fill="transparent"
-                                        legendType="none"
-                                        isAnimationActive={false}
-                                        shape={() => <g />}
-                                    />
-                                ) : (
-                                    <Bar
-                                        key={key}
-                                        dataKey={key}
-                                        name={key}
-                                        fill={color}
-                                    >
-                                        <LabelList
-                                            dataKey={key}
-                                            position="top"
-                                            formatter={(v) => v > 0 ? v.toFixed(2) : ""}
-                                            style={{ fontSize: 10, fill: "#374151" }}
-                                        />
-                                    </Bar>
-                                )
-                            )}
-                        </BarChart>
-                    </ResponsiveContainer>
-                </div>
-            )}
 
             {/* ---------------- TABLA ---------------- */}
             <div className="flex-1 min-h-0 flex flex-col">

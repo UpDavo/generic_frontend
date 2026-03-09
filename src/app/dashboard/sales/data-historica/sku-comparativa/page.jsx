@@ -21,7 +21,7 @@ import {
     RiAddLine,
     RiDeleteBinLine,
     RiCloseLine,
-    RiBarChartBoxLine,
+    RiCalendarLine,
 } from "react-icons/ri";
 import { useAuth } from "@/auth/hooks/useAuth";
 import { Unauthorized } from "@/core/components/Unauthorized";
@@ -51,6 +51,11 @@ import {
 
 const PERMISSION_PATH = "/dashboard/sales/data-historica/sku-comparativa";
 
+const MONTH_LABELS = [
+    "", "Ene", "Feb", "Mar", "Abr", "May", "Jun",
+    "Jul", "Ago", "Sep", "Oct", "Nov", "Dic",
+];
+
 // Colores para barras de SKU
 const SKU_COLORS = [
     "#3b82f6", "#f59e0b", "#10b981", "#ef4444",
@@ -71,7 +76,6 @@ export default function SkuComparativaPage() {
     const { accessToken, user } = useAuth();
 
     const tableSectionRef = useRef(null);
-    const chartSectionRef = useRef(null);
 
     /* ------------------- AUTORIZACIÓN ------------------- */
     const [authorized, setAuthorized] = useState(null);
@@ -127,25 +131,18 @@ export default function SkuComparativaPage() {
     };
 
     /* ------------------- FILTROS ------------------- */
-    const getMonthStart = () =>
-        new Date(new Date().getFullYear(), new Date().getMonth(), 1)
-            .toISOString()
-            .slice(0, 10);
+    const getYearStart = () => `${new Date().getFullYear()}-01-01`;
+    const getYearEnd = () => `${new Date().getFullYear()}-12-31`;
 
-    const getMonthEnd = () =>
-        new Date(new Date().getFullYear(), new Date().getMonth() + 1, 0)
-            .toISOString()
-            .slice(0, 10);
-
-    const [startDate, setStartDate] = useState(getMonthStart());
-    const [endDate, setEndDate] = useState(getMonthEnd());
+    const [startDate, setStartDate] = useState(getYearStart());
+    const [endDate, setEndDate] = useState(getYearEnd());
     const [reportType, setReportType] = useState("hectolitros");
     const [filtering, setFiltering] = useState(false);
 
     const [appliedFilters, setAppliedFilters] = useState({
         selectedSkus: [],
-        startDate: getMonthStart(),
-        endDate: getMonthEnd(),
+        startDate: getYearStart(),
+        endDate: getYearEnd(),
         reportType: "hectolitros",
     });
 
@@ -161,6 +158,17 @@ export default function SkuComparativaPage() {
     const [successMessage, setSuccessMessage] = useState(null);
     // { [prodName]: "2023" | "2024" | ... } — año seleccionado por columna In&Out
     const [legacyYearSelections, setLegacyYearSelections] = useState({});
+
+    // Ordenamiento de la tabla
+    const [sortConfig, setSortConfig] = useState({ key: null, direction: "asc" });
+    const handleSort = (key) =>
+        setSortConfig((prev) => ({
+            key,
+            direction: prev.key === key && prev.direction === "asc" ? "desc" : "asc",
+        }));
+
+    // Agrupación mensual en la tabla
+    const [groupByMonth, setGroupByMonth] = useState(false);
 
     /* =========================================================
        Traer reporte SKU + In&Out en paralelo
@@ -289,13 +297,13 @@ export default function SkuComparativaPage() {
             setSelectedSkus([]);
             setSkuSearchTerm("");
             setSkuSearchResults([]);
-            setStartDate(getMonthStart());
-            setEndDate(getMonthEnd());
+            setStartDate(getYearStart());
+            setEndDate(getYearEnd());
             setReportType("hectolitros");
             setAppliedFilters({
                 selectedSkus: [],
-                startDate: getMonthStart(),
-                endDate: getMonthEnd(),
+                startDate: getYearStart(),
+                endDate: getYearEnd(),
                 reportType: "hectolitros",
             });
             setSkuData(null);
@@ -342,26 +350,6 @@ export default function SkuComparativaPage() {
         } catch (err) {
             console.error(err);
             setError("Error al descargar la imagen de la tabla.");
-        } finally {
-            setDownloadingImage(false);
-        }
-    }, [appliedFilters]);
-
-    const downloadChartImage = useCallback(async () => {
-        if (!chartSectionRef.current) return;
-        setDownloadingImage(true);
-        try {
-            await generateChartImage(chartSectionRef.current, {
-                filename: `sku_comparativa_grafica_${appliedFilters.startDate}_${appliedFilters.endDate}.png`,
-                sectionId: "chartSection",
-                width: 1600,
-                scale: 2,
-                padding: "40px 60px",
-            });
-            setSuccessMessage("Imagen de gráfica descargada exitosamente");
-        } catch (err) {
-            console.error(err);
-            setError("Error al descargar la imagen de la gráfica.");
         } finally {
             setDownloadingImage(false);
         }
@@ -459,48 +447,25 @@ export default function SkuComparativaPage() {
     };
 
     /* =========================================================
-       Datos para la gráfica
-    ========================================================= */
-    const getChartData = () => {
-        const dates = getDates();
-        const legacyByDate = getLegacyByDate(); // { prodName: { fecha: val } }
-        return dates.map((date) => {
-            const entry = { date };
-            if (skuData) {
-                Object.entries(skuData).forEach(([productName, data]) => {
-                    entry[productName] = data[date] || 0;
-                });
-            }
-            Object.entries(legacyByDate).forEach(([legacyProd, byDate]) => {
-                entry[`In&Out · ${legacyProd}`] = byDate[date] || 0;
-            });
-            return entry;
-        });
-    };
-
-    /* =========================================================
-       Tooltip personalizado
-    ========================================================= */
-    const renderCustomTooltip = ({ active, payload, label }) => {
-        if (!active || !payload?.length) return null;
-        return (
-            <div className="bg-white border border-gray-200 rounded-lg p-3 shadow-lg min-w-[200px]">
-                <p className="font-bold mb-2 text-gray-800">{label}</p>
-                {payload.map((entry) => (
-                    <div key={entry.dataKey} className="flex justify-between gap-4 text-sm">
-                        <span style={{ color: entry.fill }}>● {entry.name}</span>
-                        <span className="font-bold">{Number(entry.value).toFixed(2)}</span>
-                    </div>
-                ))}
-            </div>
-        );
-    };
-
-    /* =========================================================
        Render tabla de comparativa por SKU
     ========================================================= */
     const renderComparisonTable = () => {
         if (!skuData) return null;
+
+        const SortTh = ({ colKey, children, className = "text-center" }) => (
+            <th
+                className={`${className} cursor-pointer select-none hover:bg-white/10`}
+                onClick={() => handleSort(colKey)}
+            >
+                <span className="inline-flex items-center gap-1 justify-center">
+                    {children}
+                    <span className="inline-flex flex-col leading-[0.6] text-[10px]">
+                        <span className={sortConfig.key === colKey && sortConfig.direction === "asc" ? "opacity-100" : "opacity-30"}>▲</span>
+                        <span className={sortConfig.key === colKey && sortConfig.direction === "desc" ? "opacity-100" : "opacity-30"}>▼</span>
+                    </span>
+                </span>
+            </th>
+        );
 
         const dates = getDates();
         const legacyByDate = getLegacyByDate(); // { prodName: { fecha: val } }
@@ -528,6 +493,87 @@ export default function SkuComparativaPage() {
                             : null;
                     const skuColor = SKU_COLORS[idx % SKU_COLORS.length];
 
+                    const getSortedDates = () => {
+                        if (!sortConfig.key) return dates;
+                        return [...dates].sort((a, b) => {
+                            let aVal, bVal;
+                            if (sortConfig.key === "date") {
+                                aVal = a; bVal = b;
+                            } else if (sortConfig.key === "__sku__") {
+                                aVal = data[a] || 0; bVal = data[b] || 0;
+                            } else if (sortConfig.key === "__combined__") {
+                                aVal = legacyCombinedByDate[a] || 0;
+                                bVal = legacyCombinedByDate[b] || 0;
+                            } else if (sortConfig.key === "__diff__") {
+                                aVal = (data[a] || 0) - (legacyCombinedByDate[a] || 0);
+                                bVal = (data[b] || 0) - (legacyCombinedByDate[b] || 0);
+                            } else if (sortConfig.key === "__pct__") {
+                                const la = legacyCombinedByDate[a] || 0;
+                                const lb = legacyCombinedByDate[b] || 0;
+                                aVal = la !== 0 ? ((data[a] || 0) - la) / la * 100 : -Infinity;
+                                bVal = lb !== 0 ? ((data[b] || 0) - lb) / lb * 100 : -Infinity;
+                            } else {
+                                aVal = legacyByDate[sortConfig.key]?.[a] || 0;
+                                bVal = legacyByDate[sortConfig.key]?.[b] || 0;
+                            }
+                            if (aVal < bVal) return sortConfig.direction === "asc" ? -1 : 1;
+                            if (aVal > bVal) return sortConfig.direction === "asc" ? 1 : -1;
+                            return 0;
+                        });
+                    };
+                    const sortedDates = getSortedDates();
+
+                    // Filas unificadas (diarias o agrupadas por mes)
+                    const displayRows = groupByMonth
+                        ? (() => {
+                            const rows = [];
+                            for (let m = 1; m <= 12; m++) {
+                                const mm = String(m).padStart(2, "0");
+                                const matchingDates = dates.filter((d) => d.startsWith(mm + "-"));
+                                if (matchingDates.length === 0) continue;
+                                const skuVal = matchingDates.reduce((s, d) => s + (data[d] || 0), 0);
+                                const legByProd = {};
+                                legacyProducts.forEach((lp) => {
+                                    legByProd[lp] = matchingDates.reduce(
+                                        (s, d) => s + (legacyByDate[lp]?.[d] || 0), 0
+                                    );
+                                });
+                                const totalLegVal = legacyProducts.reduce(
+                                    (s, lp) => s + (legByProd[lp] || 0), 0
+                                );
+                                rows.push({ key: mm, label: MONTH_LABELS[m], skuVal, legByProd, totalLegVal });
+                            }
+                            if (sortConfig.key) {
+                                rows.sort((a, b) => {
+                                    let aVal, bVal;
+                                    if (sortConfig.key === "date") { aVal = a.key; bVal = b.key; }
+                                    else if (sortConfig.key === "__sku__") { aVal = a.skuVal; bVal = b.skuVal; }
+                                    else if (sortConfig.key === "__combined__") { aVal = a.totalLegVal; bVal = b.totalLegVal; }
+                                    else if (sortConfig.key === "__diff__") { aVal = a.skuVal - a.totalLegVal; bVal = b.skuVal - b.totalLegVal; }
+                                    else if (sortConfig.key === "__pct__") {
+                                        aVal = a.totalLegVal !== 0 ? (a.skuVal - a.totalLegVal) / a.totalLegVal * 100 : -Infinity;
+                                        bVal = b.totalLegVal !== 0 ? (b.skuVal - b.totalLegVal) / b.totalLegVal * 100 : -Infinity;
+                                    } else {
+                                        aVal = a.legByProd[sortConfig.key] || 0;
+                                        bVal = b.legByProd[sortConfig.key] || 0;
+                                    }
+                                    if (aVal < bVal) return sortConfig.direction === "asc" ? -1 : 1;
+                                    if (aVal > bVal) return sortConfig.direction === "asc" ? 1 : -1;
+                                    return 0;
+                                });
+                            }
+                            return rows;
+                        })()
+                        : sortedDates.map((date) => {
+                            const skuVal = data[date] || 0;
+                            const legByProd = {};
+                            legacyProducts.forEach((lp) => {
+                                legByProd[lp] = legacyByDate[lp]?.[date] || 0;
+                            });
+                            const totalLegVal = legacyCombinedByDate[date] || 0;
+                            return { key: date, label: date, skuVal, legByProd, totalLegVal };
+                        });
+
                     return (
                         <div key={productName} className="mb-8 last:mb-0">
                             {/* Encabezado del SKU */}
@@ -551,57 +597,122 @@ export default function SkuComparativaPage() {
                                 )}
                             </div>
 
-                            {/* Tarjetas de resumen */}
-                            <div className="flex flex-wrap gap-3 mb-4">
-                                {/* SKU Total */}
-                                <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 text-center min-w-[120px]">
-                                    <div className="text-xs text-blue-600 font-semibold uppercase mb-1">SKU Total</div>
-                                    <div className="text-xl font-bold text-blue-800">{skuTotal.toFixed(2)}</div>
-                                    <div className="text-xs text-gray-500">{label}</div>
-                                </div>
-                                {/* Una tarjeta por producto In&Out */}
-                                {legacyProducts.map((legacyProd, lIdx) => (
-                                    <div key={legacyProd} className="bg-gray-50 border border-gray-200 rounded-lg p-3 text-center min-w-[120px]">
-                                        <div className="text-xs text-gray-600 font-semibold uppercase mb-1 truncate max-w-[140px]" title={legacyProd}>
-                                            {legacyProd}
+                            {/* Gráfica mensual agrupada */}
+                            {(() => {
+                                // Agrupar por mes (MM) sumando todos los días
+                                const monthlyMap = {};
+                                for (let m = 1; m <= 12; m++) {
+                                    const mm = String(m).padStart(2, "0");
+                                    const entry = { month: MONTH_LABELS[m] };
+                                    // SKU
+                                    entry[data.product_name || productName] = dates
+                                        .filter((d) => d.startsWith(mm + "-"))
+                                        .reduce((s, d) => s + (data[d] || 0), 0);
+                                    // Legacy products
+                                    legacyProducts.forEach((legProd) => {
+                                        entry[`In&Out: ${legProd}`] = dates
+                                        .filter((d) => d.startsWith(mm + "-"))
+                                        .reduce((s, d) => s + (legacyByDate[legProd]?.[d] || 0), 0);
+                                    });
+                                    monthlyMap[mm] = entry;
+                                }
+                                const skuKey = data.product_name || productName;
+                                // Construir el array en orden 1-12 explícitamente (evita que
+                                // "10","11","12" sean tratados como índices enteros y aparezcan
+                                // primero al usar Object.values), luego ordenar de mayor a menor
+                                // según el valor del SKU.
+                                const monthlyData = Array.from(
+                                    { length: 12 },
+                                    (_, i) => monthlyMap[String(i + 1).padStart(2, "0")]
+                                ).sort((a, b) => b[skuKey] - a[skuKey]);
+
+                                const CustomTooltip = ({ active, payload, label }) => {
+                                    if (!active || !payload?.length) return null;
+                                    return (
+                                        <div className="bg-white border border-gray-200 rounded-lg p-3 shadow-lg min-w-[180px]">
+                                            <p className="font-bold mb-2 text-gray-800 text-sm">{label}</p>
+                                            {payload.map((e) => (
+                                                <div key={e.dataKey} className="flex justify-between gap-3 text-xs">
+                                                    <span style={{ color: e.fill }}>● {e.name}</span>
+                                                    <span className="font-bold">{Number(e.value).toFixed(2)}</span>
+                                                </div>
+                                            ))}
                                         </div>
-                                        <div
-                                            className="text-xl font-bold"
-                                            style={{ color: LEGACY_COLORS[lIdx % LEGACY_COLORS.length] }}
-                                        >
-                                            {(legacyProductTotals[legacyProd] || 0).toFixed(2)}
+                                    );
+                                };
+
+                                const legendItems = [
+                                    { name: skuKey, color: skuColor },
+                                    ...legacyProducts.map((lp, lIdx) => ({
+                                        name: `In&Out: ${lp}`,
+                                        color: LEGACY_COLORS[lIdx % LEGACY_COLORS.length],
+                                    })),
+                                ];
+
+                                return (
+                                    <div className="mb-4 bg-white rounded-lg p-4 border border-gray-200">
+                                        <h3 className="text-sm font-bold uppercase text-gray-700 mb-3 text-center">
+                                            {skuKey} — comparativa mensual ({label})
+                                        </h3>
+                                        <div className="flex gap-4 items-center">
+                                            <div className="flex-1 min-w-0">
+                                                <ResponsiveContainer width="100%" height={500}>
+                                                    <BarChart data={monthlyData} margin={{ top: 24, right: 8, left: 10, bottom: 0 }}>
+                                                        <CartesianGrid strokeDasharray="3 3" />
+                                                        <XAxis dataKey="month" tick={{ fontSize: 12 }} />
+                                                        <YAxis tick={{ fontSize: 11 }} />
+                                                        <Tooltip content={<CustomTooltip />} />
+                                                        <Bar dataKey={skuKey} fill={skuColor} name={skuKey} radius={[3,3,0,0]}>
+                                                            <LabelList
+                                                                dataKey={skuKey}
+                                                                position="top"
+                                                                formatter={(v) => (v > 0 ? v.toFixed(1) : "")}
+                                                                style={{ fontSize: 9, fill: "#374151" }}
+                                                            />
+                                                        </Bar>
+                                                        {legacyProducts.map((legProd, lIdx) => (
+                                                            <Bar
+                                                                key={legProd}
+                                                                dataKey={`In&Out: ${legProd}`}
+                                                                fill={LEGACY_COLORS[lIdx % LEGACY_COLORS.length]}
+                                                                name={`In&Out: ${legProd}`}
+                                                                radius={[3,3,0,0]}
+                                                            >
+                                                                <LabelList
+                                                                    dataKey={`In&Out: ${legProd}`}
+                                                                    position="top"
+                                                                    formatter={(v) => (v > 0 ? v.toFixed(1) : "")}
+                                                                    style={{ fontSize: 9, fill: "#374151" }}
+                                                                />
+                                                            </Bar>
+                                                        ))}
+                                                    </BarChart>
+                                                </ResponsiveContainer>
+                                            </div>
+                                            <div className="flex-shrink-0 flex flex-col gap-2 max-w-[200px]">
+                                                {legendItems.map((item) => (
+                                                    <div key={item.name} className="flex items-center gap-2 text-xs text-gray-700">
+                                                        <span className="inline-block w-3 h-3 rounded-sm flex-shrink-0" style={{ backgroundColor: item.color }} />
+                                                        <span className="leading-tight">{item.name}</span>
+                                                    </div>
+                                                ))}
+                                            </div>
                                         </div>
-                                        <div className="text-xs text-gray-500">{label} In&Out</div>
                                     </div>
-                                ))}
-                                {/* Total In&Out combinado (solo si hay más de 1 producto) */}
-                                {legacyProducts.length > 1 && (
-                                    <div className="bg-gray-100 border border-gray-300 rounded-lg p-3 text-center min-w-[120px]">
-                                        <div className="text-xs text-gray-700 font-semibold uppercase mb-1">Total In&Out</div>
-                                        <div className="text-xl font-bold text-gray-800">{legacyGrandTotal.toFixed(2)}</div>
-                                        <div className="text-xs text-gray-500">{label}</div>
-                                    </div>
-                                )}
-                                {/* Diferencia */}
-                                <div className={`border rounded-lg p-3 text-center min-w-[120px] ${diff >= 0 ? "bg-green-50 border-green-200" : "bg-red-50 border-red-200"}`}>
-                                    <div className={`text-xs font-semibold uppercase mb-1 ${diff >= 0 ? "text-green-600" : "text-red-600"}`}>
-                                        Diferencia
-                                    </div>
-                                    <div className={`text-xl font-bold ${diff >= 0 ? "text-green-800" : "text-red-800"}`}>
-                                        {diff >= 0 ? "+" : ""}{diff.toFixed(2)}
-                                    </div>
-                                    <div className="text-xs text-gray-500">{label}</div>
-                                </div>
-                                {/* Variación % */}
-                                <div className={`border rounded-lg p-3 text-center min-w-[120px] ${pct === null ? "bg-gray-50 border-gray-200" : pct >= 0 ? "bg-green-50 border-green-200" : "bg-red-50 border-red-200"}`}>
-                                    <div className={`text-xs font-semibold uppercase mb-1 ${pct === null ? "text-gray-500" : pct >= 0 ? "text-green-600" : "text-red-600"}`}>
-                                        Variación %
-                                    </div>
-                                    <div className={`text-xl font-bold ${pct === null ? "text-gray-500" : pct >= 0 ? "text-green-800" : "text-red-800"}`}>
-                                        {pct !== null ? `${pct >= 0 ? "+" : ""}${pct.toFixed(1)}%` : "—"}
-                                    </div>
-                                    <div className="text-xs text-gray-500">vs Total In&Out</div>
-                                </div>
+                                );
+                            })()}
+
+                            {/* Toggle agrupación */}
+                            <div className="flex justify-end mb-2">
+                                <Button
+                                    onClick={() => setGroupByMonth((v) => !v)}
+                                    variant={groupByMonth ? "filled" : "outline"}
+                                    color="indigo"
+                                    size="xs"
+                                    leftSection={<RiCalendarLine />}
+                                >
+                                    {groupByMonth ? "Ver por Fecha" : "Ver por Mes"}
+                                </Button>
                             </div>
 
                             {/* Tabla Desktop */}
@@ -609,75 +720,70 @@ export default function SkuComparativaPage() {
                                 <table className="table w-full text-sm">
                                     <thead className="bg-primary text-white text-xs uppercase font-bold sticky top-0 z-10">
                                         <tr>
-                                            <th className="text-left">Fecha</th>
-                                            <th className="text-center">
+                                            <SortTh colKey="date" className="text-left">Fecha</SortTh>
+                                            <SortTh colKey="__sku__">
                                                 {data.product_name || productName} ({label})
-                                            </th>
+                                            </SortTh>
                                             {legacyProducts.map((legProd) => {
                                                 const availableYears = getYearsForProduct(legProd);
                                                 const selectedYear = legacyYearSelections[legProd] || "";
                                                 return (
-                                                    <th key={legProd} className="text-center">
-                                                        <div>{legProd} ({label})</div>
-                                                        {availableYears.length > 1 ? (
-                                                            <select
-                                                                value={selectedYear}
-                                                                onChange={(e) =>
-                                                                    setLegacyYearSelections((prev) => ({
-                                                                        ...prev,
-                                                                        [legProd]: e.target.value,
-                                                                    }))
-                                                                }
-                                                                onClick={(e) => e.stopPropagation()}
-                                                                className="mt-1 text-xs font-normal normal-case bg-white text-gray-800 border border-gray-300 rounded px-1 py-0.5 cursor-pointer"
-                                                            >
-                                                                {availableYears.map((yr) => (
-                                                                    <option key={yr} value={yr}>{yr}</option>
-                                                                ))}
-                                                            </select>
-                                                        ) : availableYears.length === 1 ? (
-                                                            <span className="text-xs font-normal normal-case opacity-75 ml-1">({availableYears[0]})</span>
-                                                        ) : null}
-                                                    </th>
+                                                    <SortTh key={legProd} colKey={legProd}>
+                                                        <span className="flex flex-col items-center gap-0.5">
+                                                            <span>{legProd} ({label})</span>
+                                                            {availableYears.length > 1 ? (
+                                                                <select
+                                                                    value={selectedYear}
+                                                                    onChange={(e) =>
+                                                                        setLegacyYearSelections((prev) => ({
+                                                                            ...prev,
+                                                                            [legProd]: e.target.value,
+                                                                        }))
+                                                                    }
+                                                                    onClick={(e) => e.stopPropagation()}
+                                                                    className="text-xs font-normal normal-case bg-white text-gray-800 border border-gray-300 rounded px-1 py-0.5 cursor-pointer"
+                                                                >
+                                                                    {availableYears.map((yr) => (
+                                                                        <option key={yr} value={yr}>{yr}</option>
+                                                                    ))}
+                                                                </select>
+                                                            ) : availableYears.length === 1 ? (
+                                                                <span className="text-xs font-normal normal-case opacity-75">({availableYears[0]})</span>
+                                                            ) : null}
+                                                        </span>
+                                                    </SortTh>
                                                 );
                                             })}
-                                            {legacyProducts.length > 1 && (
-                                                <th className="text-center">Total In&Out ({label})</th>
-                                            )}
-                                            <th className="text-center">Diferencia</th>
-                                            <th className="text-center">Var. %</th>
+                                            <SortTh colKey="__pct__">Var. %</SortTh>
                                         </tr>
                                     </thead>
                                     <tbody className="bg-white text-black">
-                                        {dates.map((date) => {
-                                            const skuVal = data[date] || 0;
-                                            const totalLegVal = legacyCombinedByDate[date] || 0;
-                                            const d = skuVal - totalLegVal;
+                                        {displayRows.map(({ key, label, skuVal, legByProd, totalLegVal }) => {
                                             const p =
                                                 totalLegVal !== 0
                                                     ? ((skuVal - totalLegVal) / totalLegVal) * 100
                                                     : null;
                                             return (
-                                                <tr key={date} className="hover:bg-gray-50">
-                                                    <td className="font-mono text-xs">{date}</td>
+                                                <tr key={key} className="hover:bg-gray-50">
+                                                    <td className="font-mono text-xs">{label}</td>
                                                     <td className="text-center font-semibold" style={{ color: skuColor }}>
                                                         {skuVal > 0 ? skuVal.toFixed(2) : <span className="text-gray-400">0.00</span>}
                                                     </td>
                                                     {legacyProducts.map((legProd, lIdx) => {
-                                                        const lv = legacyByDate[legProd]?.[date] || 0;
+                                                        const lv = legByProd[legProd] || 0;
                                                         return (
                                                             <td
                                                                 key={legProd}
                                                                 className="text-center"
                                                                 style={{ color: LEGACY_COLORS[lIdx % LEGACY_COLORS.length] }}
                                                             >
-                                                                {lv > 0 ? lv.toFixed(2) : <span className="text-gray-300">—</span>}
+                                                                {lv.toFixed(2)}
                                                             </td>
                                                         );
                                                     })}
                                                     {legacyProducts.length > 1 && (
                                                         <td className="text-center font-semibold text-gray-700">
-                                                            {totalLegVal > 0 ? totalLegVal.toFixed(2) : <span className="text-gray-300">—</span>}
+                                                            {totalLegVal.toFixed(2)}
                                                         </td>
                                                     )}
                                                     <td
@@ -713,14 +819,6 @@ export default function SkuComparativaPage() {
                                                     {(legacyProductTotals[legProd] || 0).toFixed(2)}
                                                 </td>
                                             ))}
-                                            {legacyProducts.length > 1 && (
-                                                <td className="text-center text-gray-700">
-                                                    {legacyGrandTotal.toFixed(2)}
-                                                </td>
-                                            )}
-                                            <td className={`text-center ${diff >= 0 ? "text-green-600" : "text-red-600"}`}>
-                                                {(diff >= 0 ? "+" : "") + diff.toFixed(2)}
-                                            </td>
                                             <td className={`text-center ${pct === null ? "text-gray-400" : pct >= 0 ? "text-green-600" : "text-red-600"}`}>
                                                 {pct !== null ? `${pct >= 0 ? "+" : ""}${pct.toFixed(1)}%` : "—"}
                                             </td>
@@ -731,17 +829,14 @@ export default function SkuComparativaPage() {
 
                             {/* Tabla Móvil */}
                             <div className="md:hidden space-y-2">
-                                {dates.map((date) => {
-                                    const skuVal = data[date] || 0;
-                                    const totalLegVal = legacyCombinedByDate[date] || 0;
-                                    const d = skuVal - totalLegVal;
+                                {displayRows.map(({ key, label, skuVal, legByProd, totalLegVal }) => {
                                     const p =
                                         totalLegVal !== 0
                                             ? ((skuVal - totalLegVal) / totalLegVal) * 100
                                             : null;
                                     return (
-                                        <div key={date} className="bg-white border rounded-lg p-3">
-                                            <div className="font-mono text-xs font-bold text-gray-600 mb-2">{date}</div>
+                                        <div key={key} className="bg-white border rounded-lg p-3">
+                                            <div className="font-mono text-xs font-bold text-gray-600 mb-2">{label}</div>
                                             <div className="grid grid-cols-2 gap-2 text-sm">
                                                 <div>
                                                     <span className="text-xs text-gray-500">SKU: </span>
@@ -756,22 +851,10 @@ export default function SkuComparativaPage() {
                                                             className="font-bold"
                                                             style={{ color: LEGACY_COLORS[lIdx % LEGACY_COLORS.length] }}
                                                         >
-                                                            {(legacyByDate[legProd]?.[date] || 0).toFixed(2)}
+                                                            {(legByProd[legProd] || 0).toFixed(2)}
                                                         </span>
                                                     </div>
                                                 ))}
-                                                {legacyProducts.length > 1 && (
-                                                    <div>
-                                                        <span className="text-xs text-gray-500">Total In&Out: </span>
-                                                        <span className="font-bold text-gray-700">{totalLegVal.toFixed(2)}</span>
-                                                    </div>
-                                                )}
-                                                <div>
-                                                    <span className="text-xs text-gray-500">Diff: </span>
-                                                    <span className={`font-bold ${d >= 0 ? "text-green-600" : "text-red-600"}`}>
-                                                        {(d >= 0 ? "+" : "") + d.toFixed(2)}
-                                                    </span>
-                                                </div>
                                                 {p !== null && (
                                                     <div>
                                                         <span className="text-xs text-gray-500">Var: </span>
@@ -800,15 +883,6 @@ export default function SkuComparativaPage() {
                                                 </span>
                                             </div>
                                         ))}
-                                        {legacyProducts.length > 1 && (
-                                            <div>
-                                                Total In&Out:{" "}
-                                                <span className="text-gray-700">{legacyGrandTotal.toFixed(2)}</span>
-                                            </div>
-                                        )}
-                                        <div className={diff >= 0 ? "text-green-700" : "text-red-700"}>
-                                            Diff: {(diff >= 0 ? "+" : "") + diff.toFixed(2)}
-                                        </div>
                                         {pct !== null && (
                                             <div className={pct >= 0 ? "text-green-700" : "text-red-700"}>
                                                 Var: {(pct >= 0 ? "+" : "") + pct.toFixed(1)}%
@@ -837,7 +911,6 @@ export default function SkuComparativaPage() {
     if (!authorized) return <Unauthorized />;
 
     const hasData = skuData && Object.keys(skuData).length > 0;
-    const chartData = hasData ? getChartData() : [];
 
     return (
         <div className="text-black h-full flex flex-col">
@@ -1132,69 +1205,6 @@ export default function SkuComparativaPage() {
                     </div>
                 )}
             </div>
-
-            {/* ---- Gráfica comparativa ---- */}
-            {hasData && chartData.length > 0 && (
-                <div
-                    id="chartSection"
-                    ref={chartSectionRef}
-                    className="bg-white mb-4 rounded-lg p-4 border border-gray-200"
-                >
-                    <h2 className="text-lg font-bold mb-1 uppercase text-center text-gray-800">
-                        Comparativa por Fecha —{" "}
-                        {appliedFilters.reportType === "hectolitros"
-                            ? "Hectolitros"
-                            : "Cajas"}
-                    </h2>
-                    <p className="text-xs text-center text-gray-500 mb-4">
-                        SKU(s) seleccionados vs In&Out · datos por fecha
-                    </p>
-                    <ResponsiveContainer width="100%" height={420}>
-                        <BarChart
-                            data={chartData}
-                            margin={{ top: 24, right: 20, left: 20, bottom: 10 }}
-                        >
-                            <CartesianGrid strokeDasharray="3 3" />
-                            <XAxis dataKey="date" tick={{ fontSize: 11 }} />
-                            <YAxis />
-                            <Tooltip content={renderCustomTooltip} />
-                            <Legend />
-                            {skuData &&
-                                Object.keys(skuData).map((productName, idx) => (
-                                    <Bar
-                                        key={productName}
-                                        dataKey={productName}
-                                        fill={SKU_COLORS[idx % SKU_COLORS.length]}
-                                    >
-                                        <LabelList
-                                            dataKey={productName}
-                                            position="top"
-                                            formatter={(v) => (v > 0 ? v.toFixed(1) : "")}
-                                            style={{ fontSize: 9, fill: "#374151" }}
-                                        />
-                                    </Bar>
-                                ))}
-                            {legacyData?.results &&
-                                typeof legacyData.results === "object" &&
-                                Object.keys(legacyData.results).map((legacyProd, idx) => (
-                                    <Bar
-                                        key={`In&Out · ${legacyProd}`}
-                                        dataKey={`In&Out · ${legacyProd}`}
-                                        fill={LEGACY_COLORS[idx % LEGACY_COLORS.length]}
-                                        name={`In&Out · ${legacyProd}`}
-                                    >
-                                        <LabelList
-                                            dataKey={`In&Out · ${legacyProd}`}
-                                            position="top"
-                                            formatter={(v) => (v > 0 ? v.toFixed(1) : "")}
-                                            style={{ fontSize: 9, fill: "#374151" }}
-                                        />
-                                    </Bar>
-                                ))}
-                        </BarChart>
-                    </ResponsiveContainer>
-                </div>
-            )}
 
             {/* ---- Tabla de resultados ---- */}
             <div className="flex-1 min-h-0 flex flex-col">
