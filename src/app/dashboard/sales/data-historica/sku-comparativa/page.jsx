@@ -336,7 +336,7 @@ export default function SkuComparativaPage() {
                 width: 1600,
                 scale: 2,
                 padding: "40px 60px",
-                hideSelectors: [".md\\:hidden", "[class*='md:hidden']"],
+                hideSelectors: [".md\\:hidden", "[class*='md:hidden']", "#chartSection"],
             });
             setSuccessMessage("Imagen de tabla descargada exitosamente");
         } catch (err) {
@@ -376,7 +376,7 @@ export default function SkuComparativaPage() {
                 width: 1600,
                 scale: 2,
                 padding: "40px 60px",
-                hideSelectors: [".md\\:hidden", "[class*='md:hidden']"],
+                hideSelectors: [".md\\:hidden", "[class*='md:hidden']", "#chartSection"],
             });
             const title = `Comparativa SKU vs In&Out — ${appliedFilters.startDate} / ${appliedFilters.endDate}`;
             await sendReportToWhatsApp(accessToken, imageBase64, title);
@@ -883,17 +883,6 @@ export default function SkuComparativaPage() {
                         className="flex-1 md:flex-none"
                     >
                         Descargar Tabla
-                    </Button>
-                    <Button
-                        onClick={downloadChartImage}
-                        variant="outline"
-                        color="indigo"
-                        leftSection={<RiBarChartBoxLine />}
-                        loading={downloadingImage}
-                        disabled={!hasData || loading}
-                        className="flex-1 md:flex-none"
-                    >
-                        Descargar Gráfica
                     </Button>
                     <Button
                         onClick={sendTableToWhatsApp}
