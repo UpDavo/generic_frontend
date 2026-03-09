@@ -172,6 +172,12 @@ export const dashboardRoutes = [
             permission: "/dashboard/sales/data-historica/sku-metrics",
           },
           {
+            path: "/dashboard/sales/data-historica/sku-comparativa",
+            icon: RiLineChartLine,
+            name: "Comparativa In&Out",
+            permission: "/dashboard/sales/data-historica/sku-comparativa",
+          },
+          {
             path: "/dashboard/sales/data-historica/venta-hecto-poc",
             icon: RiStore2Line,
             name: "Venta Hecto por POC",

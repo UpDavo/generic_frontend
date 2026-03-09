@@ -277,7 +277,8 @@ export async function getSkuMetricsReport(
     skuCodes,
     startDate,
     endDate,
-    reportType = "hectolitros"
+    reportType = "hectolitros",
+    useDates = false
 ) {
     const url = new URL(`${ENV.API_URL}/tada/sku-detail/city-poc/weekly-report/`);
     
@@ -285,6 +286,7 @@ export async function getSkuMetricsReport(
     if (startDate) url.searchParams.append("start_date", startDate);
     if (endDate) url.searchParams.append("end_date", endDate);
     if (reportType) url.searchParams.append("report_type", reportType);
+    if (useDates) url.searchParams.append("dates", "true");
 
     const response = await fetch(url.toString(), {
         method: "GET",
@@ -367,6 +369,81 @@ export async function downloadSkuMetricsReport(
  * @param {string} search - Término de búsqueda
  * @returns {Promise<Array>} - Array de productos con ids, codes, name y homologated
  */
+/**
+ * Obtener items legacy especiales con totales por fecha
+ * @param {string} token - Token de autenticación
+ * @param {string} startMd - Mes y día inicial en formato MM-DD (ej: 01-15)
+ * @param {string} endMd   - Mes y día final   en formato MM-DD (ej: 03-09)
+ * @returns {Promise<Object>} - { count, results: { "Producto A": { total_hectolitros, total_cajas, records: [...] } } }
+ */
+export async function getSpecialItemsLegacy(token, startMd, endMd) {
+    const url = new URL(`${ENV.API_URL}/tada/special-items-legacy/`);
+
+    if (startMd) url.searchParams.append("start_md", startMd);
+    if (endMd) url.searchParams.append("end_md", endMd);
+
+    const response = await fetch(url.toString(), {
+        method: "GET",
+        headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${token}`,
+        },
+    });
+
+    if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.message || "Error al obtener special items legacy");
+    }
+
+    return await response.json();
+}
+
+/**
+ * Descargar special items In&Out en Excel
+ * @param {string} token - Token de autenticación
+ * @param {string} startMd - Mes y día inicial en formato MM-DD (ej: 01-15)
+ * @param {string} endMd   - Mes y día final   en formato MM-DD (ej: 03-09)
+ * @returns {Promise<void>} - Descarga el archivo automáticamente
+ */
+export async function downloadSpecialItemsLegacy(token, startMd, endMd) {
+    const url = new URL(`${ENV.API_URL}/tada/special-items-legacy/download/`);
+
+    if (startMd) url.searchParams.append("start_md", startMd);
+    if (endMd) url.searchParams.append("end_md", endMd);
+
+    const response = await fetch(url.toString(), {
+        method: "GET",
+        headers: {
+            Authorization: `Bearer ${token}`,
+        },
+    });
+
+    if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.message || "Error al descargar special items legacy");
+    }
+
+    const blob = await response.blob();
+    const downloadUrl = window.URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.href = downloadUrl;
+
+    const contentDisposition = response.headers.get("Content-Disposition");
+    let filename = "special_items_legacy.xlsx";
+    if (contentDisposition) {
+        const filenameMatch = contentDisposition.match(/filename="?(.+)"?/);
+        if (filenameMatch && filenameMatch[1]) {
+            filename = filenameMatch[1];
+        }
+    }
+
+    link.download = filename;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    window.URL.revokeObjectURL(downloadUrl);
+}
+
 export async function searchHomologatedProducts(token, search) {
     const url = new URL(`${ENV.API_URL}/tada/ventas-productos-compra/search-homologated/`);
     
