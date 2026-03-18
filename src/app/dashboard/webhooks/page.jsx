@@ -139,6 +139,7 @@ export default function WebhooksPage() {
     poc: "",
     comment: "",
     repurchased: false,
+    numero_orden: "",
   });
   const [pocOptions, setPocOptions] = useState([]);
   const [loadingStores, setLoadingStores] = useState(false);
@@ -268,6 +269,7 @@ export default function WebhooksPage() {
       poc: log.poc || "",
       comment: log.comment || "",
       repurchased: log.repurchased || false,
+      numero_orden: log.numero_orden || "",
     });
     setModalOpen(true);
   };
@@ -280,7 +282,7 @@ export default function WebhooksPage() {
       await updateWebhookLog(accessToken, editingLog.id, formData);
       setModalOpen(false);
       setEditingLog(null);
-      setFormData({ poc: "", comment: "", repurchased: false });
+      setFormData({ poc: "", comment: "", repurchased: false, numero_orden: "" });
       await fetchLogs();
       setError(null);
     } catch (err) {
@@ -554,7 +556,7 @@ export default function WebhooksPage() {
         onClose={() => {
           setModalOpen(false);
           setEditingLog(null);
-          setFormData({ poc: "", comment: "", repurchased: false });
+          setFormData({ poc: "", comment: "", repurchased: false, numero_orden: "" });
         }}
         title="Editar Webhook"
         centered
@@ -602,6 +604,15 @@ export default function WebhooksPage() {
             checked={formData.repurchased}
             onChange={(e) =>
               setFormData({ ...formData, repurchased: e.currentTarget.checked })
+            }
+          />
+
+          <TextInput
+            label="Número de Orden"
+            placeholder="Ej. ORD-12345"
+            value={formData.numero_orden}
+            onChange={(e) =>
+              setFormData({ ...formData, numero_orden: e.currentTarget.value })
             }
           />
 
@@ -663,6 +674,9 @@ export default function WebhooksPage() {
               ) : (
                 <span className="badge badge-ghost badge-sm">No</span>
               )}
+            </div>
+            <div>
+              <strong>Número de Orden:</strong> {previewingLog.numero_orden || "-"}
             </div>
             <div>
               <strong>Creado:</strong>{" "}
