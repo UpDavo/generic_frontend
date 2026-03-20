@@ -1503,6 +1503,7 @@ export default function TrafficReportPage() {
           <p className="text-gray-600">No hay datos disponibles</p>
         </div>
       )}
+
     </div>
   );
 }

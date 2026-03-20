@@ -1,8 +1,12 @@
 import API_BASE_URL from "@/config/apiConfig";
 
-// Obtener todas las daily meta
-export const getDailyMetas = async (accessToken) => {
-  const response = await fetch(`${API_BASE_URL}/tada/daily-meta/`, {
+// Obtener daily metas, opcionalmente filtradas por rango de fechas
+export const getDailyMetas = async (accessToken, startDate = null, endDate = null) => {
+  const params = new URLSearchParams();
+  if (startDate) params.append("start_date", startDate);
+  if (endDate) params.append("end_date", endDate);
+  const qs = params.toString() ? `?${params.toString()}` : "";
+  const response = await fetch(`${API_BASE_URL}/tada/daily-meta/${qs}`, {
     method: "GET",
     headers: {
       "Content-Type": "application/json",

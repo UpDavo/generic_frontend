@@ -74,6 +74,22 @@ export const sendReportEmail = async (
   return await response.json();
 };
 
+export const getSalesByDateRange = async (accessToken, start_date, end_date) => {
+  const params = new URLSearchParams({ start_date, end_date });
+  const response = await fetch(
+    `${API_BASE_URL}/tada/reports/sales-by-date-range/?${params}`,
+    {
+      method: "GET",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${accessToken}`,
+      },
+    }
+  );
+  if (!response.ok) throw new Error("Error al obtener ventas por rango de fechas");
+  return await response.json();
+};
+
 export const manualFetchData = async (accessToken) => {
   const response = await fetch(`${API_BASE_URL}/tada/reports/fetch-data/`, {
     method: "POST",
