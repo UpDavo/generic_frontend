@@ -796,16 +796,19 @@ export default function HectolitrosPage() {
                                     {getWeekKeys().map((weekKey) => {
                                         const weekData = reportData[weekKey];
                                         const weekNumber = weekKey.replace("w", "");
+                                        const availableDays = DIAS_SEMANA.filter(d => weekData[d]);
 
-                                        return DIAS_SEMANA.map((dia, index) => {
+                                        return DIAS_SEMANA.map((dia) => {
                                             const diaData = weekData[dia];
                                             if (!diaData) return null;
 
+                                            const isFirstDay = dia === availableDays[0];
+
                                             return (
                                                 <tr key={`${weekKey}-${dia}`} className="hover:bg-gray-100">
-                                                    {index === 0 ? (
+                                                    {isFirstDay ? (
                                                         <td
-                                                            rowSpan={DIAS_SEMANA.filter(d => weekData[d]).length}
+                                                            rowSpan={availableDays.length}
                                                             className="font-bold text-center bg-gray-50"
                                                         >
                                                             W{weekNumber}

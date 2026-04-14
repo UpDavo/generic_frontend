@@ -149,6 +149,12 @@ export const dashboardRoutes = [
             permission: "/dashboard/sales/process",
           },
           {
+            path: "/dashboard/sales/process/stock",
+            icon: RiFileExcel2Line,
+            name: "Inventario Teórico",
+            permission: "/dashboard/sales/process/stock",
+          },
+          {
             path: "/dashboard/sales/data-historica",
             icon: RiDatabase2Line,
             name: "Data Histórica",
